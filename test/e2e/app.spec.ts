@@ -228,3 +228,23 @@ test("Güncelleme2 madde 2: çekmece AI analizi, Trend çizgisi ve Seviyeler dü
     await page.screenshot({ path: `${SHOTS}/g2-madde2-cekmece-${width}.png` });
   }
 });
+
+test("Güncelleme2 madde 4: paper istatistik kartı, sıfırlama düğmesi ve PAPER × OTONOM etiketleri", async ({ page }) => {
+  await waitForScan(page);
+  await page.request.post("/api/scenario/start");
+  await page.waitForTimeout(18_000);
+  for (const width of [360, 1440]) {
+    await page.setViewportSize({ width, height: width === 360 ? 780 : 900 });
+    await page.goto("/panel");
+    const card = page.locator("#paper-card");
+    await expect(card).toContainText("Kazanma oranı");
+    await expect(card).toContainText("Ortalama R");
+    await expect(card).toContainText("Maks drawdown");
+    await expect(card).toContainText("Toplam PnL");
+    await expect(card).toContainText("İşlem sayısı");
+    await expect(card.getByRole("button", { name: "Sıfırla" })).toBeEnabled();
+    await expect(page.locator("#tr-wrap")).toContainText("PAPER");
+    await card.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${SHOTS}/g2-madde4-panel-${width}.png` });
+  }
+});

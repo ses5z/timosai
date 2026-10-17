@@ -14,9 +14,10 @@
     renderPositions(p.positions);
     $("#risk-range").value = p.riskPct;
     $("#risk-val").textContent = "%" + p.riskPct;
-    $("#risk-usdt").textContent = `Bu, işlem başına en fazla ≈ ${F.usd(p.riskBudgetUsdt, 3)} kayıp demek.`;
+    $("#risk-usdt").textContent = `Bu, işlem başına en fazla ≈ ${F.usd(p.riskBudgetUsdt, 2)} kayıp demek.`;
     const TAG = { ajan: "OTONOM", senaryo: "SENARYO", "hızlı": "HIZLI" };
-    const rows = p.trades.map((t) => `<tr><td>${F.time(t.ts)}</td><td>${T.esc(t.instId.replace("-USDT", ""))}</td><td>${t.side === "buy" ? "AL" : "SAT"}</td><td class="num">${F.price(t.px)}</td><td class="num">${F.num(t.notionalUsdt, 2)}</td><td class="num ${T.cls(t.pnl)}">${t.pnl == null ? "-" : F.signed(t.pnl, 3)}</td><td><span class="badge ${t.mode === "PAPER" ? "badge-dry" : "badge-live"}">${t.mode}</span> <span class="badge badge-muted">${TAG[t.origin] || T.esc(t.origin)}</span></td><td class="pro-only">${T.esc(t.reason)}</td></tr>`).join("");
+    const MODE = { PAPER: "PAPER", CANLI: "CANLI" };
+    const rows = p.trades.map((t) => `<tr><td>${F.time(t.ts)}</td><td>${T.esc(t.instId.replace("-USDT", ""))}</td><td>${t.side === "buy" ? "AL" : "SAT"}</td><td class="num">${F.price(t.px)}</td><td class="num">${F.num(t.notionalUsdt, 2)}</td><td class="num ${T.cls(t.pnl)}">${t.pnl == null ? "-" : F.signed(t.pnl, 3)}</td><td><span class="badge ${t.mode === "PAPER" ? "badge-dry" : "badge-live"}">${MODE[t.mode] || T.esc(t.mode)}</span> <span class="badge badge-muted">${TAG[t.origin] || T.esc(t.origin)}</span>${t.ordId ? `<br><span class="mono faint">OKX #${T.esc(t.ordId)}</span>` : ""}</td><td class="pro-only">${T.esc(t.reason)}</td></tr>`).join("");
     T.renderKeep($("#tr-wrap"), rows ? `<table><thead><tr><th>Saat</th><th>Coin</th><th>Yön</th><th class="num">Fiyat</th><th class="num">USDT</th><th class="num">PnL</th><th>Mod</th><th class="pro-only">Gerekçe</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Henüz işlem yok. Ajan uygun sinyal görünce küçük bir emir açar.</div>`);
   }
 
@@ -119,13 +120,32 @@
   T.on("scenario", (s) => { if (s.step === 1) scSteps = []; scSteps.push(s); renderScenario(scSteps); if (s.done) refreshAll(); });
   T.api("/api/scenario").then((d) => { scSteps = d.steps; renderScenario(scSteps); }).catch(() => {});
 
+  async function loadPaper() {
+    const d = await T.api("/api/paper");
+    const s = d.stats, pct = (v) => F.num(v * 100, 1) + "%";
+    $("#ps-kpis").innerHTML = [
+      ["İşlem sayısı", s.trades],
+      ["Kazanma oranı", s.trades ? pct(s.winRate) : "-"],
+      ["Ortalama R", s.trades ? F.signed(s.avgR, 2) + "R" : "-"],
+      ["Maks drawdown", F.num(s.maxDrawdownPct, 2) + "%"],
+      ["Toplam PnL", `<span class="${T.cls(s.totalPnl)}">${F.signed(s.totalPnl, 3)} USDT</span>`],
+    ].map(([k, v]) => `<div class="stat"><span class="kpi-small">${k}</span><b class="num">${v}</b></div>`).join("");
+    $("#ps-note").textContent = `${d.mode === "PAPER" ? "Paper trade" : "CANLI"} · komisyon %${F.num(d.config.feeRate * 100, 2)} · slipaj %${F.num(d.config.slippagePct, 2)} · dolum order book'taki en iyi ask/bid · kaldıraç tavanı ${d.config.maxLeverage}x · funding ${d.config.fundingIntervalHours} saatte bir. Futures (SİMÜLASYON): ${d.futuresStats.trades} kapanan, ${d.futuresStats.open} açık, gerçekleşen ${F.signed(d.futuresStats.realized, 3)} USDT.`;
+    $("#paper-reset").disabled = d.mode !== "PAPER";
+    T.renderKeep($("#fut-list"), d.futures.map((x) => `<li class="${x.open ? "lvl-karar" : "lvl-bilgi"}"><time>${F.time(x.openedAt)}</time><span><span class="badge badge-muted">SİMÜLASYON</span> <span class="badge badge-muted">${x.origin === "ajan" ? "OTONOM" : "HIZLI"}</span> ${T.esc(x.instId.replace("-USDT", ""))} ${x.side} ${x.leverage}x · teminat ${x.marginUsdt} · giriş ${F.price(x.entryPx)} · likidasyon ${F.price(x.liqPx)} · funding ${F.signed(-x.fundingPaid, 4)} · <b class="${T.cls(x.pnlUsdt)}">${F.signed(x.pnlUsdt, 3)} USDT</b>${x.open ? "" : ` · ${T.esc(x.closed.reason)}`}</span></li>`).join("") || `<li><span></span><span class="muted">Açık ya da kapanmış simülasyon yok.</span></li>`);
+  }
+  $("#paper-reset").addEventListener("click", async () => {
+    if (!confirm("Paper hesap sıfırlansın mı? Paper pozisyonlar ve istatistikler silinir.")) return;
+    try { const r = await T.api("/api/paper/reset", { body: {} }); T.toast(`Paper hesap sıfırlandı: ${r.balance} USDT.`); refreshAll(); } catch (e) { T.toast(e.message); }
+  });
+
   async function loadQuick() {
     const q = await T.api("/api/quick/sims");
     $("#qk-state").textContent = q.enabled ? "açık" : "kapalı";
     $("#qk-state").className = "badge " + (q.enabled ? "badge-warn" : "badge-muted");
     if (!q.enabled) { $("#qk-body").innerHTML = `<p>Hızlı komutlar kapalı (QUICK_COMMANDS=false). Kullanıcı emir yolu yoktur; emirleri yalnızca ajan verir.</p>`; return; }
     const s = q.settings;
-    const sims = q.sims.map((x) => `<li class="lvl-karar"><time>${F.time(x.openedAt)}</time><span><span class="badge badge-muted">SİMÜLASYON</span> ${T.esc(x.instId.replace("-USDT", ""))} ${x.side} ${x.leverage}x · teminat ${x.marginUsdt} · giriş ${F.price(x.entryPx)} · likidasyon ${F.price(x.liqPx)} · <b class="${T.cls(x.pnlUsdt)}">${F.signed(x.pnlUsdt, 3)} USDT</b>${x.liquidated ? " · likide oldu" : ""}</span></li>`).join("");
+    const sims = "";
     $("#qk-body").innerHTML = `<p>Telegram ve mentorda <span class="mono">/al SOL 5</span>, <span class="mono">/sat SOL</span>, <span class="mono">/kapat SOL</span>: komutun kendisi onaydır; sert limitler ve zorunlu stop geçerli. Kaldıraçlı <span class="mono">/l</span>, <span class="mono">/s</span> yalnızca SİMÜLASYON.</p>
       <form id="qk-form" style="display:grid;gap:8px;grid-template-columns:1fr 1fr 1fr;align-items:end">
         <label>Varsayılan tutar (USDT)<input id="qk-amt" type="number" min="1" max="5" step="0.5" value="${s.amountUsdt}" style="width:100%"></label>
@@ -136,7 +156,7 @@
     ["#qk-amt", "#qk-mode", "#qk-val"].forEach((id) => $(id).addEventListener("change", save));
   }
 
-  const refreshAll = () => Promise.allSettled([loadPortfolio(), loadContract(), loadEvents(), loadAtk(), loadLedger(), loadQuick()]);
+  const refreshAll = () => Promise.allSettled([loadPortfolio(), loadContract(), loadEvents(), loadAtk(), loadLedger(), loadQuick(), loadPaper()]);
   refreshAll();
   T.on("status", renderStatus);
   if (T.status) renderStatus(T.status);

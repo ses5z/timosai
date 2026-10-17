@@ -1,6 +1,8 @@
 // TradingClient: SERT LİMİT KAPISI burada. Paper (Mock) ve canlı (Atk) uygulamalar aynı kapıdan geçer.
 // Kullanıcı emir yolu yoktur; bu sınıfı yalnızca ajan (ve deterministik senaryo) çağırır.
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import type { AtkCaller } from "../atk/mcpClient.js";
 import type { SignalLedger } from "../ledger/signalLedger.js";
 import { round, roundPrice } from "../util/math.js";
@@ -40,10 +42,23 @@ export interface Position {
   atr: number;
   origin: string;
   ordId?: string;
+  openCost?: number;
+}
+
+export interface ClosedTrade {
+  instId: string;
+  pnl: number;
+  riskUsdt: number;
+  r: number;
+  origin: string;
+  mode: ExecMode;
+  openedAt: number;
+  closedAt: number;
 }
 
 export interface Trade {
   id: string;
+  ordId?: string;
   instId: string;
   side: "buy" | "sell";
   qty: number;
@@ -65,12 +80,38 @@ export class HardLimitError extends Error {
 
 export const FEE_RATE = 0.001;
 
+export interface PaperConfig {
+  startBalanceUsdt: number;
+  feeRate: number;
+  slippagePct: number;
+  maxLeverage: number;
+  fundingIntervalHours: number;
+  maintenanceMarginRate: number;
+  agentFutures: { enabled: boolean; leverage: number; marginUsdt: number; maxOpen: number; stopPct: number; targetPct: number };
+}
+
+export const DEFAULT_PAPER: PaperConfig = { startBalanceUsdt: 1000, feeRate: 0.001, slippagePct: 0.05, maxLeverage: 10, fundingIntervalHours: 8, maintenanceMarginRate: 0.005, agentFutures: { enabled: true, leverage: 2, marginUsdt: 5, maxOpen: 2, stopPct: 2, targetPct: 4.4 } };
+
+export function loadPaperConfig(file = "config/paper.json"): PaperConfig {
+  try {
+    const j = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), file), "utf8"));
+    return { ...DEFAULT_PAPER, ...j, agentFutures: { ...DEFAULT_PAPER.agentFutures, ...(j.agentFutures ?? {}) } };
+  } catch {
+    return DEFAULT_PAPER;
+  }
+}
+
+/** En iyi alış/satış fiyatı (order book). Paper dolumları bunu kullanır. */
+export type QuoteFn = (instId: string) => Promise<{ bid: number; ask: number } | null>;
+
 export abstract class TradingClient {
   abstract readonly mode: ExecMode;
   protected positions = new Map<string, Position>();
   protected trades: Trade[] = [];
   protected entryTimes: number[] = [];
   protected realizedByDay = new Map<string, number>();
+  closed: ClosedTrade[] = [];
+  feeRate = FEE_RATE;
   readonly startEquity: number;
 
   constructor(
@@ -111,7 +152,8 @@ export abstract class TradingClient {
     this.entryTimes.push(Date.now());
     const pos = await this.executeEntry(req);
     this.positions.set(pos.id, pos);
-    this.pushTrade({ instId: pos.instId, side: "buy", qty: pos.qty, px: pos.entryPx, notionalUsdt: pos.costUsdt, mode: this.mode, reason: req.reason, origin: req.origin });
+    pos.openCost = pos.costUsdt;
+    this.pushTrade({ instId: pos.instId, side: "buy", qty: pos.qty, px: pos.entryPx, notionalUsdt: pos.costUsdt, mode: this.mode, reason: req.reason, origin: req.origin, ordId: pos.ordId });
     this.ledger.append("order", { durum: this.mode, yon: "AL", instId: pos.instId, qty: pos.qty, px: pos.entryPx, stop: pos.stopPx, hedef: pos.targetPx, notional: pos.costUsdt, gerekce: req.reason, origin: req.origin });
     return pos;
   }
@@ -123,7 +165,7 @@ export abstract class TradingClient {
     const f = Math.min(1, Math.max(0, fraction));
     const res = await this.executeExit(pos, f >= 0.999 ? pos.qty : pos.qty * f, px);
     const qty = res.qty;
-    const proceeds = qty * res.px * (1 - FEE_RATE);
+    const proceeds = qty * res.px * (1 - this.feeRate);
     const costPart = pos.costUsdt * (qty / pos.qty);
     const pnl = proceeds - costPart;
     pos.costUsdt -= costPart;
@@ -132,10 +174,30 @@ export abstract class TradingClient {
     const day = new Date().toISOString().slice(0, 10);
     this.realizedByDay.set(day, (this.realizedByDay.get(day) ?? 0) + pnl);
     const closed = pos.qty <= 1e-12 || res.closedAll;
-    if (closed) this.positions.delete(id);
-    this.pushTrade({ instId: pos.instId, side: "sell", qty, px: res.px, notionalUsdt: qty * res.px, mode: this.mode, reason, pnl, origin });
+    if (closed) {
+      this.positions.delete(id);
+      const initRisk = pos.entryPx > pos.initialStop ? (pos.entryPx - pos.initialStop) / pos.entryPx : 0;
+      const riskUsdt = (pos.openCost ?? pos.costUsdt + costPart) * initRisk;
+      this.closed.push({ instId: pos.instId, pnl: pos.realizedPnl, riskUsdt, r: riskUsdt > 0 ? pos.realizedPnl / riskUsdt : 0, origin: pos.origin, mode: this.mode, openedAt: pos.openedAt, closedAt: Date.now() });
+      if (this.closed.length > 1000) this.closed.shift();
+    }
+    this.pushTrade({ instId: pos.instId, side: "sell", qty, px: res.px, notionalUsdt: qty * res.px, mode: this.mode, reason, pnl, origin, ordId: res.ordId });
     this.ledger.append("order", { durum: this.mode, yon: "SAT", instId: pos.instId, qty, px: res.px, pnl: round(pnl, 4), gerekce: reason, kapandi: closed, origin });
     return { pnl, closed, qty, px: res.px };
+  }
+
+  /** Paper istatistikleri: kazanma oranı, ortalama R, maks drawdown, toplam PnL, işlem sayısı. */
+  stats(equityHistory: { equity: number }[] = []) {
+    const n = this.closed.length;
+    const wins = this.closed.filter((c) => c.pnl > 0).length;
+    const avgR = n ? this.closed.reduce((s, c) => s + c.r, 0) / n : 0;
+    let peak = -Infinity;
+    let maxDd = 0;
+    for (const e of [...equityHistory.map((x) => x.equity), this.equity()]) {
+      peak = Math.max(peak, e);
+      if (peak > 0) maxDd = Math.max(maxDd, (peak - e) / peak);
+    }
+    return { trades: n, winRate: n ? wins / n : 0, avgR, maxDrawdownPct: maxDd * 100, totalPnl: this.equity() - this.startEquity, realized: this.closed.reduce((s, c) => s + c.pnl, 0) };
   }
 
   updateStop(id: string, stopPx: number, trailing = false): void {
@@ -169,7 +231,7 @@ export abstract class TradingClient {
     return this.entryTimes.filter((t) => now - t < 3_600_000).length;
   }
   unrealizedPnl(): number {
-    return [...this.positions.values()].reduce((s, p) => s + (p.qty * p.lastPx * (1 - FEE_RATE) - p.costUsdt), 0);
+    return [...this.positions.values()].reduce((s, p) => s + (p.qty * p.lastPx * (1 - this.feeRate) - p.costUsdt), 0);
   }
   dailyRealized(): number {
     return this.realizedByDay.get(new Date().toISOString().slice(0, 10)) ?? 0;
@@ -193,7 +255,7 @@ export abstract class TradingClient {
     return null;
   }
   protected abstract executeEntry(req: EntryRequest): Promise<Position>;
-  protected abstract executeExit(pos: Position, qty: number, refPx: number): Promise<{ qty: number; px: number; closedAll: boolean }>;
+  protected abstract executeExit(pos: Position, qty: number, refPx: number): Promise<{ qty: number; px: number; closedAll: boolean; ordId?: string }>;
   protected async onStopMoved(_pos: Position): Promise<void> {}
 }
 
@@ -202,9 +264,24 @@ export class MockTradingClient extends TradingClient {
   readonly mode = "PAPER" as const;
   private cash: number;
 
-  constructor(limits: HardLimits, ledger: SignalLedger, startEquity: number) {
+  constructor(
+    limits: HardLimits,
+    ledger: SignalLedger,
+    startEquity: number,
+    private readonly quote: QuoteFn | null = null,
+    readonly paper: PaperConfig = DEFAULT_PAPER,
+  ) {
     super(limits, ledger, startEquity);
     this.cash = startEquity;
+    this.feeRate = paper.feeRate;
+  }
+
+  /** Market emir dolumu: alışta en iyi ask, satışta en iyi bid + slipaj; order book yoksa referans fiyat. */
+  async fillPrice(instId: string, side: "buy" | "sell", refPx: number): Promise<number> {
+    const q = this.quote ? await this.quote(instId).catch(() => null) : null;
+    const base = q ? (side === "buy" ? q.ask : q.bid) : refPx;
+    const slip = this.paper.slippagePct / 100;
+    return side === "buy" ? base * (1 + slip) : base * (1 - slip);
   }
 
   cashUsdt(): number {
@@ -212,8 +289,8 @@ export class MockTradingClient extends TradingClient {
   }
 
   protected async executeEntry(req: EntryRequest): Promise<Position> {
-    const px = req.entryPx;
-    const qty = (req.notionalUsdt * (1 - FEE_RATE)) / px;
+    const px = await this.fillPrice(req.instId, "buy", req.entryPx);
+    const qty = (req.notionalUsdt * (1 - this.feeRate)) / px;
     this.cash -= req.notionalUsdt;
     return {
       id: crypto.randomUUID().slice(0, 8),
@@ -236,9 +313,10 @@ export class MockTradingClient extends TradingClient {
     };
   }
 
-  protected async executeExit(_pos: Position, qty: number, refPx: number) {
-    this.cash += qty * refPx * (1 - FEE_RATE);
-    return { qty, px: refPx, closedAll: false };
+  protected async executeExit(pos: Position, qty: number, refPx: number) {
+    const px = await this.fillPrice(pos.instId, "sell", refPx);
+    this.cash += qty * px * (1 - this.feeRate);
+    return { qty, px, closedAll: false };
   }
 }
 
@@ -378,7 +456,7 @@ export class AtkTradingClient extends TradingClient {
     if (placed?.[0]?.sCode && placed[0].sCode !== "0") throw new Error(`Satış reddedildi: ${placed[0].sMsg}`);
     if (!full) await this.onStopMoved(pos).catch(() => undefined);
     void this.refreshBalance(true).catch(() => undefined);
-    return { qty: full ? pos.qty : sz, px: refPx, closedAll: full };
+    return { qty: full ? pos.qty : sz, px: refPx, closedAll: full, ordId: placed?.[0]?.ordId as string | undefined };
   }
 
   /** Kısmi çıkış/trailing sonrası borsadaki stopu kalan miktara göre yeniler. */

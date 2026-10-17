@@ -15,6 +15,6 @@ export default defineConfig({
     url: "http://127.0.0.1:3123/api/status",
     reuseExistingServer: false,
     timeout: 60_000,
-    env: { PORT: "3123", ATK_MODE: "mock", ENV_FILE: "/nonexistent/.env", SCAN_INTERVAL_SEC: "15", AUTONOMOUS: "false" },
+    env: { PORT: "3123", ATK_MODE: "mock", ENV_FILE: "/nonexistent/.env", SCAN_INTERVAL_SEC: "15", AUTONOMOUS: "false", QUICK_COMMANDS: "false" },
   },
 });

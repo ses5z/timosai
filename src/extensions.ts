@@ -8,6 +8,7 @@ import { AlertEngine } from "./alerts/alertEngine.js";
 import { AvalancheProofAnchor, loadDeployment, makeViemWriter } from "./proof/avalancheAnchor.js";
 import { NoopProofAnchor } from "./proof/proofAnchor.js";
 import { QuickTrader } from "./trading/quick.js";
+import { PaperFutures } from "./trading/paperFutures.js";
 import { log } from "./util/log.js";
 
 export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typeof fetch } = {}): Promise<void> {
@@ -17,6 +18,31 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
   ctx.extras.analyze = async (instId: string) => mentor.analyze(instId);
   ctx.extras.explainPlan = async (plan: any) => mentor.explainPlan(plan);
 
+  const futures = new PaperFutures(ctx);
+  ctx.extras.futures = futures;
+  const futTimer = setInterval(() => futures.tick(), 10_000);
+  futTimer.unref?.();
+  // Ajanın vadeli kararları (yalnızca paper): kalabalık long + düşüş trendinde kısa SİMÜLASYON; short squeeze + yükselişte uzun.
+  ctx.agent.onScan(async (cands) => {
+    futures.tick();
+    const af = ctx.paper.agentFutures;
+    if (!af.enabled || ctx.agent.trading.mode !== "PAPER" || !ctx.store.settings.autonomous || ctx.store.settings.paused) return;
+    const open = futures.positions.filter((p) => !p.closed);
+    if (open.length >= af.maxOpen) return;
+    for (const c of cands) {
+      if (open.some((p) => p.instId === c.instId) || !c.derivatives?.available) continue;
+      const f = c.derivatives.flags;
+      const down = c.atrTrend?.dir === -1 && c.direction.endsWith("aşağı");
+      const up = c.atrTrend?.dir === 1 && c.direction.endsWith("yukarı");
+      let side: "long" | "short" | null = null;
+      if (down && (f.includes("long_squeeze") || c.derivatives.crowded === "long")) side = "short";
+      else if (up && (f.includes("short_squeeze") || f.includes("shortlar_sikisiyor"))) side = "long";
+      if (!side) continue;
+      await futures.open({ instId: c.instId, side, leverage: af.leverage, marginUsdt: af.marginUsdt, origin: "ajan", stopPct: af.stopPct, targetPct: af.targetPct });
+      ctx.store.addEvent("karar", `Ajan vadeli kararı (paper): ${c.base} ${side} — ${c.derivatives.badge}, ${c.direction}.`, c.instId);
+      break;
+    }
+  });
   const quick = new QuickTrader(ctx);
   ctx.extras.quick = quick;
   const bot = new TelegramBot(ctx, mentor, { token: ctx.env.telegramToken, allowedUserId: ctx.env.telegramAllowedUserId, fetchImpl: opts.fetchImpl });
@@ -56,6 +82,7 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
   ctx.extras.startBackground = () => void bot.start();
   ctx.extras.stopBackground = () => {
     bot.stop();
+    clearInterval(futTimer);
     if (anchorTimer) clearInterval(anchorTimer);
   };
 
@@ -92,6 +119,21 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
       if (b.stopMode === "atr" || b.stopMode === "pct") q.stopMode = b.stopMode;
       if (typeof b.stopValue === "number" && b.stopValue > 0 && b.stopValue <= 10) q.stopValue = b.stopValue;
       res.json(q);
+    });
+    app.get("/api/paper", (_req, res) => {
+      const t = ctx.agent.trading;
+      res.json({ mode: t.mode, config: ctx.paper, stats: t.stats(ctx.agent.equityHistory), futures: futures.view(), futuresStats: futures.stats(), quickCommands: quick.enabled() });
+    });
+    app.post("/api/paper/reset", (_req, res) => {
+      if (ctx.agent.trading.mode !== "PAPER") return res.status(409).json({ error: "Yalnızca paper modda sıfırlanabilir." });
+      ctx.agent.setTrading(ctx.newPaperClient());
+      ctx.agent.equityHistory = [];
+      ctx.agent.lossStreak = 0;
+      ctx.agent.awaitingNewSetup.clear();
+      futures.positions = [];
+      ctx.store.addEvent("bilgi", `Paper hesap sıfırlandı: ${ctx.agent.trading.startEquity} USDT sanal bakiye.`);
+      ctx.store.bus.publish("positions", ctx.agent.positionsView());
+      res.json({ ok: true, balance: ctx.agent.trading.startEquity });
     });
     app.get("/api/quick/sims", (_req, res) => res.json({ enabled: quick.enabled(), sims: quick.simView(), settings: ctx.store.settings.quick }));
     app.get("/api/telegram/chart/:file", (req, res) => {

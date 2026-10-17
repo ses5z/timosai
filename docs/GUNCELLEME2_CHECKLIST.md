@@ -9,7 +9,7 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [ ] P3 Yapılamayan kalem BLOCKED + tek cümle neden + en yakın alternatif
 - [x] DONE P4 Harici uç noktalar curl ile doğrulandı → `docs/VERI_KAYNAKLARI.md` (OKX public, Binance Futures, CoinGecko, DefiLlama, Honeypot.is, OnchainOS); izin listesine eklendi
 - [ ] P5 Mevcut kurallar korunuyor (sert limitler, LIVE=false varsayılan, anahtarlar yalnızca .env, yasak terimler, tavsiye yok, dondurma yok)
-- [ ] P5a QUICK_COMMANDS varsayılanı: LIVE=false iken açık; LIVE=true iken varsayılan kapalı, yalnızca .env'de açıkça true ise çalışır
+- [x] DONE P5a QUICK_COMMANDS varsayılanı: LIVE=false iken açık; LIVE=true iken varsayılan kapalı, yalnızca .env'de açıkça true ise çalışır
 - [ ] P5b Isı haritası/çekmecede Al/Sat düğmesi yok
 - [!] BLOCKED P6 Follow Line (lisans başlığı ve kaynak kod sayfadan doğrulanamadı; kendi ATR trend çizgimiz kullanılıyor, arayüzde "Follow Line" adı yok) – lisans başlığı kontrol edildi; izin yoksa BLOCKED + kendi ATR-trend çizgisi, "Follow Line" adı kullanılmaz; izin varsa dosya başı link/yazar/lisans notu
 - [x] DONE P6a Lightweight Charts (TradingView) atfı korunuyor
@@ -46,20 +46,20 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [x] DONE 3.7 Test + ekran görüntüsü + commit
 
 ## Madde 4 – Paper trading motoru
-- [ ] 4.1 Sanal bakiye config, varsayılan 1000 USDT
-- [ ] 4.2 Panelden sıfırlama
-- [ ] 4.3 Market emir: order book en iyi ask/bid + komisyon (config) + slipaj (config)
-- [ ] 4.4 Stop/hedef canlı fiyatla tetiklenir
-- [ ] 4.5 Paper futures: /l, /s ve ajanın vadeli kararları global SWAP fiyatıyla
-- [ ] 4.6 Isolated margin, likidasyon fiyatı, funding etkisi 8 saatte bir
-- [ ] 4.7 Kaldıraç tavanı config
-- [ ] 4.8 Panelde istatistik kartı: kazanma oranı, ortalama R, maks drawdown, toplam PnL, işlem sayısı
-- [ ] 4.9 Canlı mod: LIVE=true + OKX anahtarı → yalnızca spot, sert limitler
-- [ ] 4.10 Canlı işlemler "CANLI" etiketi + OKX emir numarası
-- [ ] 4.11 Bonus: gün içinde tek küçük canlı spot işlem (kullanıcı anahtar girip LIVE=true yaptığında)
-- [ ] 4.12 QUICK_COMMANDS=true (paper'da varsayılan)
-- [ ] 4.13 İşlem geçmişi etiketleri PAPER / CANLI × OTONOM / HIZLI
-- [ ] 4.14 Test + ekran görüntüsü + commit
+- [x] DONE 4.1 Sanal bakiye config, varsayılan 1000 USDT
+- [x] DONE 4.2 Panelden sıfırlama
+- [x] DONE 4.3 Market emir: order book en iyi ask/bid + komisyon (config) + slipaj (config)
+- [x] DONE 4.4 Stop/hedef canlı fiyatla tetiklenir
+- [x] DONE 4.5 Paper futures: /l, /s ve ajanın vadeli kararları global SWAP fiyatıyla
+- [x] DONE 4.6 Isolated margin, likidasyon fiyatı, funding etkisi 8 saatte bir
+- [x] DONE 4.7 Kaldıraç tavanı config
+- [x] DONE 4.8 Panelde istatistik kartı: kazanma oranı, ortalama R, maks drawdown, toplam PnL, işlem sayısı
+- [x] DONE 4.9 Canlı mod: LIVE=true + OKX anahtarı → yalnızca spot, sert limitler
+- [~] PARTIAL 4.10 (CANLI etiketi + OKX emir numarası kodda ve panelde hazır; canlı işlem henüz yapılmadı) Canlı işlemler "CANLI" etiketi + OKX emir numarası
+- [!] BLOCKED 4.11 (OKX API anahtarları .env'de boş ve LIVE=true kararı kullanıcıya ait; anahtar girilip tünel kapatıldıktan sonra yapılacak) Bonus: gün içinde tek küçük canlı spot işlem (kullanıcı anahtar girip LIVE=true yaptığında)
+- [x] DONE 4.12 QUICK_COMMANDS=true (paper'da varsayılan)
+- [x] DONE 4.13 İşlem geçmişi etiketleri PAPER / CANLI × OTONOM / HIZLI
+- [x] DONE 4.14 Test + ekran görüntüsü + commit
 
 ## Madde 5 – Keşfet CEX / DEX
 - [ ] 5.1 Keşfet üstünde iki sekme: CEX ve DEX; kart kuyruğu CEX altında

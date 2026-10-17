@@ -31,7 +31,7 @@ export class Scenario {
   private agent(): Agent {
     const main = this.ctx.agent;
     if (main.trading.mode === "PAPER") return main;
-    const sandbox = new Agent({ ...main.d, trading: new MockTradingClient(this.ctx.limits, this.ctx.ledger, this.ctx.env.paperBalanceUsdt), decision: new RuleDecisionProvider(this.ctx.thresholds) });
+    const sandbox = new Agent({ ...main.d, trading: this.ctx.newPaperClient(), decision: new RuleDecisionProvider(this.ctx.thresholds) });
     sandbox.candidates = new Map(main.candidates);
     sandbox.prices = new Map(main.prices);
     return sandbox;

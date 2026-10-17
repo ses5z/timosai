@@ -81,7 +81,8 @@ export function loadEnv(opts: { file?: string; source?: Record<string, string | 
     live: bool(get("LIVE"), false),
     autonomous: bool(get("AUTONOMOUS"), true),
     scanIntervalSec: Math.max(10, num(get("SCAN_INTERVAL_SEC"), 30)),
-    paperBalanceUsdt: Math.max(1, num(get("PAPER_BALANCE_USDT"), 30)),
+    // Paper bakiyesi: .env'de verilmezse config/paper.json → startBalanceUsdt (varsayılan 1000).
+    paperBalanceUsdt: get("PAPER_BALANCE_USDT") ? Math.max(1, num(get("PAPER_BALANCE_USDT"), 1000)) : 0,
     okx: { apiKey: get("OKX_API_KEY"), secret: get("OKX_API_SECRET"), passphrase: get("OKX_API_PASSPHRASE") },
     mentorProvider: provider === "claude" ? "claude" : provider === "rule" ? "rule" : "gemini",
     mentorModel: get("MENTOR_MODEL"),
@@ -91,7 +92,8 @@ export function loadEnv(opts: { file?: string; source?: Record<string, string | 
     anthropicKey: get("ANTHROPIC_API_KEY"),
     telegramToken: get("TELEGRAM_BOT_TOKEN"),
     telegramAllowedUserId: get("TELEGRAM_ALLOWED_USER_ID"),
-    quickCommands: bool(get("QUICK_COMMANDS"), false),
+    // Paper modda (LIVE=false) varsayılan açık; LIVE=true iken varsayılan kapalı, yalnızca .env'de açıkça true ise çalışır.
+    quickCommands: bool(get("LIVE"), false) ? bool(get("QUICK_COMMANDS"), false) : bool(get("QUICK_COMMANDS"), true),
     avaxPrivateKey: get("AVAX_DEPLOYER_PRIVATE_KEY"),
     avaxFujiRpc: get("AVAX_FUJI_RPC") || "https://api.avax-test.network/ext/bc/C/rpc",
     avaxMainnetRpc: get("AVAX_MAINNET_RPC") || "https://api.avax.network/ext/bc/C/rpc",

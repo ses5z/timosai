@@ -19,7 +19,7 @@ export function req(over: Partial<EntryRequest> = {}): EntryRequest {
 }
 
 export function mkCtx(envOver: Record<string, string> = {}) {
-  const env = loadEnv({ file: "/nonexistent/.env", source: { ATK_MODE: "mock", ...envOver } });
+  const env = loadEnv({ file: "/nonexistent/.env", source: { ATK_MODE: "mock", PAPER_BALANCE_USDT: "30", ...envOver } });
   const market = new MockMarketData(1_790_000_000_000);
   return createContext(env, { market, atk: null });
 }

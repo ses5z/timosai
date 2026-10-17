@@ -1,0 +1,10 @@
+{
+  "_aciklama": "Paper trading motoru: gerçek piyasa verisi, sanal bakiye; emir borsaya gitmez. Sert limitler paper'da da geçerlidir.",
+  "startBalanceUsdt": 1000,
+  "feeRate": 0.001,
+  "slippagePct": 0.05,
+  "maxLeverage": 10,
+  "fundingIntervalHours": 8,
+  "maintenanceMarginRate": 0.005,
+  "agentFutures": { "enabled": true, "leverage": 2, "marginUsdt": 5, "maxOpen": 2, "stopPct": 2, "targetPct": 4.4 }
+}

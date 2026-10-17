@@ -30,7 +30,6 @@ export function liquidationPrice(side: "long" | "short", entry: number, lev: num
 }
 
 export class QuickTrader {
-  sims: SimPosition[] = [];
   constructor(private readonly ctx: AppContext) {}
 
   enabled(): boolean {
@@ -91,7 +90,11 @@ export class QuickTrader {
   async close(instId: string, via: string): Promise<QuickResult> {
     const { ctx } = this;
     const p = ctx.agent.trading.listPositions().find((x) => x.instId === instId);
-    if (!p) return { ok: false, text: `${instId.split("-")[0]} için açık spot pozisyon yok. (Spotta açığa satış yapılmaz.)` };
+    if (!p) {
+      const fp = this.ctx.extras.futures?.closeBySymbol?.(instId);
+      if (fp) return { ok: true, text: `HIZLI: ${instId.split("-")[0]} paper futures pozisyonu (SİMÜLASYON) kapatıldı.` };
+      return { ok: false, text: `${instId.split("-")[0]} için açık pozisyon yok. (Spotta açığa satış yapılmaz.)` };
+    }
     const r = await ctx.agent.trading.reducePosition(p.id, 1, p.lastPx, `Hızlı komut: kapat (${via})`, "hızlı");
     const msg = `HIZLI: ${instId.split("-")[0]} pozisyonu kapatıldı @ ${roundPrice(p.lastPx)}. Sonuç ${r ? (r.pnl >= 0 ? "+" : "") + r.pnl.toFixed(3) : "?"} USDT.`;
     ctx.store.addEvent("emir", msg, instId);
@@ -99,38 +102,15 @@ export class QuickTrader {
     return { ok: true, text: msg };
   }
 
-  /** Kaldıraçlı komutlar yalnızca SİMÜLASYON: global SWAP fiyatı, likidasyon fiyatı hesaplanır, gerçek emre dönüşmez. */
-  async sim(side: "long" | "short", instId: string, lev: number, margin: number, via: string): Promise<QuickResult> {
-    const { ctx } = this;
-    const levC = Math.max(1, Math.min(20, lev));
-    let px = ctx.agent.prices.get(instId)?.last ?? 0;
-    let src = "spot fiyatı";
-    try {
-      const t: any = await ctx.atk?.call("market_get_ticker", { instId: `${instId.split("-")[0]}-USDT-SWAP` });
-      const v = Number(t?.[0]?.last);
-      if (v > 0) {
-        px = v;
-        src = "SWAP fiyatı (ATK)";
-      }
-    } catch {
-      /* spot fiyatına düş */
-    }
-    if (!px) return { ok: false, text: `${instId} için fiyat yok.` };
-    const s: SimPosition = { id: crypto.randomUUID().slice(0, 8), instId, side, leverage: levC, marginUsdt: margin, entryPx: px, liqPx: roundPrice(liquidationPrice(side, px, levC)), openedAt: Date.now() };
-    this.sims.push(s);
-    const msg = `SİMÜLASYON: ${instId.split("-")[0]} ${side} ${levC}x, teminat ${margin} USDT, giriş ${roundPrice(px)} (${src}), likidasyon ≈ ${s.liqPx}. OKX TR'de kaldıraç yoktur; bu bir paper işlemdir.`;
-    ctx.ledger.append("order", { durum: "SİMÜLASYON", instId, yon: side, kaldirac: levC, teminat: margin, giris: px, likidasyon: s.liqPx, via });
-    ctx.store.addEvent("emir", msg, instId);
-    return { ok: true, text: msg };
+  /** Kaldıraçlı komutlar yalnızca SİMÜLASYON (paper futures): global SWAP fiyatı, isolated margin, likidasyon, funding. */
+  async sim(side: "long" | "short", instId: string, lev: number, margin: number, _via: string): Promise<QuickResult> {
+    const f = this.ctx.extras.futures as import("./paperFutures.js").PaperFutures | undefined;
+    if (!f) return { ok: false, text: "Paper futures modülü yüklü değil." };
+    const r = await f.open({ instId, side, leverage: lev, marginUsdt: margin, origin: "hızlı" });
+    return { ok: r.ok, text: r.text };
   }
 
   simView() {
-    return this.sims.map((s) => {
-      const last = this.ctx.agent.prices.get(s.instId)?.last ?? s.entryPx;
-      const dir = s.side === "long" ? 1 : -1;
-      const pnl = s.marginUsdt * s.leverage * dir * ((last - s.entryPx) / s.entryPx);
-      const liquidated = s.side === "long" ? last <= s.liqPx : last >= s.liqPx;
-      return { ...s, lastPx: last, pnlUsdt: round(liquidated ? -s.marginUsdt : pnl, 4), liquidated };
-    });
+    return (this.ctx.extras.futures?.view?.() ?? []) as any[];
   }
 }

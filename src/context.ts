@@ -21,7 +21,7 @@ import { InstrumentCatalog, mockInstruments } from "./market/instruments.js";
 import { GoPlusSecurity, MockTokenSecurity, OnchainOsSecurity, ScamScanner } from "./security/tokenSecurity.js";
 import { Store } from "./state/store.js";
 import { loadHardLimits, type HardLimits } from "./trading/hardLimits.js";
-import { AtkTradingClient, MockTradingClient, type TradingClient } from "./trading/tradingClient.js";
+import { AtkTradingClient, MockTradingClient, loadPaperConfig, type PaperConfig, type QuoteFn, type TradingClient } from "./trading/tradingClient.js";
 import { log, registerSecrets } from "./util/log.js";
 
 export interface AppContext {
@@ -40,6 +40,9 @@ export interface AppContext {
   fundamentals: FundamentalsData;
   scanner: ScamScanner;
   instruments: InstrumentCatalog;
+  paper: PaperConfig;
+  quote: QuoteFn;
+  newPaperClient(): MockTradingClient;
   atk: AtkCaller | null;
   agent: Agent;
   proof: ProofAnchor;
@@ -91,7 +94,15 @@ export function createContext(env: AppEnv, opts: ContextOptions = {}): AppContex
 
   const derivConfig = loadDerivConfig();
   const derivatives: DerivativesData = opts.derivatives ?? (atk ? new LiveDerivativesData(atk) : new MockDerivativesData());
-  const trading: TradingClient = opts.trading ?? new MockTradingClient(limits, ledger, env.paperBalanceUsdt);
+  const paper = loadPaperConfig();
+  const startBal = env.paperBalanceUsdt || paper.startBalanceUsdt;
+  // Paper dolumları order book'tan (ATK market_get_orderbook) en iyi ask/bid ile.
+  const quote: QuoteFn = async (instId) => {
+    const ob = await market.orderbook(instId).catch(() => null);
+    return ob ? { bid: ob.bid, ask: ob.ask } : null;
+  };
+  const newPaperClient = () => new MockTradingClient(limits, ledger, startBal, quote, paper);
+  const trading: TradingClient = opts.trading ?? newPaperClient();
   const agent = new Agent({
     market,
     trading,
@@ -115,7 +126,7 @@ export function createContext(env: AppEnv, opts: ContextOptions = {}): AppContex
     store.bus.publish("warning", w);
   });
 
-  return { env, store, ledger, warnings, limits, thresholds, contract, watchlist, market, mock, derivatives, derivConfig, instruments: new InstrumentCatalog(env.atkMode === "live" ? atk : null, mockInstruments(watchlist.map((w) => w.instId.split("-")[0]))), fundamentals: env.atkMode === "live" ? new CoinGeckoFundamentals() : new MockFundamentals(), scanner: new ScamScanner(env.atkMode === "live" ? [new GoPlusSecurity(), new OnchainOsSecurity()] : [new MockTokenSecurity()]), atk, agent, proof: new NoopProofAnchor(), missingEnv: missingEnvLines(env), extras: {} };
+  return { env, store, ledger, warnings, limits, thresholds, contract, watchlist, market, mock, derivatives, derivConfig, paper, quote, newPaperClient, instruments: new InstrumentCatalog(env.atkMode === "live" ? atk : null, mockInstruments(watchlist.map((w) => w.instId.split("-")[0]))), fundamentals: env.atkMode === "live" ? new CoinGeckoFundamentals() : new MockFundamentals(), scanner: new ScamScanner(env.atkMode === "live" ? [new GoPlusSecurity(), new OnchainOsSecurity()] : [new MockTokenSecurity()]), atk, agent, proof: new NoopProofAnchor(), missingEnv: missingEnvLines(env), extras: {} };
 }
 
 /** LIVE=true ise ve koşullar uygunsa canlı işlem istemcisine geçer; değilse PAPER kalır. */
