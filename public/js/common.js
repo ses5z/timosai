@@ -259,7 +259,8 @@
       T.status = s;
       const dry = s.tradingMode === "PAPER";
       const b = document.getElementById("mode-badge");
-      b.textContent = dry ? "Paper trade" : "CANLI İŞLEM";
+      b.textContent = dry ? "Paper trade" : "Live account";
+      b.title = dry ? "Gerçek piyasa verisi, sanal bakiye; emir borsaya gitmez." : "OKX hesabına bağlı: bakiye cüzdandan okunur, emirler borsaya gider.";
       b.className = "badge " + (dry ? "badge-dry" : "badge-live");
       const fb = document.getElementById("footer-dry");
       fb.hidden = !dry;

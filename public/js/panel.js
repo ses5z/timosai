@@ -167,7 +167,18 @@
     ["#qk-amt", "#qk-mode", "#qk-val"].forEach((id) => $(id).addEventListener("change", save));
   }
 
-  const refreshAll = () => Promise.allSettled([loadPortfolio(), loadContract(), loadEvents(), loadOrderLog(), loadAtk(), loadLedger(), loadQuick(), loadPaper()]);
+  async function loadWallet() {
+    const card = $("#wallet-card");
+    let w;
+    try { w = await T.api("/api/wallet"); } catch (e) { card.hidden = false; $("#wl-total").textContent = `Cüzdan okunamadı: ${e.message}`; return; }
+    card.hidden = !w.live;
+    if (!w.live) return;
+    $("#wl-total").textContent = `Toplam ${F.num(w.totalUsd, 2)} USD · ${new Date(w.at).toLocaleTimeString("tr-TR")} itibarıyla (15 sn'de bir yenilenir)`;
+    T.renderKeep($("#wl-wrap"), `<table class="dense"><thead><tr><th>Varlık</th><th class="num">Miktar</th><th class="num">Kullanılabilir</th><th class="num">Emirde</th><th class="num">USD</th></tr></thead><tbody>${w.assets.map((a) => `<tr><th scope="row">${T.esc(a.ccy)}</th><td class="num">${F.num(a.cash, a.cash < 1 ? 8 : 2)}</td><td class="num">${F.num(a.avail, a.avail < 1 ? 8 : 2)}</td><td class="num">${F.num(a.frozen, a.frozen < 1 ? 8 : 2)}</td><td class="num">${F.num(a.usd, 2)}</td></tr>`).join("")}</tbody></table>`);
+  }
+  setInterval(loadWallet, 15000);
+
+  const refreshAll = () => Promise.allSettled([loadPortfolio(), loadContract(), loadEvents(), loadOrderLog(), loadWallet(), loadAtk(), loadLedger(), loadQuick(), loadPaper()]);
   refreshAll();
   T.on("status", renderStatus);
   if (T.status) renderStatus(T.status);

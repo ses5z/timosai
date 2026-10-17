@@ -346,14 +346,28 @@ export class AtkTradingClient extends TradingClient {
     return this.balance;
   }
 
+  /** Cüzdandaki tüm varlıklar (OKX hesabı): ccy, toplam, kullanılabilir, donmuş, USD değeri. */
+  wallet: { ccy: string; cash: number; avail: number; frozen: number; usd: number }[] = [];
+  walletTotalUsd = 0;
+
   async refreshBalance(force = false): Promise<number> {
-    if (!force && Date.now() - this.balanceAt < 30_000) return this.balance;
-    const data: any = await this.tool("account_get_balance", { ccy: "USDT" });
+    if (!force && Date.now() - this.balanceAt < 15_000) return this.balance;
+    const data: any = await this.tool("account_get_balance", {});
     const details: any[] = data?.[0]?.details ?? [];
-    const usdt = details.find((d) => d.ccy === "USDT");
-    this.balance = Number(usdt?.availBal ?? usdt?.cashBal ?? 0) || 0;
+    this.wallet = details
+      .map((d) => ({ ccy: String(d.ccy), cash: Number(d.cashBal) || 0, avail: Number(d.availBal) || 0, frozen: Number(d.frozenBal) || 0, usd: Number(d.eqUsd) || 0 }))
+      .filter((d) => d.cash > 0)
+      .sort((a, b) => b.usd - a.usd);
+    this.walletTotalUsd = Number(data?.[0]?.totalEq) || this.wallet.reduce((t, d) => t + d.usd, 0);
+    const usdt = this.wallet.find((d) => d.ccy === "USDT");
+    this.balance = usdt ? usdt.avail || usdt.cash : 0;
     this.balanceAt = Date.now();
     return this.balance;
+  }
+
+  /** Canlı hesapta değer = cüzdanın toplam USD karşılığı (ajanın açmadığı varlıklar dahil). */
+  equity(): number {
+    return this.walletTotalUsd > 0 ? this.walletTotalUsd : super.equity();
   }
 
   protected async preflight(): Promise<string | null> {
@@ -433,6 +447,21 @@ export class AtkTradingClient extends TradingClient {
     return Number(d?.availBal ?? 0) || 0;
   }
 
+  private async cashBase(instId: string): Promise<number> {
+    const base = instId.split("-")[0];
+    const data: any = await this.tool("account_get_balance", { ccy: base });
+    const d = (data?.[0]?.details ?? []).find((x: any) => x.ccy === base);
+    return Number(d?.cashBal ?? 0) || 0;
+  }
+
+  /** Giriş emrine bağlı (attached) stop/hedef: bekleyen algo emirleri arasında "conditional"/"oco" dışında da olabilir. */
+  private async cancelAttached(pos: Position): Promise<void> {
+    for (const ordType of ["conditional", "oco", "trigger"]) {
+      const list: any[] = (await this.tool<any[]>("spot_get_algo_orders", { instId: pos.instId, ordType, status: "pending" }).catch(() => [])) ?? [];
+      for (const a of list) await this.tool("spot_cancel_algo_order", { instId: pos.instId, algoId: a.algoId }).catch(() => undefined);
+    }
+  }
+
   private async cancelAlgos(instId: string): Promise<void> {
     for (const ordType of ["conditional", "oco"]) {
       const list: any[] = (await this.tool<any[]>("spot_get_algo_orders", { instId, ordType, status: "pending" }).catch(() => [])) ?? [];
@@ -442,18 +471,23 @@ export class AtkTradingClient extends TradingClient {
 
   protected async executeExit(pos: Position, qty: number, refPx: number) {
     const { lotSz, minSz } = await this.lotOf(pos.instId);
+    const full = qty >= pos.qty - 1e-12;
+    // Bağlı stop/hedef emri varlığı dondurur (availBal = 0). Önce iptal edilir, sonra gerçek bakiye okunur.
+    if (full) await this.cancelAlgos(pos.instId);
+    await this.cancelAttached(pos);
     const avail = await this.availBase(pos.instId);
     if (avail < Math.max(minSz, lotSz)) {
-      // Borsadaki bağlı stop/hedef zaten tetiklenmiş: pozisyon kapalı kabul edilir.
-      return { qty: pos.qty, px: refPx, closedAll: true };
+      const cash = await this.cashBase(pos.instId);
+      if (cash >= Math.max(minSz, lotSz)) throw new Error(`${pos.instId}: ${cash} adet var ama kullanılabilir değil (donmuş emir). Satış yapılmadı.`);
+      // Cüzdanda yok: bağlı stop/hedef tetiklenmiş, pozisyon borsada zaten kapanmış.
+      return { qty: pos.qty, px: refPx, closedAll: true, ordId: "borsada stop/hedef tetiklendi" };
     }
-    const full = qty >= pos.qty - 1e-12;
-    if (full) await this.cancelAlgos(pos.instId);
     let sz = Math.min(qty, avail);
     sz = Math.floor(sz / lotSz) * lotSz;
     if (sz < minSz) return { qty: 0, px: refPx, closedAll: false };
     const placed: any = await this.tool("spot_place_order", { instId: pos.instId, tdMode: "cash", side: "sell", ordType: "market", sz: sz.toFixed(8).replace(/0+$/, "").replace(/\.$/, "") });
     if (placed?.[0]?.sCode && placed[0].sCode !== "0") throw new Error(`Satış reddedildi: ${placed[0].sMsg}`);
+    if (!placed?.[0]?.ordId) throw new Error("Satış emri numarası dönmedi; pozisyon kapatılmış sayılmadı.");
     if (!full) await this.onStopMoved(pos).catch(() => undefined);
     void this.refreshBalance(true).catch(() => undefined);
     return { qty: full ? pos.qty : sz, px: refPx, closedAll: full, ordId: placed?.[0]?.ordId as string | undefined };

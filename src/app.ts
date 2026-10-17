@@ -331,6 +331,17 @@ export function createApp(ctx: AppContext) {
   });
 
   app.get("/api/events", (_req, res) => json(res, store.events.slice(-120).reverse().map((e) => ({ ...e, kind: logKind(e) }))));
+  // Canlı hesap: OKX cüzdanındaki tüm varlıklar (ajanın açmadığı varlıklar dahil), 15 sn önbellek.
+  app.get("/api/wallet", async (_req, res) => {
+    const t: any = agent.trading;
+    if (t.mode !== "CANLI" || typeof t.refreshBalance !== "function") return json(res, { live: false, assets: [], totalUsd: null });
+    try {
+      await t.refreshBalance();
+      json(res, { live: true, assets: t.wallet, totalUsd: round(t.walletTotalUsd, 2), at: Date.now() });
+    } catch (e) {
+      res.status(502).json({ live: true, error: (e as Error).message });
+    }
+  });
   app.get("/api/order-log", (_req, res) => json(res, orderRows(agent.trading.listTrades(100))));
   app.get("/api/atk", (_req, res) => json(res, { ...ledger.atkStats(), connected: ctx.atk?.available() ?? false, tools: ctx.atk?.toolNames() ?? [] }));
   app.get("/api/ledger", async (_req, res) =>

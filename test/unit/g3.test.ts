@@ -254,3 +254,45 @@ test("Pro L/S tüm SWAP: evren + funding tek çağrı, aranan coin anında, filt
   assert.match(t.units.volume, /USDT/);
   assert.equal(await s.ensureCoin("YOK"), null);
 });
+
+test("Canlı kapanış: bağlı stop varlığı donduruyorsa önce iptal edilir, sonra gerçek satış yapılır; emir no yoksa kapanmış sayılmaz", async () => {
+  const { AtkTradingClient } = await import("../../src/trading/tradingClient.js");
+  const { resolveHardLimits } = await import("../../src/trading/hardLimits.js");
+  const { SignalLedger } = await import("../../src/ledger/signalLedger.js");
+  const calls: string[] = [];
+  let algoPending = true, sellOrdId: string | undefined = "S123";
+  const atk: any = {
+    available: () => true,
+    toolNames: () => [],
+    call: async (name: string, a: any) => {
+      calls.push(name);
+      if (name === "account_get_balance") {
+        if (a.ccy === "BTC") return [{ details: [{ ccy: "BTC", cashBal: "0.0001", availBal: algoPending ? "0" : "0.0001" }] }];
+        return [{ totalEq: "30", details: [{ ccy: "USDT", cashBal: "25", availBal: "25", eqUsd: "25" }, { ccy: "BTC", cashBal: "0.0001", availBal: "0", frozenBal: "0.0001", eqUsd: "8" }] }];
+      }
+      if (name === "market_get_instruments") return [{ lotSz: "0.00000001", minSz: "0.00001" }];
+      if (name === "spot_get_algo_orders") return algoPending ? [{ algoId: "A1" }] : [];
+      if (name === "spot_cancel_algo_order") { algoPending = false; return [{}]; }
+      if (name === "spot_place_order") return [{ ordId: sellOrdId, sCode: "0" }];
+      return [];
+    },
+  };
+  const t = new AtkTradingClient(resolveHardLimits({}), new SignalLedger(), atk, 0);
+  await t.refreshBalance(true);
+  assert.equal(t.equity(), 30);
+  assert.ok(t.wallet.some((w) => w.ccy === "BTC" && w.frozen > 0));
+  const pos: any = { id: "p1", instId: "BTC-USDT", qty: 0.0001, entryPx: 80000, stopPx: 79000, initialStop: 79000, targetPx: 82000, costUsdt: 8, openedAt: 0, partialDone: false, trailing: false, mode: "CANLI", reason: "", realizedPnl: 0, lastPx: 80000, atr: 1, origin: "test" };
+  (t as any).positions.set("p1", pos);
+  const r = await t.reducePosition("p1", 1, 80100, "test kapat");
+  assert.equal(r!.closed, true);
+  assert.ok(calls.includes("spot_cancel_algo_order"));
+  assert.ok(calls.lastIndexOf("spot_place_order") > calls.indexOf("spot_cancel_algo_order"), "satış iptalden sonra");
+  assert.equal(t.listTrades(1)[0].ordId, "S123");
+  // emir numarası dönmezse kapanmış sayılmaz
+  algoPending = false; sellOrdId = undefined;
+  (t as any).positions.set("p2", { ...pos, id: "p2", qty: 0.0001, costUsdt: 8, realizedPnl: 0 });
+  const before = calls.length;
+  const rr = await t.reducePosition("p2", 1, 80100, "test").catch((e) => e);
+  assert.match(String(rr?.message ?? JSON.stringify(rr) + calls.slice(before).join(",")), /emri numarası dönmedi/);
+  assert.ok((t as any).positions.has("p2"));
+});
