@@ -155,6 +155,7 @@ Portlar ve uygulamaları (`src/ports.ts`; her biri için gerçek ve `Mock*`, `AT
 | `/panel` | Değer çizgisi, pozisyonlar, risk kartı (uyarı, engellenen emir, limit çubukları, risk skoru, boyut çarpanı), işlem geçmişi (OTONOM / HIZLI / SENARYO etiketleri), olay günlüğü, ajan durumu ve devre kesici, hızlı mod, ATK çağrıları, Avalanche kanıtı, **Senaryoyu başlat** |
 | `/isi-haritasi` | Treemap (boyut hacim, renk değişim veya fırsat/risk). Çekmecede: grafik, ajanın görüşü, skor bileşenleri, vadeli durum, hold raporu, pozisyon, Takibe al, Ajana öncelik ver, Mentora sor. Al/Sat yok. `?s=SOL-USDT` paylaşılabilir |
 | `/telegram` | Bağlantı durumu, 4 adım rehber, komut listesi, telefon çerçevesinde canlı önizleme (grafikli), bildirim ayarları |
+| `/terminal` | Pro Terminal: izleme listesi, büyük grafik, order book, vadeli, L/S, arz, alt sekmeler |
 | `/hakkimizda` | Vizyon, nasıl çalışır (8 adım), veri kaynakları, ekip, yol haritası, ATK araçları, MIT, sorumluluk notu |
 
 Grafikler [TradingView Lightweight Charts](https://www.tradingview.com/lightweight-charts/) ile çizilir (Apache 2.0, `public/vendor/`, CDN yok, varsayılan TradingView atıf logosu açık). Veri bizimdir (ATK mumları).
@@ -212,6 +213,22 @@ npm run test:e2e    # Playwright (bilgisayardaki Microsoft Edge ile; PW_CHANNEL=
 - ATK `news`/`smartmoney` için OKX OAuth, OnchainOS için Web3 API anahtarı gerekli; şimdilik "veri yok".
 - Canlı veri sinyal üretmediğinde kayıtlı tarama anını tekrar oynatan "KAYIT" modu yazılmadı. Senaryo düğmesi canlı fiyatlardan deterministik kararlar üretiyor.
 - Gerçek emir yolu kodlandı ve kapı testli, ancak geliştirme sırasında `LIVE=true` açılmadı.
+
+## Güncelleme 2 (özet)
+
+Ayrıntılı durum: [`docs/GUNCELLEME2_CHECKLIST.md`](docs/GUNCELLEME2_CHECKLIST.md); uç nokta doğrulamaları: [`docs/VERI_KAYNAKLARI.md`](docs/VERI_KAYNAKLARI.md).
+
+- **Terimler:** kripto terimleri İngilizce (Layer 1, DeFi, PnL…), "KURU" yerine **Paper trade** ("Gerçek piyasa verisi, sanal bakiye; emir borsaya gitmez").
+- **Paper trading motoru** (`config/paper.json`): 1000 USDT sanal bakiye (panelden sıfırlanır). Market emir order book'taki en iyi ask/bid + komisyon + slipaj ile dolar. Paper futures: `/l`, `/s` ve ajanın vadeli kararları global SWAP fiyatıyla; isolated margin, likidasyon, 8 saatlik funding, kaldıraç tavanı. Panelde istatistik kartı (kazanma oranı, ortalama R, maks drawdown, toplam PnL, işlem sayısı). Etiketler: PAPER / CANLI × OTONOM / HIZLI, canlıda OKX emir numarası. `QUICK_COMMANDS` paper'da varsayılan açık; `LIVE=true` iken varsayılan kapalı.
+- **Keşfet CEX/DEX:** CEX'te OKX'in tüm spot pariteleri aranır (USDT, USDC, BTC, ETH, SOL, TRY; yalnızca borsada olanlar). Büyük grafik (15m/1H/4H/1D), AI analizi, vadeli, arz, likidite uyarısı. İzin listesi dışındaki paritelerde "analiz için; işlem izin listesinde değil" notu. DEX'te zincir + kontrat adresi doğrulaması (EVM/Solana) ve çok kaynaklı güvenlik tablosu (GoPlus, Honeypot.is, OKX OnchainOS: anahtar gerekli). Paylaşılabilir URL: `/kesfet?tab=cex&s=AVAX-USDC`, `/kesfet?tab=dex&chain=56&ca=0x…`.
+- **Grafik çekmecesi:** grafik + "AI analizi" kartı; "Trend çizgisi · TimosAI ATR" ve "Seviyeler" düğmeleri (seviyeler varsayılan kapalı); fiyat biçimi coinin `tickSz`'ine göre.
+- **Arz dedektörü:** arz yapısı, 1G/1A/1Y değişim (tahmini, MC/fiyat), deflasyon, sıçramalar, kilit açılımı (ÖRNEK VERİ; DefiLlama ücretli), arz baskısı skoru (hold kararına girer), 1 yıllık eğri.
+- **Long/Short tablosu:** OKX üst trader + Binance Futures (5 dk); özet (BTC, ETH, Top 10, Top 20, All, Ex Top 20), kategori ve coin görünümleri; hacim ağırlıklı; `/ls`; kategori eşiği bildirimi.
+- **Pro Terminal** (`/terminal`): izleme listesi, büyük grafik, order book derinliği, vadeli, L/S, arz, alt sekmeler (pozisyonlar, emir geçmişi, paper istatistikleri, güvenlik taraması, ATK günlüğü). **Gündüz/gece** her iki modda (4 palet, AA kontrast testli), View Transitions.
+- **Haber:** ATK `news_get_coin_sentiment` ve `news_get_latest` her tarama turunda çağrılır; OAuth olmadan "veri yok" (50 değil).
+- **BLOCKED:** Follow Line (Kıvanç Özbilgiç) ve AlphaTrend port edilmedi; TradingView sayfalarında lisans başlığı ve kaynak kod doğrulanamadı, yerine kendi ATR trend çizgimiz kullanılıyor ve arayüzde "Follow Line" adı geçmiyor. OnchainOS (Web3 anahtarı/x402), DefiLlama emisyon (ücretli), doğrulanmış gerçek honeypot adresi (uydurulmadı), gün içi canlı işlem (OKX anahtarı ve `LIVE=true` kararı kullanıcıda).
+
+**Güvenlik:** Cloudflare tüneli açıkken `LIVE=false` kalır. OKX anahtarları girilip `LIVE=true` yapılmadan önce tünel kapatılır. Panelde hiçbir anahtar/token görünmez.
 
 ## Lisans
 
