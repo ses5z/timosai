@@ -1,0 +1,119 @@
+// MentorService: seçili sağlayıcı → diğeri → RuleMentor zinciri. Hata/limitte sessizce yedeğe geçer.
+// Web, ses ve Telegram aynı sohbet geçmişini paylaşır.
+import type { AppContext } from "../context.js";
+import { ClaudeMentor, DEFAULT_CLAUDE_MODEL, DEFAULT_GEMINI_MODEL, GeminiMentor, type MentorProvider } from "./llm.js";
+import { INJECTION_RE, RuleMentor, explainPlanText } from "./ruleMentor.js";
+import { MentorTools } from "./tools.js";
+import { analyzeCandidate } from "./analysis.js";
+import { log } from "../util/log.js";
+import type { ChatMessage } from "../state/store.js";
+
+export interface MentorReply {
+  text: string;
+  provider: string;
+  ai: boolean;
+  pending: { id: string; summary: string } | null;
+}
+
+const YES_RE = /^(evet|onayl[ıi]yorum|onayla|tamam|olur|kabul|yes)\b/i;
+const NO_RE = /^(hay[ıi]r|vazge[çc]|iptal|istemiyorum|no)\b/i;
+
+export class MentorService {
+  readonly tools: MentorTools;
+  readonly rule: RuleMentor;
+  private chain: MentorProvider[] = [];
+  private calls: number[] = [];
+  private lastProvider = "kural tabanlı";
+  private lastAi = false;
+
+  constructor(
+    private readonly ctx: AppContext,
+    opts: { fetchImpl?: typeof fetch } = {},
+  ) {
+    this.tools = new MentorTools(ctx);
+    this.rule = new RuleMentor(ctx, this.tools);
+    const env = ctx.env;
+    const gemini = env.geminiKey ? new GeminiMentor(env.geminiKey, env.mentorModel || DEFAULT_GEMINI_MODEL, opts.fetchImpl) : null;
+    const claude = env.anthropicKey ? new ClaudeMentor(env.anthropicKey, env.claudeModel || DEFAULT_CLAUDE_MODEL, opts.fetchImpl) : null;
+    if (env.mentorProvider === "claude") this.chain = [claude, gemini].filter(Boolean) as MentorProvider[];
+    else if (env.mentorProvider === "gemini") this.chain = [gemini, claude].filter(Boolean) as MentorProvider[];
+    else this.chain = [];
+    if (this.chain[0]) {
+      this.lastProvider = this.chain[0].name;
+      this.lastAi = true;
+    }
+  }
+
+  status() {
+    return { active: this.lastProvider, ai: this.lastAi, provider: this.chain[0]?.name ?? "kural tabanlı", chain: [...this.chain.map((c) => c.name), "kural tabanlı"], hourlyLimit: this.ctx.env.mentorHourlyLimit, usedLastHour: this.usedLastHour() };
+  }
+
+  private usedLastHour(): number {
+    const now = Date.now();
+    this.calls = this.calls.filter((t) => now - t < 3_600_000);
+    return this.calls.length;
+  }
+
+  history(): ChatMessage[] {
+    return this.ctx.store.chat.slice(-40);
+  }
+
+  async chat(textRaw: string, via: ChatMessage["via"] = "web"): Promise<MentorReply> {
+    const text = String(textRaw ?? "").slice(0, 800).trim();
+    if (!text) return { text: "Bir şey yazmadın.", provider: "kural tabanlı", ai: false, pending: null };
+    const history = this.ctx.store.chat.slice(-8);
+    this.ctx.store.addChat({ role: "user", text, via });
+    this.tools.lastPending = null;
+    let reply: MentorReply | null = null;
+
+    // Bekleyen onaya evet/hayır
+    const pending = [...this.ctx.store.pending.values()].sort((a, b) => b.createdAt - a.createdAt)[0];
+    if (pending && (YES_RE.test(text) || NO_RE.test(text))) {
+      const r = await this.tools.confirm(pending.id, YES_RE.test(text));
+      reply = { text: r.ok ? (YES_RE.test(text) ? `Tamam, yapıldı: ${pending.summary}` : "Vazgeçtim, hiçbir şey değişmedi.") : r.error ?? "Olmadı.", provider: "kural tabanlı", ai: false, pending: null };
+    } else if (INJECTION_RE.test(text.toLocaleLowerCase("tr"))) {
+      // Kural delme / prompt sızdırma girişimleri modele hiç gitmez.
+      reply = { ...(await this.rule.reply(text)), provider: "kural tabanlı", ai: false, pending: null };
+    } else {
+      const limited = this.usedLastHour() >= this.ctx.env.mentorHourlyLimit;
+      if (!limited) {
+        for (const p of this.chain) {
+          if (!p.available()) continue;
+          try {
+            this.calls.push(Date.now());
+            const out = await p.reply({ text, history, tools: this.tools });
+            reply = { text: out, provider: p.name, ai: true, pending: this.tools.lastPending };
+            break;
+          } catch (e) {
+            log.warn(`Mentor sağlayıcısı başarısız, yedeğe geçiliyor: ${(e as Error).message}`);
+          }
+        }
+      }
+      if (!reply) {
+        const r = await this.rule.reply(text);
+        reply = { text: r.text, provider: "kural tabanlı", ai: false, pending: this.tools.lastPending };
+      }
+    }
+    this.lastProvider = reply.provider;
+    this.lastAi = reply.ai;
+    this.ctx.store.addChat({ role: "mentor", text: reply.text, via, provider: reply.provider, pendingId: reply.pending?.id });
+    return reply;
+  }
+
+  async confirm(id: string, yes: boolean, via: ChatMessage["via"] = "web"): Promise<MentorReply> {
+    const p = this.ctx.store.pending.get(id);
+    const r = await this.tools.confirm(id, yes);
+    const text = r.ok ? (yes ? `Tamam, yapıldı: ${p?.summary ?? ""}` : "Vazgeçtim, hiçbir şey değişmedi.") : r.error ?? "Olmadı.";
+    this.ctx.store.addChat({ role: "mentor", text, via, provider: "kural tabanlı" });
+    return { text, provider: "kural tabanlı", ai: false, pending: null };
+  }
+
+  /** Keşfet'te sağa kaydırınca otomatik analiz (kod hesaplar; metin kural tabanlı ve kısa). */
+  analyze(instId: string) {
+    return analyzeCandidate(this.ctx, instId);
+  }
+
+  explainPlan(plan: any): string {
+    return explainPlanText(plan);
+  }
+}

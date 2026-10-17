@@ -63,11 +63,11 @@ export function createApp(ctx: AppContext) {
   app.get("/api/candidates", (_req, res) => json(res, agent.queue().map((c) => ({ ...c, followed: store.follows.includes(c.instId) }))));
 
   app.get("/api/queue", (_req, res) => {
-    const q = agent
-      .queue()
-      .filter((c) => c.decision !== "ele" || agent.candidates.size < 18)
-      .filter((c) => !store.passed.has(c.instId) && !store.follows.includes(c.instId))
-      .slice(0, 20);
+    // Kuyruk: önce aç/izle, 15'e tamamlanana kadar en iyi "ele"ler; en fazla 20 aday.
+    const open = agent.queue().filter((c) => !store.passed.has(c.instId) && !store.follows.includes(c.instId));
+    const good = open.filter((c) => c.decision !== "ele");
+    const rest = open.filter((c) => c.decision === "ele");
+    const q = [...good, ...rest.slice(0, Math.max(0, 15 - good.length))].slice(0, 20);
     json(res, { queue: q, follows: store.follows, canUndo: store.swipeHistory.length > 0, total: agent.candidates.size });
   });
 

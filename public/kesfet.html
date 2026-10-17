@@ -1,3 +1,63 @@
 <!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TimosAI</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/css/app.css"></head>
-<body><main id="main" tabindex="-1"><h1>Hazırlanıyor</h1><p class="muted">Bu sayfa sonraki dilimde gelecek. <a href="/panel">Panele geç</a>.</p></main><script src="/js/common.js"></script></body></html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keşfet · TimosAI</title>
+  <meta name="description" content="Ajanın seçtiği adaylar tek tek kart olarak gelir: kaydırarak ele ya da listene al.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<main id="main" tabindex="-1">
+  <div class="page-head">
+    <div>
+      <h1>Keşfet</h1>
+      <p>Ajanın taradığı adaylar tek tek gelir. Sağa kaydır: listene al ve mentor analiz etsin. Sola kaydır: geç. Listeye almak işlem açmak değildir.</p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <div class="tabs" role="tablist" aria-label="Görünüm">
+        <button role="tab" id="tab-cards" aria-selected="true" aria-controls="view-cards">Kartlar</button>
+        <button role="tab" id="tab-list" aria-selected="false" aria-controls="view-list">Listem <span id="follow-count" class="num">(0)</span></button>
+      </div>
+      <div id="detail-toggle"></div>
+    </div>
+  </div>
+  <div id="notices"></div>
+
+  <section id="view-cards" role="tabpanel" aria-labelledby="tab-cards">
+    <div class="discover">
+      <div class="deck-wrap">
+        <p class="kpi-small" id="queue-info" aria-live="polite">Kuyruk yükleniyor…</p>
+        <div class="deck" id="deck"></div>
+        <div class="deck-actions">
+          <button class="round-btn pass" id="btn-pass" type="button" aria-label="Geç (sol ok)"></button>
+          <button class="round-btn small" id="btn-undo" type="button" aria-label="Geri al"></button>
+          <button class="round-btn like" id="btn-like" type="button" aria-label="Listeme al (sağ ok)"></button>
+        </div>
+        <p class="hint">Kartı sürükle, ← → ok tuşlarını ya da düğmeleri kullan. Geri almak için Backspace.</p>
+      </div>
+      <section class="card analysis" id="analysis" aria-live="polite" aria-labelledby="an-h">
+        <h2 id="an-h">Mentor analizi</h2>
+        <p class="muted">Bir kartı sağa kaydırdığında mentor teknik tabloyu, giriş/stop/hedefi, R:R'yi ve risk bütçene göre örnek boyutu burada açıklar. Boyutu kod hesaplar.</p>
+      </section>
+    </div>
+  </section>
+
+  <section id="view-list" role="tabpanel" aria-labelledby="tab-list" hidden>
+    <div class="grid-2">
+      <section class="card" aria-labelledby="fl-h">
+        <div class="card-head"><h2 id="fl-h">Takip listem</h2><button class="btn btn-primary btn-sm" id="btn-plan" type="button">Mentorla planla</button></div>
+        <div id="follow-list"></div>
+      </section>
+      <section class="card" aria-labelledby="pl-h">
+        <div class="card-head"><h2 id="pl-h">Plan</h2></div>
+        <div id="plan-box"><p class="muted">"Mentorla planla" dediğinde kod, takip listendeki coinler için limitler içinde bir dağılım tablosu hesaplar; mentor açıklar. Onaylarsan plan ajana <b>tercih</b> olarak iletilir. Emri ajan kendi kararıyla ve kapıdan geçirerek verir.</p></div>
+      </section>
+    </div>
+  </section>
+</main>
+<script src="/js/common.js"></script>
+<script src="/js/kesfet.js"></script>
+</body>
+</html>

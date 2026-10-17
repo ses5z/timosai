@@ -1,3 +1,56 @@
 <!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TimosAI</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/css/app.css"></head>
-<body><main id="main" tabindex="-1"><h1>Hazırlanıyor</h1><p class="muted">Bu sayfa sonraki dilimde gelecek. <a href="/panel">Panele geç</a>.</p></main><script src="/js/common.js"></script></body></html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mentor · TimosAI</title>
+  <meta name="description" content="Sesli ya da yazılı mentor: adayları, risk matematiğini ve ajanın kararlarını sade dille anlatır.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<main id="main" tabindex="-1">
+  <div class="page-head">
+    <div>
+      <h1>Mentor</h1>
+      <p>Konuş ya da yaz. Mentor adayları, riskleri ve boyut matematiğini anlatır; emir veremez, tavsiye vermez. Emirleri ajan verir.</p>
+    </div>
+    <span class="badge badge-muted" id="provider-badge">Mentor: -</span>
+  </div>
+
+  <section class="mentor-stage" aria-label="Sesli mentor">
+    <span class="state-badge" id="state-badge" data-state="ready" role="status" aria-live="polite">HAZIR</span>
+    <div class="pulse" id="pulse" data-state="ready">
+      <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+      <button class="mic-btn" id="mic" type="button" aria-pressed="false" aria-label="Konuşmaya başla"></button>
+    </div>
+    <div class="controls">
+      <button class="btn btn-sm" id="btn-mute" type="button"></button>
+      <label class="switch"><input type="checkbox" id="voice-chat" role="switch"> <span>Sesli sohbet</span></label>
+      <label class="switch"><input type="checkbox" id="speak-out" role="switch" checked> <span>Cevabı oku</span></label>
+    </div>
+    <p class="kpi-small" id="speech-note" hidden></p>
+
+    <div class="convo card" aria-labelledby="last-h">
+      <h2 id="last-h" class="visually-hidden">Son konuşma</h2>
+      <div id="confirm-area"></div>
+      <div id="last-convo"><div class="bubble mentor"><small>Mentor</small>Merhaba. "Adaylar", "SOL analizi" ya da "portföyüm" diyerek başlayabilirsin.</div></div>
+    </div>
+
+    <div class="chips" role="group" aria-label="Hızlı komutlar" id="chips"></div>
+    <form class="composer" id="composer" autocomplete="off">
+      <label for="msg" class="visually-hidden">Mesajın</label>
+      <input id="msg" name="msg" placeholder="Mentora yaz…" maxlength="500">
+      <button class="btn btn-primary" type="submit" aria-label="Gönder" id="send-btn"></button>
+    </form>
+  </section>
+
+  <section class="card" style="margin-top:22px" aria-labelledby="hist-h">
+    <div class="card-head"><h2 id="hist-h">Sohbet geçmişi</h2><span class="kpi-small">Telegram ile ortak</span></div>
+    <div class="history" id="history"></div>
+  </section>
+</main>
+<script src="/js/common.js"></script>
+<script src="/js/mentor.js"></script>
+</body>
+</html>
