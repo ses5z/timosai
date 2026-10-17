@@ -7,3 +7,4 @@ playwright-report/
 artifacts/screens/
 *.log
 .DS_Store
+.claude/
