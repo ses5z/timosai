@@ -10,7 +10,7 @@ test("senaryo: tarar, KURU emir verir, riskli kararı engeller ve uyarı açar",
   const warnings: string[] = [];
   ctx.warnings.onWarning((w) => warnings.push(w.text));
   const steps = await new Scenario(ctx, 0).start();
-  assert.equal(steps.length, 5);
+  assert.equal(steps.length, 8);
   assert.equal(steps.at(-1)!.done, true);
   assert.equal(ctx.agent.trading.listPositions().length, 1);
   assert.equal(ctx.agent.trading.mode, "KURU");

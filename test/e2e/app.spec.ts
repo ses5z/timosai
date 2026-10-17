@@ -47,6 +47,8 @@ test("keşfet: sürükleme, ok tuşları ve geri al akışı", async ({ page }) 
   await expect(card).toBeVisible();
   const first = await card.getAttribute("data-inst");
   // sağa sürükle → listeme al + analiz
+  await page.locator(".deck").scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, 120));
   const box = (await card.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 3);
   await page.mouse.down();
@@ -113,7 +115,7 @@ test("ısı haritası: tıkla → çekmece → URL; Al/Sat düğmesi yok", async
 });
 
 test("kullanıcı emir yolu yok: API'de emir uç noktası bulunmaz, sayfalarda Al/Sat düğmesi yok", async ({ page }) => {
-  for (const p of ["/api/order", "/api/orders", "/api/trade", "/api/buy", "/api/sell", "/api/positions/close"]) {
+  for (const p of ["/api/order", "/api/orders", "/api/trade", "/api/buy", "/api/sell", "/api/positions/close", "/api/quick", "/api/settings/quick"]) {
     const r = await page.request.post(p, { data: { instId: "SOL-USDT", side: "buy", sz: "5" } });
     expect(r.status(), p).toBe(404);
   }
@@ -157,4 +159,49 @@ test("mentor: yazılı komut ve onay düğmesi", async ({ page }) => {
   await page.fill("#msg", "BTC al");
   await page.press("#msg", "Enter");
   await expect(page.locator("#last-convo")).toContainText("Emir veremem");
+});
+
+test("Basic/Pro: iki modda tüm sayfalar düzgün; Basic'te Pro alanları görünmez", async ({ page }) => {
+  await waitForScan(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const mode of ["basic", "pro"]) {
+    await page.goto("/");
+    await page.evaluate((m) => localStorage.setItem("tms-mode", m), mode);
+    for (const p of PAGES) {
+      const errors = watchErrors(page);
+      await page.goto(p);
+      await page.waitForTimeout(500);
+      expect(await page.evaluate(() => document.body.dataset.mode)).toBe(mode);
+      const visiblePro = await page.locator(".pro-only:visible").count();
+      if (mode === "basic") expect(visiblePro, `${p} Basic'te görünen Pro alanı`).toBe(0);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(overflow).toBeLessThanOrEqual(1);
+      expect(errors, `${p} (${mode}) konsol hataları`).toEqual([]);
+    }
+  }
+  await page.goto("/panel");
+  await page.getByRole("button", { name: "Basic" }).click();
+  expect(await page.evaluate(() => localStorage.getItem("tms-mode"))).toBe("basic");
+});
+
+test("token tarama kutusu: honeypot BLOCK, geçersiz adres hata verir", async ({ page }) => {
+  await waitForScan(page);
+  await page.goto("/kesfet");
+  await page.selectOption("#scan-chain", "bsc");
+  await page.fill("#scan-addr", "0x000000000000000000000000000000000000dEaD");
+  await page.getByRole("button", { name: "Tara", exact: true }).click();
+  await expect(page.locator("#scan-result")).toContainText("BLOCK");
+  await page.fill("#scan-addr", "0x123");
+  await page.getByRole("button", { name: "Tara", exact: true }).click();
+  await expect(page.locator("#scan-result")).toContainText("Geçersiz");
+});
+
+test("ısı haritası çekmecesi: vadeli durum ve hold raporu, Lightweight Charts grafiği", async ({ page }) => {
+  await waitForScan(page);
+  await page.goto("/isi-haritasi?s=BTC-USDT");
+  const drawer = page.getByRole("dialog");
+  await expect(drawer).toBeVisible();
+  await expect(drawer.locator("#dr-deriv")).not.toBeEmpty();
+  await expect(drawer.locator("#dr-hold")).toContainText(/hold profiline uygun|kısa vade trade edilebilir|ikisi de riskli/);
+  await expect(drawer.locator(".tv-box canvas").first()).toBeVisible();
 });

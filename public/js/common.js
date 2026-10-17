@@ -33,13 +33,13 @@
     vol: (v) => (v >= 1e9 ? nf(1).format(v / 1e9) + " Mr" : v >= 1e6 ? nf(1).format(v / 1e6) + " Mn" : v >= 1e3 ? nf(0).format(v / 1e3) + " B" : nf(0).format(v)),
   };
   T.cls = (v) => (v > 0 ? "up" : v < 0 ? "down" : "");
-  /** Vadeli durum rozeti: renk yanında her zaman metin. */
+  /** Vadeli durum etiketi: renk yanında her zaman metin. */
   T.derivBadge = (d) => {
     if (!d || !d.available) return `<span class="badge badge-muted">vadeli veri yok</span>`;
     const cls = d.manipulation === "yüksek" ? "badge-bad" : d.manipulation === "orta" || d.crowded !== "dengeli" ? "badge-warn" : "badge-ok";
     return `<span class="badge ${cls}" title="Manipülasyon şüphesi: ${T.esc(d.manipulation)}">${T.esc(d.badge)}</span>`;
   };
-  /** Vadeli durum kartı (Basit: tek rozet + ilk gerekçe; Ayrıntı: tüm sayılar). */
+  /** Vadeli durum kartı (Basic: tek etiket + gerekçeler; Pro: tüm sayılar). */
   T.derivCard = (d) => {
     if (!d || !d.available) return `<p class="kpi-small">Vadeli veri yok.</p>`;
     const s = d.snapshot, n = (v, k = 2) => (v == null ? "-" : Number(v).toFixed(k));

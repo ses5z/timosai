@@ -18,13 +18,15 @@
     </section>
     <section class="card" aria-labelledby="h-h">
       <h2 id="h-h">Nasıl çalışır?</h2>
-      <ol class="flow" style="padding:0;margin:0">
-        <li><b>Tara</b><p>Her 30 saniyede 28 likit spot çift için ATK'den fiyat, mum, RSI ve funding.</p></li>
-        <li><b>Güvenlik</b><p>Gerçek emir defterinden makas ve derinlik; proje özeti şimdilik örnek veri.</p></li>
-        <li><b>Karar</b><p>İvme, trend, hacim, RSI, oynaklık, funding ve duygu skorları → aç / izle / ele.</p></li>
-        <li><b>Sözleşme kontrolü</b><p>R:R, stop mesafesi, işlem riski, risk skoru. Aykırıysa ajan emri vermez, uyarı açılır.</p></li>
-        <li><b>Emir</b><p>Sert limit kapısı: tek emir ≤ 5 USDT, toplam ≤ 15 USDT, en fazla 3 pozisyon, saatte 6 emir, stop zorunlu.</p></li>
-        <li><b>İz</b><p>Her karar, emir ve ATK çağrısı sha256 zincirli kayda yazılır; zincire sabitlemeye hazır.</p></li>
+      <ol class="flow flow-8" style="padding:0;margin:0">
+        <li><b>Tara</b><p>Her 30 saniyede 28 likit spot çift: ATK'den fiyat, mum, RSI, order book.</p></li>
+        <li><b>Vadeli + Temel</b><p>Funding, OI (ATK); genel ve üst trader oranı, taker hacmi (OKX public); arz (CoinGecko).</p></li>
+        <li><b>Güvenlik</b><p>Makas ve derinlik; DEX tokenları için GoPlus taraması.</p></li>
+        <li><b>Karar</b><p>Skorlar + ATR trend filtresi + vadeli durum → aç / izle / ele, R:R ≥ 2.</p></li>
+        <li><b>Kapı</b><p>Davranış sözleşmesi ve sert limitler: tek emir ≤ 5 USDT, toplam ≤ 15, en fazla 3 pozisyon, stop zorunlu.</p></li>
+        <li><b>Emir</b><p>Yalnızca OKX TR spot, yalnızca ATK üzerinden; varsayılan kuru çalışma.</p></li>
+        <li><b>İz</b><p>Her karar, emir ve ATK çağrısı sha256 zincirli kayda yazılır.</p></li>
+        <li><b>Zincir</b><p>Kayıt özeti ve kapanan işlem sonuçları Avalanche'taki DecisionLog sözleşmesine.</p></li>
       </ol>
     </section>
     <div class="grid-2">
@@ -48,9 +50,22 @@
     <section class="card" aria-labelledby="a-h">
       <div class="card-head"><h2 id="a-h">Kullanılan OKX Agent Trade Kit araçları</h2><span class="badge badge-muted" id="atk-count">-</span></div>
       <ul class="tool-list mono" id="atk-tools">
-        <li>market_get_tickers</li><li>market_get_candles</li><li>market_get_indicator</li><li>market_get_funding_rate</li><li>market_get_orderbook</li><li>market_get_instruments</li><li>news_get_coin_sentiment</li><li>account_get_balance</li><li>spot_place_order</li><li>spot_place_algo_order</li><li>spot_cancel_algo_order</li><li>spot_get_order</li><li>spot_get_algo_orders</li>
+        <li>market_get_tickers</li><li>market_get_ticker</li><li>market_get_candles</li><li>market_get_indicator</li><li>market_get_funding_rate</li><li>market_get_open_interest</li><li>market_get_oi_history</li><li>market_filter_oi_change</li><li>market_get_orderbook</li><li>market_get_instruments</li><li>news_get_coin_sentiment</li><li>news_get_latest</li><li>account_get_balance</li><li>spot_place_order</li><li>spot_place_algo_order</li><li>spot_cancel_algo_order</li><li>spot_get_order</li><li>spot_get_algo_orders</li>
       </ul>
       <p class="kpi-small" style="margin-top:10px" id="atk-live"></p>
+    </section>
+    <section class="card" aria-labelledby="ds-h">
+      <h2 id="ds-h">Veri kaynakları</h2>
+      <div class="table-wrap" style="max-height:none"><table><thead><tr><th>Veri</th><th>Kaynak</th><th>Durum</th></tr></thead><tbody>
+        <tr><td>Fiyat, mum, RSI, order book, funding, OI, OI geçmişi, OI değişim filtresi</td><td>OKX Agent Trade Kit</td><td><span class="badge badge-ok">gerçek</span></td></tr>
+        <tr><td>Genel hesap oranı, üst trader oranı (hesap/pozisyon), taker hacmi</td><td>OKX vadeli verisi (ATK dışı, public)</td><td><span class="badge badge-ok">gerçek</span></td></tr>
+        <tr><td>Arz, piyasa değeri, FDV</td><td>CoinGecko public API</td><td><span class="badge badge-ok">gerçek</span></td></tr>
+        <tr><td>DEX token güvenliği</td><td>GoPlus Security</td><td><span class="badge badge-ok">gerçek</span></td></tr>
+        <tr><td>Haber, smart money</td><td>ATK news / smartmoney</td><td><span class="badge badge-muted">OAuth kimliği gerekli</span></td></tr>
+        <tr><td>Cüzdan dağılımı, OnchainOS güvenlik</td><td>OKX OnchainOS</td><td><span class="badge badge-muted">Web3 anahtarı gerekli</span></td></tr>
+        <tr><td>Kilit açılımı takvimi, önemli tarihler, proje güvenlik özeti</td><td>Elle (kaynak linkli)</td><td><span class="badge badge-warn">ÖRNEK VERİ</span></td></tr>
+      </tbody></table></div>
+      <p class="kpi-small" style="margin-top:10px">Grafikler <a href="https://www.tradingview.com/lightweight-charts/" target="_blank" rel="noopener">TradingView Lightweight Charts</a> (Apache 2.0) ile çizilir; veri bizim (ATK mumları). Trend filtresi TimosAI'nin kendi ATR trend göstergesidir.</p>
     </section>
     <div class="grid-2">
       <section class="card" aria-labelledby="l-h"><h2 id="l-h">Lisans</h2><p>MIT lisansı ile açık kaynak. Kod bu yarışma için bugün sıfırdan yazıldı.</p></section>

@@ -42,7 +42,7 @@ export interface DerivAnalysis {
   available: boolean;
   crowded: Crowded;
   manipulation: Manipulation;
-  badge: string; // Basit modda tek rozet
+  badge: string; // Basic modda tek etiket
   reasons: string[];
   flags: string[];
   snapshot: DerivSnapshot;

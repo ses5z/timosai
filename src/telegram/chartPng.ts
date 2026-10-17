@@ -152,7 +152,7 @@ export function renderLineChartPng(closes: number[], levels: ChartLevel[] = [], 
     const y = Y(data[i] + (data[i + 1] - data[i]) * (f - i));
     for (let yy = Math.ceil(y); yy <= bottom; yy++) cv.blend(x, yy, C.amber, 0.32 * (1 - (yy - y) / Math.max(1, bottom - y)));
   }
-  // seviye çizgileri
+  // giriş/stop/hedef çizgileri
   const levelColor = { entry: C.cream, stop: C.stop, target: C.target } as const;
   for (const l of levels) {
     if (!(l.v > 0)) continue;

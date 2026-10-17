@@ -28,6 +28,8 @@
     items = d.preview;
     render();
     renderSettings(d.settings);
+    const st = T.status;
+    if (st) $("#quick-state").textContent = st.quickCommands ? "açık (komut = onay, sert limitler geçerli; kaldıraçlı olanlar SİMÜLASYON)" : "kapalı (QUICK_COMMANDS=false)";
   }
   function renderSettings(n) {
     $("#n-dev").checked = n.developments;
@@ -42,5 +44,6 @@
   document.querySelectorAll("[data-quiet]").forEach((b) => b.addEventListener("click", () => save({ quietMinutes: Number(b.dataset.quiet) })));
   T.on("telegram", (m) => { items.push(m); if (items.length > 40) items.shift(); render(); });
   load();
+  T.on("status", (st) => { $("#quick-state").textContent = st.quickCommands ? "açık (komut = onay, sert limitler geçerli; kaldıraçlı olanlar SİMÜLASYON)" : "kapalı (QUICK_COMMANDS=false)"; });
   setInterval(load, 30000);
 })();
