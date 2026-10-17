@@ -92,7 +92,7 @@ p { margin: 0 0 0.8em; }
   .menu-btn, .mobile-menu, .mobile-menu.open { display: none; }
 }
 
-/* Rozetler */
+/* Etiketler (badge) */
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; border: 1px solid transparent; white-space: nowrap; }
 .badge-dry { background: var(--caution-soft); color: var(--caution); border-color: rgba(242, 193, 78, 0.4); }
 .badge-live { background: var(--risky-soft); color: #ff9a96; border-color: rgba(240, 106, 102, 0.45); }
@@ -116,7 +116,7 @@ main { max-width: var(--maxw); margin: 0 auto; padding: 20px 16px 40px; }
 .page-head p { margin: 0; color: var(--muted); max-width: 60ch; }
 .grid { display: grid; gap: var(--gap); }
 .grid-2 { display: grid; gap: var(--gap); grid-template-columns: 1fr; }
-.grid-3 { display: grid; gap: var(--gap); grid-template-columns: 1fr; }
+.grid-3 { display: grid; gap: var(--gap); grid-template-columns: 1fr; align-items: start; }
 @media (min-width: 760px) { .grid-2 { grid-template-columns: 1fr 1fr; } .grid-3 { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1080px) { .grid-3 { grid-template-columns: repeat(3, 1fr); } }
 .span-2 { grid-column: 1 / -1; }
@@ -384,3 +384,40 @@ tr:last-child td { border-bottom: 0; }
 .view-box { background: var(--ink-700); border-radius: 14px; padding: 12px 14px; }
 .heart-btn[aria-pressed="true"] { background: var(--coral); border-color: var(--coral); color: var(--ink-950); }
 .heart-btn[aria-pressed="true"] .icon { fill: currentColor; }
+
+/* ---------- Karşılama ---------- */
+.hero { min-height: calc(100vh - 230px); display: grid; place-items: center; text-align: center; padding: 30px 0 10px; position: relative; }
+.hero-bg { position: absolute; inset: 0; opacity: 0.16; pointer-events: none; overflow: hidden; }
+.hero-bg svg { width: 100%; height: 100%; }
+.hero-inner { position: relative; display: grid; gap: 18px; justify-items: center; max-width: 720px; }
+.hero-logo { width: 112px; height: 112px; filter: drop-shadow(0 14px 40px rgba(242, 169, 59, 0.25)); }
+.hero h1 { font-size: clamp(2.4rem, 8vw, 4rem); margin: 0; }
+.motto { font-family: var(--font-display); font-size: clamp(1.15rem, 3.4vw, 1.6rem); color: var(--cream-50); min-height: 2.6em; margin: 0; transition: opacity 0.6s ease; }
+.motto.fade { opacity: 0; }
+.hero-cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.hero-links { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
+.hero-links a { color: var(--muted); text-decoration: none; display: inline-flex; gap: 6px; align-items: center; padding: 8px 12px; border-radius: 12px; border: 1px solid transparent; }
+.hero-links a:hover { border-color: var(--line); color: var(--text); }
+.live-strip { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; font-size: 0.85rem; color: var(--muted); }
+.live-strip span { background: var(--surface); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; }
+
+/* ---------- Hakkımızda ---------- */
+.flow { display: grid; gap: 10px; grid-template-columns: 1fr; counter-reset: f; }
+@media (min-width: 700px) { .flow { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1080px) { .flow { grid-template-columns: repeat(6, 1fr); } }
+.flow li { list-style: none; background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; padding: 14px; position: relative; counter-increment: f; }
+.flow li::before { content: counter(f); position: absolute; top: 10px; right: 12px; font-family: var(--font-display); color: var(--amber); font-size: 1.3rem; }
+.flow b { display: block; font-family: var(--font-display); font-size: 1.05rem; margin-bottom: 4px; }
+.flow p { margin: 0; font-size: 0.86rem; color: var(--muted); }
+.team { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 700px) { .team { grid-template-columns: repeat(3, 1fr); } }
+.member { text-align: center; }
+.avatar { width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 10px; display: grid; place-items: center; background: var(--amber-soft); color: var(--amber); }
+.avatar .icon { width: 34px; height: 34px; }
+.tool-list { columns: 1; column-gap: 20px; padding-left: 18px; margin: 0; }
+@media (min-width: 560px) { .tool-list { columns: 2; } }
+@media (min-width: 900px) { .tool-list { columns: 3; } }
+.tool-list li { break-inside: avoid; margin-bottom: 4px; overflow-wrap: anywhere; }
+#atk-live, .log span, .bubble { overflow-wrap: anywhere; }
+.roadmap { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.roadmap li { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; }

@@ -53,7 +53,7 @@ const num = (v: string | undefined, def: number) => {
 };
 
 export function loadEnv(opts: { file?: string; source?: Record<string, string | undefined> } = {}): AppEnv {
-  const file = opts.file ?? path.resolve(process.cwd(), ".env");
+  const file = opts.file ?? (process.env.ENV_FILE ? path.resolve(process.env.ENV_FILE) : path.resolve(process.cwd(), ".env"));
   let fromFile: Record<string, string> = {};
   let envFileFound = false;
   try {

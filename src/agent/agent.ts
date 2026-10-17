@@ -271,7 +271,7 @@ export class Agent {
         this.dev({ symbol: c.instId, kind: "risk", text: `${c.base}: risk puanı ${prev.risk} → ${c.risk}.`, critical: false });
       }
       if (!held.has(c.instId) && c.decision === "aç" && prev.decision === "aç" && c.atr > 0 && prev.entry - c.entry > c.atr) {
-        this.dev({ symbol: c.instId, kind: "daha_iyi_giriş", text: `${c.base}: giriş seviyesi ${prev.entry} → ${c.entry}; karar hâlâ "aç".`, critical: false });
+        this.dev({ symbol: c.instId, kind: "daha_iyi_giriş", text: `${c.base}: giriş noktası ${prev.entry} → ${c.entry}; karar hâlâ "aç".`, critical: false });
       }
     }
     this.d.store.bus.publish("candidates", this.queue().slice(0, 30).map(slim));
@@ -402,7 +402,7 @@ export class Agent {
       const rNow = (price - p.entryPx) / R;
       const base = p.instId.split("-")[0];
       if (price <= p.stopPx) {
-        await this.close(p, price, p.trailing ? "İz süren stop tetiklendi" : p.stopPx >= p.entryPx ? "Başa baş stop tetiklendi" : "Stop seviyesine gelindi");
+        await this.close(p, price, p.trailing ? "İz süren stop tetiklendi" : p.stopPx >= p.entryPx ? "Başa baş stop tetiklendi" : "Stop fiyatına gelindi");
         continue;
       }
       if (price >= p.targetPx) {
@@ -420,7 +420,7 @@ export class Agent {
         const ns = price - m.trailAtrMult * p.atr;
         if (ns > p.stopPx + 0.25 * R) {
           t.updateStop(p.id, ns, true);
-          this.d.store.addEvent("karar", `${base}: iz süren stop ${roundPrice(ns)} seviyesine yükseltildi (+${rNow.toFixed(1)}R).`, p.instId);
+          this.d.store.addEvent("karar", `${base}: iz süren stop ${roundPrice(ns)} fiyatına yükseltildi (+${rNow.toFixed(1)}R).`, p.instId);
         }
       }
       if (Date.now() - p.openedAt > m.timeStopHours * 3_600_000 && rNow < m.timeStopMinR) {

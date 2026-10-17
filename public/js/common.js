@@ -184,6 +184,12 @@
   }
   refreshStatus();
   setInterval(refreshStatus, 15000);
+  // fiyat şeridini ilk açılışta doldur (SSE fiyat akışını beklemeden)
+  fetch("/api/candidates").then((r) => r.json()).then((list) => {
+    if (!Array.isArray(list)) return;
+    for (const c of list) if (!tickerPrices[c.instId]) tickerPrices[c.instId] = { p: c.price, c: c.change24hPct };
+    renderTicker();
+  }).catch(() => {});
   T.refreshStatus = refreshStatus;
 
   // ---------- Uyarı penceresi (tek düğme: Tamam) ----------
@@ -229,8 +235,10 @@
         fire(type, data);
       }),
     );
-    es.onerror = () => { es.close(); setTimeout(connect, 4000); };
+    es.onerror = () => { es.close(); if (!leaving) setTimeout(connect, 4000); };
   }
+  let leaving = false;
+  window.addEventListener("pagehide", () => { leaving = true; es && es.close(); });
   connect();
 
   // ---------- Grafik yardımcıları ----------

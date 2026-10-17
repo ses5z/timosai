@@ -217,7 +217,7 @@ export function createApp(ctx: AppContext) {
 
   app.post("/api/settings/risk", (req, res) => {
     const v = Number(req.body?.riskPct);
-    if (!Number.isFinite(v) || v < 0.25 || v > ctx.contract.riskPerTradePct * 2) return res.status(400).json({ error: `risk %0.25 ile %${ctx.contract.riskPerTradePct * 2} arasında olmalı` });
+    if (!Number.isFinite(v) || v < 0.25 || v > ctx.contract.riskPerTradePct) return res.status(400).json({ error: `risk %0.25 ile %${ctx.contract.riskPerTradePct} arasında olmalı` });
     store.settings.riskPct = round(v, 2);
     store.addEvent("bilgi", `İşlem başı risk bütçesi %${store.settings.riskPct} olarak ayarlandı.`);
     json(res, { riskPct: store.settings.riskPct });

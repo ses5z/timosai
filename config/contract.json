@@ -1,6 +1,6 @@
 {
   "_aciklama": "Davranış sözleşmesi: sert limitlerden daha sıkı, ajanın uyduğu yumuşak kurallar. İhlalde ajan emri vermez ve uyarı penceresi açılır; kimse kilitlenmez.",
-  "riskPerTradePct": 1,
+  "riskPerTradePct": 2,
   "minRR": 1.5,
   "maxStopPct": 6,
   "maxRiskScoreForEntry": 70,

@@ -78,7 +78,7 @@
     $("#ag-info").innerHTML = `${a.scanCount} tarama · son ${a.lastScanAt ? F.ago(a.lastScanAt) : "-"} · her ${a.scanIntervalSec} sn · ${s.liveData ? '<span class="up">canlı veri</span>' : '<span class="down">canlı veri yok</span>'} · ${T.term("kuru", s.tradingMode)}`;
     $("#ag-mentor").textContent = `Mentor: ${s.mentor.ai ? "yapay zeka (" + s.mentor.active + ")" : "kural tabanlı"}`;
     const n = [];
-    if (!s.liveData) n.push(`<div class="notice notice-warn">${T.icon("warn")}<span>Canlı veri yok: ATK'ya ulaşılamadı, örnek veri gösteriliyor.</span></div>`);
+    if (!s.liveData) n.push(`<div class="notice notice-warn">${T.icon("warn")}<span>${s.atkMode === "mock" ? "Örnek veri modu (ATK_MODE=mock): canlı veri kapalı." : "Canlı veri yok: ATK'ya ulaşılamadı, örnek veri gösteriliyor."}</span></div>`);
     if (s.missingEnv.length) n.push(`<div class="notice notice-info">${T.icon("info")}<span>.env içinde boş: ${s.missingEnv.map(T.esc).join(", ")}. İlgili özellikler kapalı görünür.</span></div>`);
     $("#notices").innerHTML = n.join("");
   }

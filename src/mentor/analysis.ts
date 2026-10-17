@@ -1,4 +1,4 @@
-// Aday analizi: teknik tablo, seviyeler, R:R, risk bütçesine göre örnek boyut, dikkat edilecekler.
+// Aday analizi: teknik tablo, giriş/stop/hedef, R:R, risk bütçesine göre örnek boyut, dikkat edilecekler.
 // Boyutu KOD hesaplar; mentor yalnızca açıklar. Yatırım tavsiyesi içermez.
 import type { AppContext } from "../context.js";
 import { sizePosition, type SizeResult } from "../agent/sizing.js";
@@ -60,7 +60,7 @@ export function analyzeCandidate(ctx: AppContext, instId: string): Analysis | nu
   const headline = `${c.base}: ${DECISION_TEXT[c.decision]}.`;
   const text = [
     headline,
-    `Seviyeler: giriş ${c.entry}, stop ${c.stop} (%${stopPct}), hedef ${c.target} (%${targetPct}), R:R ${c.rr}.`,
+    `Fiyat noktaları: giriş ${c.entry}, stop ${c.stop} (%${stopPct}), hedef ${c.target} (%${targetPct}), R:R ${c.rr}.`,
     size.notionalUsdt > 0 ? `Risk bütçene göre örnek boyut ${size.notionalUsdt.toFixed(2)} USDT; stop olursa kayıp ≈ ${size.riskUsdt} USDT.` : `Şu an anlamlı bir boyut çıkmıyor: ${size.explain}`,
     cautions[0] ? `Dikkat: ${cautions[0]}` : "",
     "Bu bir yatırım tavsiyesi değil; emri ajan kendi kuralları ve sert limitler içinde verir.",

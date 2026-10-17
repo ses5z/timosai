@@ -1,3 +1,74 @@
 <!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TimosAI</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/css/app.css"></head>
-<body><main id="main" tabindex="-1"><h1>Hazırlanıyor</h1><p class="muted">Bu sayfa sonraki dilimde gelecek. <a href="/panel">Panele geç</a>.</p></main><script src="/js/common.js"></script></body></html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hakkımızda · TimosAI</title>
+  <meta name="description" content="TimosAI'nin vizyonu, nasıl çalıştığı, ekibi ve kullandığı OKX Agent Trade Kit araçları.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<main id="main" tabindex="-1">
+  <div class="page-head"><div><h1>Hakkımızda</h1><p>Yeni başlayan trader için sakin, sade ve güven veren bir otonom asistan.</p></div></div>
+  <div class="grid">
+    <section class="card" aria-labelledby="v-h">
+      <h2 id="v-h">Vizyon</h2>
+      <p>Kripto piyasasında en pahalı hata çoğu zaman tek bir aceleci karardır. TimosAI, kararı veriye, boyutu matematiğe, disiplini koda bırakır: yapay zeka adayları tarar ve tek tek önüne getirir, sen kaydırarak elersin; mentor risk matematiğini anlatır; otonom ajan küçük, stoplu ve kurallı emirler verir. Davranış sözleşmesi seni uyarır, kilitlemez.</p>
+    </section>
+    <section class="card" aria-labelledby="h-h">
+      <h2 id="h-h">Nasıl çalışır?</h2>
+      <ol class="flow" style="padding:0;margin:0">
+        <li><b>Tara</b><p>Her 30 saniyede 28 likit spot çift için ATK'den fiyat, mum, RSI ve funding.</p></li>
+        <li><b>Güvenlik</b><p>Gerçek emir defterinden makas ve derinlik; proje özeti şimdilik örnek veri.</p></li>
+        <li><b>Karar</b><p>İvme, trend, hacim, RSI, oynaklık, funding ve duygu skorları → aç / izle / ele.</p></li>
+        <li><b>Sözleşme kontrolü</b><p>R:R, stop mesafesi, işlem riski, risk skoru. Aykırıysa ajan emri vermez, uyarı açılır.</p></li>
+        <li><b>Emir</b><p>Sert limit kapısı: tek emir ≤ 5 USDT, toplam ≤ 15 USDT, en fazla 3 pozisyon, saatte 6 emir, stop zorunlu.</p></li>
+        <li><b>İz</b><p>Her karar, emir ve ATK çağrısı sha256 zincirli kayda yazılır; zincire sabitlemeye hazır.</p></li>
+      </ol>
+    </section>
+    <div class="grid-2">
+      <section class="card" aria-labelledby="t-h">
+        <h2 id="t-h">Ekip</h2>
+        <div class="team">
+          <div class="member"><div class="avatar" data-ic="user"></div><b>Ekip üyesi 1</b><p class="kpi-small">Ürün ve strateji</p></div>
+          <div class="member"><div class="avatar" data-ic="chart"></div><b>Ekip üyesi 2</b><p class="kpi-small">Kural kitabı ve risk</p></div>
+          <div class="member"><div class="avatar" data-ic="compass"></div><b>Ekip üyesi 3</b><p class="kpi-small">Ajan ve altyapı</p></div>
+        </div>
+      </section>
+      <section class="card" aria-labelledby="r-h">
+        <h2 id="r-h">Hedefler ve yol haritası</h2>
+        <ul class="roadmap">
+          <li><span class="badge badge-ok">bugün</span><span>Otonom ajan, gerçek ATK verisi, kuru çalışma, mentor, Telegram, ısı haritası.</span></li>
+          <li><span class="badge badge-warn">sıradaki</span><span>Karar özetlerini Avalanche Fuji'ye sabitleme (ProofAnchor) ve web yayını.</span></li>
+          <li><span class="badge badge-muted">sonra</span><span>Kural kitabının eşik dosyasına aktarılması, gerçek güvenlik verisi, geriye dönük test.</span></li>
+        </ul>
+      </section>
+    </div>
+    <section class="card" aria-labelledby="a-h">
+      <div class="card-head"><h2 id="a-h">Kullanılan OKX Agent Trade Kit araçları</h2><span class="badge badge-muted" id="atk-count">-</span></div>
+      <ul class="tool-list mono" id="atk-tools">
+        <li>market_get_tickers</li><li>market_get_candles</li><li>market_get_indicator</li><li>market_get_funding_rate</li><li>market_get_orderbook</li><li>market_get_instruments</li><li>news_get_coin_sentiment</li><li>account_get_balance</li><li>spot_place_order</li><li>spot_place_algo_order</li><li>spot_cancel_algo_order</li><li>spot_get_order</li><li>spot_get_algo_orders</li>
+      </ul>
+      <p class="kpi-small" style="margin-top:10px" id="atk-live"></p>
+    </section>
+    <div class="grid-2">
+      <section class="card" aria-labelledby="l-h"><h2 id="l-h">Lisans</h2><p>MIT lisansı ile açık kaynak. Kod bu yarışma için bugün sıfırdan yazıldı.</p></section>
+      <section class="card" aria-labelledby="d-h"><h2 id="d-h">Sorumluluk notu</h2><p>TimosAI bir eğitim ve yarışma projesidir. Gerçek piyasa verisi kullanır, bakiye sınırlıdır ve sert limitlerle korunur. Hiçbir içerik yatırım tavsiyesi değildir; kripto varlıklar yüksek risk taşır.</p></section>
+    </div>
+  </div>
+</main>
+<script src="/js/common.js"></script>
+<script>
+(function () {
+  const T = window.TimosAI;
+  document.querySelectorAll("[data-ic]").forEach((el) => (el.innerHTML = T.icon(el.dataset.ic)));
+  T.api("/api/atk").then((a) => {
+    document.getElementById("atk-count").textContent = `${a.total} çağrı`;
+    const used = Object.keys(a.byTool);
+    document.getElementById("atk-live").textContent = used.length ? `Bu oturumda çağrılanlar: ${used.join(", ")}.` : "Bu oturumda henüz ATK çağrısı yok (örnek veri modu olabilir).";
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>

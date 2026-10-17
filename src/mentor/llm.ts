@@ -54,7 +54,7 @@ export class GeminiMentor implements MentorProvider {
         generationConfig: { maxOutputTokens: this.maxTokens, temperature: 0.4 },
       };
       if (turn < MAX_TOOL_TURNS) body.tools = [{ functionDeclarations: decl }];
-      // Kısa ve hızlı cevap için düşünme en düşük seviyede.
+      // Kısa ve hızlı cevap için düşünme en düşük ayarda.
       if (/2\.5-flash/.test(this.model)) body.generationConfig.thinkingConfig = { thinkingBudget: 0 };
       else if (/gemini-3/.test(this.model) && this.thinkingOk) body.generationConfig.thinkingConfig = { thinkingLevel: "low" };
       const send = () =>
