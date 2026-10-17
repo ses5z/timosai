@@ -2,7 +2,9 @@
 // Araç döngüsü en fazla 4 tur; araç sonuçları <durum_verisi> bloğunda veri olarak verilir.
 import type { MentorTools } from "./tools.js";
 import { activeToolDefs } from "./tools.js";
-import { SYSTEM_PROMPT } from "./systemPrompt.js";
+import { buildSystemPrompt } from "./systemPrompt.js";
+import { DETAIL_MAX_TOKENS, SHORT_MAX_TOKENS } from "./detail.js";
+import { log } from "../util/log.js";
 import type { ChatMessage } from "../state/store.js";
 import { mask } from "../util/log.js";
 
@@ -10,7 +12,12 @@ export interface LlmInput {
   text: string;
   history: ChatMessage[];
   tools: MentorTools;
+  /** Ayrıntılı mod: daha uzun cevap ve daha yüksek token sınırı. */
+  detail?: boolean;
 }
+
+export const TEMPERATURE = 0.3;
+export const maxTokensFor = (detail?: boolean) => (detail ? DETAIL_MAX_TOKENS : SHORT_MAX_TOKENS);
 
 export interface MentorProvider {
   readonly name: string;
@@ -34,7 +41,6 @@ export class GeminiMentor implements MentorProvider {
     private readonly apiKey: string,
     private readonly model: string = DEFAULT_GEMINI_MODEL,
     private readonly fetchImpl: FetchLike = fetch,
-    private readonly maxTokens = 1024,
   ) {
     this.name = `Gemini (${model})`;
   }
@@ -43,15 +49,16 @@ export class GeminiMentor implements MentorProvider {
     return Boolean(this.apiKey);
   }
 
-  async reply({ text, history, tools }: LlmInput): Promise<string> {
+  async reply({ text, history, tools, detail }: LlmInput): Promise<string> {
+    let maxOut = maxTokensFor(detail);
     const decl = activeToolDefs(tools).map((t) => (Object.keys(t.parameters.properties).length ? { name: t.name, description: t.description, parameters: t.parameters } : { name: t.name, description: t.description }));
     const contents: any[] = history.slice(-8).map((m) => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.text }] }));
     contents.push({ role: "user", parts: [{ text }] });
     for (let turn = 0; turn <= MAX_TOOL_TURNS; turn++) {
       const body: any = {
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        systemInstruction: { parts: [{ text: buildSystemPrompt(Boolean(detail)) }] },
         contents,
-        generationConfig: { maxOutputTokens: this.maxTokens, temperature: 0.4 },
+        generationConfig: { maxOutputTokens: maxOut, temperature: TEMPERATURE },
       };
       if (turn < MAX_TOOL_TURNS) body.tools = [{ functionDeclarations: decl }];
       // Kısa ve hızlı cevap için düşünme en düşük ayarda.
@@ -79,7 +86,14 @@ export class GeminiMentor implements MentorProvider {
       const parts: any[] = content?.parts ?? [];
       const calls = parts.filter((p) => p.functionCall);
       if (!calls.length) {
-        const out = parts.map((p) => p.text ?? "").join("").trim();
+        const out = parts.filter((p) => !p.thought).map((p) => p.text ?? "").join("").trim();
+        if (!out && data?.candidates?.[0]?.finishReason === "MAX_TOKENS" && maxOut < 3 * maxTokensFor(detail)) {
+          // Düşünme belirteçleri sınırı tükettiyse bir kez daha geniş bütçeyle dene (özetleme çağrısı değil).
+          log.warn("Gemini: token sınırı düşünmeye harcandı, tek sefer daha geniş bütçeyle yeniden deneniyor.");
+          maxOut = 3 * maxTokensFor(detail);
+          turn--;
+          continue;
+        }
         if (!out) throw new Error("Gemini boş yanıt");
         return out;
       }
@@ -101,7 +115,6 @@ export class ClaudeMentor implements MentorProvider {
     private readonly apiKey: string,
     private readonly model: string = DEFAULT_CLAUDE_MODEL,
     private readonly fetchImpl: FetchLike = fetch,
-    private readonly maxTokens = 600,
   ) {
     this.name = `Claude (${model})`;
   }
@@ -110,7 +123,7 @@ export class ClaudeMentor implements MentorProvider {
     return Boolean(this.apiKey);
   }
 
-  async reply({ text, history, tools }: LlmInput): Promise<string> {
+  async reply({ text, history, tools, detail }: LlmInput): Promise<string> {
     const toolDefs = activeToolDefs(tools).map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters }));
     const messages: any[] = [];
     for (const m of history.slice(-8)) {
@@ -122,7 +135,7 @@ export class ClaudeMentor implements MentorProvider {
     if (messages.length && messages[messages.length - 1].role === "user") messages[messages.length - 1].content += "\n" + text;
     else messages.push({ role: "user", content: text });
     for (let turn = 0; turn <= MAX_TOOL_TURNS; turn++) {
-      const body: any = { model: this.model, max_tokens: this.maxTokens, system: SYSTEM_PROMPT, messages };
+      const body: any = { model: this.model, max_tokens: maxTokensFor(detail), temperature: TEMPERATURE, system: buildSystemPrompt(Boolean(detail)), messages };
       if (turn < MAX_TOOL_TURNS) body.tools = toolDefs;
       const res = await this.fetchImpl("https://api.anthropic.com/v1/messages", {
         method: "POST",

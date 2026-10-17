@@ -82,6 +82,9 @@ export class TelegramBot implements Notifier {
   readonly policy: NotifyPolicy;
   readonly preview: PreviewMsg[] = [];
   private summaryTimer: NodeJS.Timeout | null = null;
+  /** "Ayrıntı" düğmesi için son soruların kısa kimlikleri. */
+  private questions = new Map<string, string>();
+  private qSeq = 0;
 
   constructor(
     private readonly ctx: AppContext,
@@ -281,8 +284,7 @@ export class TelegramBot implements Notifier {
     this.pushPreview({ dir: "in", text, sent: true });
     if (text.startsWith("/")) await this.handleCommand(text);
     else {
-      const r = await this.mentor.chat(text, "telegram");
-      await this.send(r.text, r.pending ? [[{ text: "Onayla", data: `cf:${r.pending.id}:y` }, { text: "Vazgeç", data: `cf:${r.pending.id}:n` }]] : undefined);
+      await this.askMentor(text, false);
     }
   }
 
@@ -399,6 +401,20 @@ export class TelegramBot implements Notifier {
     await this.sendCandidatePhoto(c, [[{ text: `${BROKEN} Geç`, data: `pass:${c.instId}` }, { text: `${HEART} Takibe al`, data: `like:${c.instId}` }]]);
   }
 
+  /** Mentora sor; kısa cevabın altına tek düğme: "Ayrıntı" (aynı soru detail=true ile). */
+  async askMentor(text: string, detail: boolean): Promise<void> {
+    const r = await this.mentor.chat(text, "telegram", { detail });
+    let buttons: Btn[][] | undefined;
+    if (r.pending) buttons = [[{ text: "Onayla", data: `cf:${r.pending.id}:y` }, { text: "Vazgeç", data: `cf:${r.pending.id}:n` }]];
+    else if (r.canDetail) {
+      const id = (++this.qSeq).toString(36);
+      this.questions.set(id, text);
+      if (this.questions.size > 50) this.questions.delete(this.questions.keys().next().value as string);
+      buttons = [[{ text: "Ayrıntı", data: `dt:${id}` }]];
+    }
+    await this.send(r.text, buttons);
+  }
+
   async handleCallback(data: string): Promise<void> {
     const [kind, a1, a2] = data.split(":");
     const st = this.ctx.store;
@@ -409,10 +425,14 @@ export class TelegramBot implements Notifier {
       if (kind === "like") {
         const r = st.follow(id);
         const an = analyzeCandidate(this.ctx, id);
-        await this.send(`${HEART} ${id.split("-")[0]} takipte (${r.count} coin).\n${an ? an.text : ""}`);
+        await this.send(`${HEART} ${id.split("-")[0]} takipte (${r.count} coin).\n${an ? an.short : ""}`, an ? [[{ text: "Ayrıntı", data: `an:${id}` }]] : undefined);
         if (r.count >= this.ctx.contract.softWatchlistWarnAt) await this.send(`Listende ${r.count} coin var. Listeye almak işlem açmak değildir; ajan en fazla ${this.ctx.limits.maxOpenPositions} pozisyon tutar.`);
       }
       return this.sendNextCandidate();
+    }
+    if (kind === "dt") {
+      const q = this.questions.get(a1);
+      return void (q ? await this.askMentor(q, true) : await this.send("Bu sorunun süresi doldu; tekrar sorar mısın?"));
     }
     if (kind === "an") {
       const id = normSymbol(a1);

@@ -441,3 +441,6 @@ tr:last-child td { border-bottom: 0; }
 @media (min-width: 1080px) { .flow-8 { grid-template-columns: repeat(4, 1fr); } }
 .cmd-list { list-style: none; padding: 0; margin: 0 0 10px; display: grid; gap: 8px; font-size: 0.9rem; }
 .cmd-list .mono { color: var(--amber); margin-right: 6px; }
+.pre { white-space: pre-line; }
+.detail-btn { margin-top: 8px; background: transparent; border: 1px solid var(--line); color: var(--amber); border-radius: 999px; padding: 4px 12px; min-height: 30px; font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+.detail-btn:hover { border-color: var(--amber); }

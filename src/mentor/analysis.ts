@@ -17,6 +17,9 @@ export interface Analysis {
   cautions: string[];
   scenarios: { lehte: string; aleyhte: string };
   security: Candidate["security"];
+  /** Kısa (varsayılan): karar, giriş/stop/hedef, R:R, tek uyarı. */
+  short: string;
+  /** Ayrıntılı: bölümlü, sayılarla. */
   text: string;
   live: boolean;
 }
@@ -58,14 +61,25 @@ export function analyzeCandidate(ctx: AppContext, instId: string): Analysis | nu
     aleyhte: `Fiyat ${c.stop} stopuna inerse yaklaşık %${stopPct} kayıp; örnek boyutla ≈ ${size.riskUsdt} USDT.`,
   };
   const headline = `${c.base}: ${DECISION_TEXT[c.decision]}.`;
-  const text = [
-    headline,
-    `Fiyat noktaları: giriş ${c.entry}, stop ${c.stop} (%${stopPct}), hedef ${c.target} (%${targetPct}), R:R ${c.rr}.`,
-    size.notionalUsdt > 0 ? `Risk bütçene göre örnek boyut ${size.notionalUsdt.toFixed(2)} USDT; stop olursa kayıp ≈ ${size.riskUsdt} USDT.` : `Şu an anlamlı bir boyut çıkmıyor: ${size.explain}`,
-    cautions[0] ? `Dikkat: ${cautions[0]}` : "",
-    "Bu bir yatırım tavsiyesi değil; emri ajan kendi kuralları ve sert limitler içinde verir.",
+  const shortWarn = cautions.find((x) => !x.startsWith("Her girişte stop")) ?? null;
+  const short = [
+    `${c.base}: ajan "${c.decision}" diyor (${c.direction.toLocaleLowerCase("tr")}).`,
+    `Giriş ${c.entry}, stop ${c.stop} (-%${stopPct}), hedef ${c.target}, R:R ${c.rr}.`,
+    shortWarn ? `Dikkat: ${shortWarn}` : "",
   ]
     .filter(Boolean)
     .join(" ");
-  return { instId, base: c.base, decision: c.decision, direction: c.direction, headline, table, levels: { entry: c.entry, stop: c.stop, target: c.target, rr: c.rr, stopPct, targetPct }, size, cautions, scenarios, security: c.security, text, live: c.live };
+  const text = [
+    `Karar: ${headline} Fırsat ${c.opportunity}, risk ${c.risk}.`,
+    `Teknik: ${c.direction}; RSI ${c.rsi ?? "-"}; ATR fiyatın %${c.atrPct}'i${c.atrTrend ? `; ATR trend ${c.atrTrend.dir === 1 ? "yükseliş" : "düşüş"} yönünde` : ""}.`,
+    c.derivatives?.available ? `Vadeli: ${c.derivatives.badge}. ${c.derivatives.reasons[0]}` : "",
+    `Fiyat noktaları: giriş ${c.entry}, stop ${c.stop} (%${stopPct}), hedef ${c.target} (%${targetPct}), R:R ${c.rr}.`,
+    size.notionalUsdt > 0 ? `Risk bütçene göre örnek boyut ${size.notionalUsdt.toFixed(2)} USDT; stop olursa kayıp ≈ ${size.riskUsdt} USDT.` : `Şu an anlamlı bir boyut çıkmıyor: ${size.explain}`,
+    `Senaryolar: lehte ${scenarios.lehte} Aleyhte ${scenarios.aleyhte}`,
+    cautions.length ? `Dikkat: ${cautions.slice(0, 3).join(" ")}` : "",
+    "Yatırım tavsiyesi değildir; emri ajan kendi kuralları ve sert limitler içinde verir.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return { instId, base: c.base, decision: c.decision, direction: c.direction, headline, table, levels: { entry: c.entry, stop: c.stop, target: c.target, rr: c.rr, stopPct, targetPct }, size, cautions, scenarios, security: c.security, short, text, live: c.live };
 }

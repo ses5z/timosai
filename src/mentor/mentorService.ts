@@ -7,12 +7,18 @@ import { MentorTools } from "./tools.js";
 import { analyzeCandidate } from "./analysis.js";
 import { log } from "../util/log.js";
 import type { ChatMessage } from "../state/store.js";
+import { enforceShort, wantsDetail, type DetailOpts } from "./detail.js";
 
 export interface MentorReply {
   text: string;
   provider: string;
   ai: boolean;
   pending: { id: string; summary: string } | null;
+  /** Bu cevap ayrıntılı modda mı üretildi? */
+  detail?: boolean;
+  /** Arayüz "Ayrıntı" düğmesi gösterebilir mi? */
+  canDetail?: boolean;
+  question?: string;
 }
 
 const YES_RE = /^(evet|onayl[ıi]yorum|onayla|tamam|olur|kabul|yes)\b/i;
@@ -58,8 +64,9 @@ export class MentorService {
     return this.ctx.store.chat.slice(-40);
   }
 
-  async chat(textRaw: string, via: ChatMessage["via"] = "web"): Promise<MentorReply> {
+  async chat(textRaw: string, via: ChatMessage["via"] = "web", opts: DetailOpts = {}): Promise<MentorReply> {
     const text = String(textRaw ?? "").slice(0, 800).trim();
+    const detail = wantsDetail(text, opts);
     if (!text) return { text: "Bir şey yazmadın.", provider: "kural tabanlı", ai: false, pending: null };
     const history = this.ctx.store.chat.slice(-8);
     this.ctx.store.addChat({ role: "user", text, via });
@@ -79,7 +86,7 @@ export class MentorService {
       reply = { text: "Hızlı komutlar kapalı (QUICK_COMMANDS=false). Emir veremem; emirleri yalnızca ajan, sözleşme ve sert limitler içinde verir.", provider: "kural tabanlı", ai: false, pending: null };
     } else if (INJECTION_RE.test(text.toLocaleLowerCase("tr"))) {
       // Kural delme / prompt sızdırma girişimleri modele hiç gitmez.
-      reply = { ...(await this.rule.reply(text)), provider: "kural tabanlı", ai: false, pending: null };
+      reply = { ...(await this.rule.reply(text, false)), provider: "kural tabanlı", ai: false, pending: null };
     } else {
       const limited = this.usedLastHour() >= this.ctx.env.mentorHourlyLimit;
       if (!limited) {
@@ -88,7 +95,12 @@ export class MentorService {
           if (!p.available()) continue;
           try {
             this.calls.push(Date.now());
-            const out = await p.reply({ text, history, tools: this.tools });
+            let out = await p.reply({ text, history, tools: this.tools, detail });
+            if (!detail) {
+              const s = enforceShort(out);
+              if (s.trimmed) log.warn(`Mentor: uzun cevap (${p.name}); kısa modda ilk 4 cümle gönderildi.`);
+              out = s.text;
+            }
             reply = { text: out, provider: p.name, ai: true, pending: this.tools.lastPending };
             break;
           } catch (e) {
@@ -97,10 +109,13 @@ export class MentorService {
         }
       }
       if (!reply) {
-        const r = await this.rule.reply(text);
+        const r = await this.rule.reply(text, detail);
         reply = { text: r.text, provider: "kural tabanlı", ai: false, pending: this.tools.lastPending };
       }
     }
+    reply.detail = detail;
+    reply.question = text;
+    reply.canDetail = !detail && !reply.pending && reply.provider !== "hızlı komut" && !INJECTION_RE.test(text.toLocaleLowerCase("tr"));
     this.lastProvider = reply.provider;
     this.lastAi = reply.ai;
     this.ctx.store.addChat({ role: "mentor", text: reply.text, via, provider: reply.provider, pendingId: reply.pending?.id });

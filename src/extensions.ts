@@ -106,7 +106,7 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
     app.post("/api/mentor/chat", async (req, res) => {
       const text = typeof req.body?.text === "string" ? req.body.text : "";
       const via = req.body?.via === "ses" ? "ses" : "web";
-      res.json(await mentor.chat(text, via));
+      res.json(await mentor.chat(text, via, { detail: req.body?.detail === true, mode: req.body?.mode === "pro" ? "pro" : "basic" }));
     });
     app.post("/api/mentor/confirm", async (req, res) => {
       const { id, yes } = req.body ?? {};

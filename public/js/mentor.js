@@ -26,7 +26,7 @@
   function speak(text) {
     if (!synth || !$("#speak-out").checked) return Promise.resolve();
     synth.cancel();
-    const sentences = text.replace(/\s+/g, " ").match(/[^.!?]+[.!?]*/g) || [text];
+    const sentences = text.replace(/\s+/g, " ").trim().split(/(?<=[.!?…])\s+(?=[A-ZÇĞİÖŞÜ0-9])/u).filter(Boolean);
     setState("speaking");
     return new Promise((resolve) => {
       let i = 0;
@@ -78,13 +78,13 @@
   $("#mic").addEventListener("click", () => { if (state === "listening") { rec?.stop(); } else listen(); });
 
   // ---- Gönderim ----
-  async function send(text, via = "web") {
+  async function send(text, via = "web", detail = false) {
     if (!text) return;
     $("#msg").value = "";
     renderLast(text, null);
     setState("thinking");
     try {
-      const r = await T.api("/api/mentor/chat", { body: { text, via } });
+      const r = await T.api("/api/mentor/chat", { body: { text, via, detail, mode: document.body.dataset.mode } });
       renderLast(text, r);
       $("#provider-badge").textContent = `Mentor: ${r.ai ? "yapay zeka" : "kural tabanlı"}`;
       setState("ready");
@@ -96,7 +96,7 @@
     }
   }
   function renderLast(userText, r) {
-    $("#last-convo").innerHTML = `<div class="bubble user"><small>Sen</small>${T.esc(userText)}</div>` + (r ? `<div class="bubble mentor"><small>Mentor · ${T.esc(r.provider)}</small>${T.esc(r.text)}</div>` : `<div class="bubble mentor"><small>Mentor</small><span class="muted">Düşünüyor…</span></div>`);
+    $("#last-convo").innerHTML = `<div class="bubble user"><small>Sen</small>${T.esc(userText)}</div>` + (r ? `<div class="bubble mentor"><small>Mentor · ${T.esc(r.provider)}${r.detail ? " · ayrıntılı" : ""}</small><span class="pre">${T.esc(r.text)}</span>${r.canDetail ? `<div><button type="button" class="detail-btn" data-detail-q="${T.esc(r.question || userText)}">Ayrıntı</button></div>` : ""}</div>` : `<div class="bubble mentor"><small>Mentor</small><span class="muted">Düşünüyor…</span></div>`);
     renderConfirm(r && r.pending);
   }
   function renderConfirm(p) {
@@ -112,12 +112,16 @@
     area.querySelector("[data-yes]").addEventListener("click", () => done(true));
     area.querySelector("[data-no]").addEventListener("click", () => done(false));
   }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-detail-q]");
+    if (b) send(b.dataset.detailQ, "web", true);
+  });
   $("#composer").addEventListener("submit", (e) => { e.preventDefault(); send($("#msg").value.trim()); });
   $("#chips").addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (b) send(b.textContent); });
 
   // ---- Geçmiş (Telegram ile ortak) ----
   const hist = $("#history");
-  const bubble = (m) => `<div class="bubble ${m.role}"><small>${m.role === "user" ? "Sen" : "Mentor"} · ${m.via === "telegram" ? "Telegram" : m.via === "ses" ? "ses" : "web"} · ${T.fmt.time(m.ts)}</small>${T.esc(m.text)}</div>`;
+  const bubble = (m) => `<div class="bubble ${m.role}"><small>${m.role === "user" ? "Sen" : "Mentor"} · ${m.via === "telegram" ? "Telegram" : m.via === "ses" ? "ses" : "web"} · ${T.fmt.time(m.ts)}</small><span class="pre">${T.esc(m.text)}</span></div>`;
   async function loadHistory() {
     const d = await T.api("/api/mentor/history");
     hist.innerHTML = d.history.map(bubble).join("") || `<p class="muted">Henüz sohbet yok.</p>`;

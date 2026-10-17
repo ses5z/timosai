@@ -127,14 +127,18 @@
     const box = $("#analysis");
     if (!a) { box.innerHTML = `<h2 id="an-h">Mentor analizi</h2><p class="muted">${T.esc(c.base)} için analiz hazırlanamadı.</p>`; return; }
     const L = a.levels, S = a.size;
+    const open = document.body.dataset.mode === "pro";
     box.innerHTML = `<div class="card-head"><h2 id="an-h">${T.esc(a.base)} · mentor analizi</h2><span class="pill pill-${T.esc(a.decision)}">${DEC[a.decision]}</span></div>
-      <p>${T.esc(a.headline)} <span class="muted">${T.esc(a.direction)}.</span></p>
+      <p>${T.esc(a.short)}</p>
       <div class="levels">
         <div class="level"><span>Giriş</span><b>${F.price(L.entry)}</b></div>
         <div class="level stop"><span>${T.term("stop", "Stop")}</span><b>${F.price(L.stop)}</b> <small class="faint">-%${L.stopPct}</small></div>
         <div class="level target"><span>Hedef</span><b>${F.price(L.target)}</b> <small class="faint">+%${L.targetPct}</small></div>
         <div class="level"><span>${T.term("rr", "R:R")}</span><b>${L.rr}</b></div>
       </div>
+      <p style="margin:10px 0 0"><button type="button" class="detail-btn" id="an-more-btn" aria-expanded="${open}" aria-controls="an-more">${open ? "Ayrıntıyı gizle" : "Ayrıntı"}</button></p>
+      <div id="an-more" ${open ? "" : "hidden"}>
+      <div id="an-mentor" class="view-box pre" style="margin-top:10px" aria-live="polite"><span class="muted">Mentor ayrıntılı açıklamayı hazırlıyor…</span></div>
       <div id="an-chart" style="margin-top:12px"></div>
       <h3>Risk bütçene göre örnek boyut</h3>
       <p><b class="num">${S.notionalUsdt > 0 ? F.usd(S.notionalUsdt) : "Boyut yok"}</b> ${S.notionalUsdt > 0 ? `· stop olursa ≈ <b class="num">${F.num(S.riskUsdt, 3)} USDT</b>` : ""}</p>
@@ -145,10 +149,29 @@
       <p class="kpi-small"><span class="up">Lehte:</span> ${T.esc(a.scenarios.lehte)}<br><span class="down">Aleyhte:</span> ${T.esc(a.scenarios.aleyhte)}</p>
       <h3>Dikkat edilecekler</h3>
       <ul class="cautions">${a.cautions.map((x) => `<li>${T.esc(x)}</li>`).join("")}</ul>
+      </div>
       <p style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-sm" href="/mentor?q=${encodeURIComponent(a.base + " analizi")}">Mentora sor</a><a class="btn btn-sm btn-ghost" href="/isi-haritasi?s=${encodeURIComponent(a.instId)}">Ayrıntı çekmecesi</a></p>
       <p class="faint" style="font-size:.8rem">Yatırım tavsiyesi değildir. Emri ajan kendi kuralları ve sert limitler içinde verir.</p>`;
     if (window.__anChart) window.__anChart.destroy();
-    window.__anChart = T.tvChart(box.querySelector("#an-chart"), a.instId, { height: 220, levels: a.levels });
+    window.__anChart = null;
+    let asked = false;
+    const drawChart = () => {
+      if (!window.__anChart) window.__anChart = T.tvChart(box.querySelector("#an-chart"), a.instId, { height: 220, levels: a.levels });
+      if (asked) return;
+      asked = true;
+      // Aynı soru mentora ayrıntılı modda sorulur (detail=true).
+      T.api("/api/mentor/chat", { body: { text: `${a.base} analizi`, detail: true, mode: document.body.dataset.mode } })
+        .then((r) => { const el = box.querySelector("#an-mentor"); if (el) el.textContent = r.text; })
+        .catch(() => { const el = box.querySelector("#an-mentor"); if (el) el.textContent = "Mentor şu an cevap veremiyor."; });
+    };
+    if (open) drawChart();
+    box.querySelector("#an-more-btn").addEventListener("click", (e) => {
+      const more = box.querySelector("#an-more"), show = more.hidden;
+      more.hidden = !show;
+      e.currentTarget.setAttribute("aria-expanded", String(show));
+      e.currentTarget.textContent = show ? "Ayrıntıyı gizle" : "Ayrıntı";
+      if (show) drawChart();
+    });
   }
 
   // ---- Liste görünümü ----

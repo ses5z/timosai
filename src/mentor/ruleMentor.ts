@@ -42,7 +42,8 @@ export class RuleMentor {
     return true;
   }
 
-  async reply(textIn: string): Promise<RuleReply> {
+  /** detail=false: kısa (2-4 cümle); detail=true: bölümlü, sayılarla. */
+  async reply(textIn: string, detail = false): Promise<RuleReply> {
     const text = textIn.trim();
     const t = text.toLocaleLowerCase("tr");
     const sym = detectSymbol(text, this.ctx);
@@ -54,7 +55,7 @@ export class RuleMentor {
       const base = "Emir veremem ve al/sat tavsiyesi vermem; emirleri yalnızca ajan kendi kuralları ve sert limitler içinde verir.";
       if (sym) {
         const r = await this.tools.call("aday_analizi", { sembol: sym });
-        if (r.ok) return { text: `${base} ${(r.data as any).headline} ${(r.data as any).text.split(". ").slice(1, 3).join(". ")}.` };
+        if (r.ok) return { text: `${base} ${detail ? (r.data as any).text : (r.data as any).short}` };
       }
       return { text: `${base} Bir coin adı söylersen ajanın o coin hakkındaki görüşünü açıklarım.` };
     }
@@ -76,6 +77,13 @@ export class RuleMentor {
       return { text: "Şunları yapabilirim: durum, adaylar, bir coinin analizi (ör. \"ETH analizi\"), takip listen, listeye ekle/çıkar, plan oluştur, portföy, risk bütçesi ayarı, bildirim ayarı, ajanı duraklatma ve tarama. Emir veremem; emirleri ajan verir." };
     }
     const num = t.match(/(\d+(?:[.,]\d+)?)/)?.[1]?.replace(",", ".");
+    if (/(risk\s*b[üu]t[çc]e|b[üu]t[çc]em)/.test(t) && !num) {
+      const pct = this.ctx.store.settings.riskPct;
+      const eq = this.ctx.agent.trading.equity();
+      const usdt = ((eq * pct) / 100).toFixed(2);
+      if (!detail) return { text: `İşlem başına %${pct}, yani yaklaşık ${usdt} USDT.` };
+      return { text: `İşlem başına risk bütçen %${pct}: değer ${eq.toFixed(2)} USDT olduğu için yaklaşık ${usdt} USDT.\nAjan boyutu risk tutarı ÷ stop mesafesiyle hesaplar; tek emir en fazla 5 USDT, toplam açık en fazla 15 USDT.\nArt arda 3 zararda boyut yarıya iner (${this.ctx.store.settings.halveAfterLosses ? "açık" : "kapalı"}); şu anki çarpan ${this.ctx.agent.sizeMultiplier()}×.` };
+    }
     if (/(risk|b[üu]t[çc]e)/.test(t) && num && /(ayarla|yap|olsun|%)/.test(t)) {
       const r = await this.tools.call("butce_ayarla", { risk_yuzde: Number(num) });
       return { text: r.pending ? `Onayın gerekiyor: ${r.pending.summary} Onaylıyor musun?` : r.error ?? "Tamam." };
@@ -106,19 +114,25 @@ export class RuleMentor {
       const r = await this.tools.call("token_tara", { zincir: chain, adres: addr });
       if (!r.ok) return { text: r.error! };
       const d = r.data as any;
-      return { text: `Token tarama sonucu: ${d.karar} (${d.token?.symbol ?? "bilinmeyen"}, ${d.zincir}). ${d.gerekceler.slice(0, 3).join(" ")}` };
+      if (!detail) return { text: `Token tarama: ${d.karar} (${d.token?.symbol ?? "bilinmeyen"}, ${d.zincir}). ${d.gerekceler[0] ?? ""}` };
+      return { text: [`Token tarama: ${d.karar} (${d.token?.symbol ?? "bilinmeyen"}, ${d.zincir}).`, ...d.gerekceler.map((g: string) => `- ${g}`), ...d.kaynaklar.filter((k: any) => !k.erisim).map((k: any) => `- ${k.kaynak}: ${k.not ?? "kapalı"}`)].join("\n") };
     }
     if (/(hold|temel\s*analiz|arz|fdv|kilit\s*a[çc][ıi]l)/.test(t) && sym) {
       const r = await this.tools.call("hold_raporu", { sembol: sym });
       const d = r.data as any;
-      return { text: r.ok ? `${d.sembol} hold raporu: ${d.karar}. ${d.gerekceler.slice(0, 3).join(" ")}` : r.error! };
+      if (!r.ok) return { text: r.error! };
+      if (!detail) return { text: `${d.sembol}: ${d.karar}. ${d.gerekceler[0] ?? ""}` };
+      const m = d.olcumler;
+      return { text: [`${d.sembol} hold raporu: ${d.karar}.`, ...d.gerekceler.map((g: string) => `- ${g}`), `Dolaşım oranı ${m.circulatingRatio === null ? "-" : "%" + (m.circulatingRatio * 100).toFixed(0)}, FDV/piyasa değeri ${m.fdvToMc === null ? "-" : m.fdvToMc.toFixed(2)}, 90 gün kilit açılımı %${m.unlock90dPct.toFixed(1)} (ÖRNEK VERİ).`, `Cüzdan dağılımı: ${d.cuzdanDagilimi.status}. Kaynak: ${d.kaynak}.`].join("\n") };
     }
     if (/(vadeli|funding|open\s*interest|\boi\b|long\s*short|l\/s|kalabal)/.test(t)) {
       const id = sym ?? "BTC-USDT";
       const r = await this.tools.call("vadeli_durum", { sembol: id });
       if (!r.ok) return { text: r.error! };
       const d = r.data as any;
-      return { text: `${d.sembol} vadeli durum: ${d.ozet}. Kalabalık taraf ${d.kalabalikTaraf}, manipülasyon şüphesi ${d.manipulasyonSuphesi}. ${d.gerekceler[0]} Vadeli veri yalnızca analiz girdisi; işlem spot.` };
+      if (!detail) return { text: `${d.sembol} vadeli: ${d.ozet}, manipülasyon şüphesi ${d.manipulasyonSuphesi}. ${d.gerekceler[0]}` };
+      const f = (v: number | null, k = 2) => (v === null || v === undefined ? "-" : Number(v).toFixed(k));
+      return { text: [`${d.sembol} vadeli durum: ${d.ozet}. Kalabalık taraf ${d.kalabalikTaraf}, manipülasyon şüphesi ${d.manipulasyonSuphesi}.`, ...d.gerekceler.map((g: string) => `- ${g}`), `Funding ${d.funding === null ? "-" : (d.funding * 100).toFixed(4) + "%"}, OI 1 sa ${f(d.oiDegisim1sa)}%, genel hesap oranı ${f(d.genelHesapOrani)}, üst trader oranı (pozisyon) ${f(d.ustTraderPozisyonOrani)}.`, `Kaynak: ${d.kaynak}. Vadeli veri yalnızca analiz girdisi; işlem spot.`].join("\n") };
     }
     if (/(listeme\s*ekle|listeye\s*ekle|takibe\s*al|takip\s*et|ekle)/.test(t) && sym) {
       const r = await this.tools.call("listeye_ekle", { sembol: sym });
@@ -132,13 +146,16 @@ export class RuleMentor {
     if (/(plan|da[ğg][ıi]l[ıi]m|ne\s*kadar)/.test(t)) {
       const r = await this.tools.call("plan_olustur", {});
       if (!r.ok) return { text: r.error! };
-      return { text: explainPlanText(r.data as any) };
+      const plan = r.data as any;
+      if (!detail) return { text: explainPlanText(plan) };
+      return { text: [explainPlanText(plan), ...plan.rows.map((row: any) => `- ${row.instId.split("-")[0]}: giriş ${row.entry}, stop ${row.stop}, R:R ${row.rr}, ${row.included ? `${row.notionalUsdt} USDT (risk ${row.riskUsdt})` : "dahil değil"}. ${row.note}`)].join("\n") };
     }
     if (/(portf[öo]y|bakiye|pozisyon|k[âa]r|zarar|k\/z|param)/.test(t)) {
       const r = await this.tools.call("portfoy", {});
       const d = r.data as any;
       const pos = d.pozisyonlar.length ? d.pozisyonlar.map((p: any) => `${p.sembol} ${p.kz >= 0 ? "+" : ""}${p.kz} USDT`).join(", ") : "açık pozisyon yok";
-      return { text: `${d.mod === "KURU" ? "Kuru çalışma modundayız." : "Gerçek işlem modundayız."} Değer ${d.deger} USDT, nakit ${d.nakit} USDT, bugünkü K/Z ${d.gunlukKZ >= 0 ? "+" : ""}${d.gunlukKZ} USDT. Pozisyonlar: ${pos}.` };
+      if (!detail) return { text: `Değer ${d.deger} USDT, bugün ${d.gunlukKZ >= 0 ? "+" : ""}${d.gunlukKZ} USDT. ${d.pozisyonlar.length ? `Açık: ${pos}.` : "Açık pozisyon yok."}` };
+      return { text: [`${d.mod === "KURU" ? "Kuru çalışma" : "Gerçek işlem"} modu. Değer ${d.deger} USDT, nakit ${d.nakit} USDT, bugünkü K/Z ${d.gunlukKZ >= 0 ? "+" : ""}${d.gunlukKZ} USDT.`, ...d.pozisyonlar.map((p: any) => `- ${p.sembol}: K/Z ${p.kz >= 0 ? "+" : ""}${p.kz} USDT, giriş ${p.giris}, stop ${p.stop}, hedef ${p.hedef}.`)].join("\n") };
     }
     if (/(listem|takip\s*listem|takip\s*ettiklerim)/.test(t)) {
       const r = await this.tools.call("listem", {});
@@ -154,19 +171,21 @@ export class RuleMentor {
       const id = sym ?? normSymbol(t.split(/\s+/)[0]);
       if (id) {
         const r = await this.tools.call("aday_analizi", { sembol: id });
-        if (r.ok) return { text: (r.data as any).text };
+        if (r.ok) return { text: detail ? (r.data as any).text : (r.data as any).short };
         return { text: r.error! };
       }
     }
     if (/(durum|ajan|nas[ıi]l\s*gidiyor|ne\s*yap[ıi]yor|risk)/.test(t)) {
       const r = await this.tools.call("durum", {});
       const d = r.data as any;
-      return { text: `Ajan ${d.ajan}, otonom mod ${d.otonom ? "açık" : "kapalı"}, ${d.mod === "KURU" ? "kuru çalışma" : "gerçek işlem"} modunda. ${d.taramaSayisi} tarama yaptı, ${d.acikPozisyon} açık pozisyon var. Risk skoru ${d.riskSkoru} (${d.riskDurumu}). ${d.canliVeri ? "Veri canlı." : "Canlı veri yok, örnek veri kullanılıyor."}` };
+      if (!detail) return { text: `Ajan ${d.ajan}, ${d.mod === "KURU" ? "kuru çalışma" : "gerçek işlem"}; ${d.acikPozisyon} açık pozisyon, risk skoru ${d.riskSkoru} (${d.riskDurumu}).` };
+      return { text: `Ajan ${d.ajan}, otonom mod ${d.otonom ? "açık" : "kapalı"}, ${d.mod === "KURU" ? "kuru çalışma" : "gerçek işlem"} modunda.\n${d.taramaSayisi} tarama yaptı, ${d.acikPozisyon} açık pozisyon, takipte ${d.takipSayisi} coin.\nRisk skoru ${d.riskSkoru} (${d.riskDurumu}). ${d.canliVeri ? "Veri canlı (OKX ATK)." : "Canlı veri yok, örnek veri kullanılıyor."}` };
     }
     if (/(aday|f[ıi]rsat|[öo]neri|ke[şs]fet|ne\s*var)/.test(t)) {
-      const r = await this.tools.call("adaylar", { adet: 4 });
+      const r = await this.tools.call("adaylar", { adet: detail ? 6 : 3 });
       const d = r.data as any[];
-      return { text: `Ajanın sıraladığı ilk adaylar: ${d.map((c) => `${c.sembol} (${c.karar}, fırsat ${c.firsat}, risk ${c.risk})`).join("; ")}. Birini incelemek için adını söylemen yeterli.` };
+      if (!detail) return { text: `Öne çıkan adaylar: ${d.map((c) => `${c.sembol} (${c.karar})`).join(", ")}. Birinin adını söylersen incelerim.` };
+      return { text: ["Ajanın sıraladığı adaylar:", ...d.map((c) => `- ${c.sembol}: ${c.karar}, fırsat ${c.firsat}, risk ${c.risk}. ${c.gerekce}`)].join("\n") };
     }
     return { text: "Tam anlayamadım. \"adaylar\", \"SOL analizi\", \"portföyüm\", \"plan oluştur\" ya da \"durum\" diyebilirsin. Emir veremem; emirleri ajan verir." };
   }
