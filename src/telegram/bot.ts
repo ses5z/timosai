@@ -305,13 +305,23 @@ export class TelegramBot implements Notifier {
             "/sessiz 60 - 60 dakika sessiz",
             "/ozet - kısa özet",
             "/id - kullanıcı kimliğin",
-            "Komut dışındaki her mesaj mentora gider. Emir veremem; emirleri ajan verir.",
+            ...(this.ctx.env.quickCommands ? ["/al SOL 5 · /sat SOL · /kapat SOL - hızlı komut (komut = onay, sert limitler geçerli)", "/l SOL 5x 20 · /s ETH 3x 10 - kaldıraçlı SİMÜLASYON (gerçek emre dönüşmez)"] : []),
+            this.ctx.env.quickCommands ? "Komut dışındaki her mesaj mentora gider." : "Komut dışındaki her mesaj mentora gider. Emirleri yalnızca ajan verir (hızlı komutlar kapalı).",
           ].join("\n"),
         ));
       case "/id":
         return void (await this.send(`Kullanıcı kimliğin: ${this.opts.allowedUserId}`));
       case "/kesfet":
         return this.sendNextCandidate();
+      case "/al":
+      case "/sat":
+      case "/kapat":
+      case "/l":
+      case "/s": {
+        const q = this.ctx.extras.quick;
+        const r = q ? await q.run(text, "telegram") : { text: "Hızlı komutlar kapalı." };
+        return void (await this.send(r.text));
+      }
       case "/vadeli": {
         const id = normSymbol(args[0] ?? "BTC");
         if (!id) return void (await this.send("Kullanım: /vadeli SOL"));

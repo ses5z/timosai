@@ -16,7 +16,7 @@ export interface EntryRequest {
   targetPx: number;
   atr: number;
   reason: string;
-  origin: "ajan" | "senaryo";
+  origin: "ajan" | "senaryo" | "hızlı";
   /** Spot dışı bir şey istenirse kapı reddeder (testler için açık alan). */
   instType?: string;
 }

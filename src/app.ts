@@ -56,6 +56,7 @@ export function createApp(ctx: AppContext) {
       riskScore: agent.riskScore(),
       limits,
       followsCount: store.follows.length,
+      quickCommands: ctx.env.quickCommands,
       disclaimer: "Gerçek piyasa verisi, sınırlı bakiye, yatırım tavsiyesi değildir.",
     });
   });

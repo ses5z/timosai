@@ -16,7 +16,8 @@
     $("#risk-range").value = p.riskPct;
     $("#risk-val").textContent = "%" + p.riskPct;
     $("#risk-usdt").textContent = `Bu, işlem başına en fazla ≈ ${F.usd(p.riskBudgetUsdt, 3)} kayıp demek.`;
-    const rows = p.trades.map((t) => `<tr><td>${F.time(t.ts)}</td><td>${T.esc(t.instId.replace("-USDT", ""))}</td><td>${t.side === "buy" ? "AL" : "SAT"}</td><td class="num">${F.price(t.px)}</td><td class="num">${F.num(t.notionalUsdt, 2)}</td><td class="num ${T.cls(t.pnl)}">${t.pnl == null ? "-" : F.signed(t.pnl, 3)}</td><td><span class="badge ${t.mode === "KURU" ? "badge-dry" : "badge-live"}">${t.mode}</span></td><td class="detail-only">${T.esc(t.reason)}</td></tr>`).join("");
+    const TAG = { ajan: "OTONOM", senaryo: "SENARYO", "hızlı": "HIZLI" };
+    const rows = p.trades.map((t) => `<tr><td>${F.time(t.ts)}</td><td>${T.esc(t.instId.replace("-USDT", ""))}</td><td>${t.side === "buy" ? "AL" : "SAT"}</td><td class="num">${F.price(t.px)}</td><td class="num">${F.num(t.notionalUsdt, 2)}</td><td class="num ${T.cls(t.pnl)}">${t.pnl == null ? "-" : F.signed(t.pnl, 3)}</td><td><span class="badge ${t.mode === "KURU" ? "badge-dry" : "badge-live"}">${t.mode}</span> <span class="badge badge-muted">${TAG[t.origin] || T.esc(t.origin)}</span></td><td class="detail-only">${T.esc(t.reason)}</td></tr>`).join("");
     T.renderKeep($("#tr-wrap"), rows ? `<table><thead><tr><th>Saat</th><th>Coin</th><th>Yön</th><th class="num">Fiyat</th><th class="num">USDT</th><th class="num">K/Z</th><th>Mod</th><th class="detail-only">Gerekçe</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Henüz işlem yok. Ajan uygun sinyal görünce küçük bir emir açar.</div>`);
   }
 
@@ -119,7 +120,24 @@
   T.on("scenario", (s) => { if (s.step === 1) scSteps = []; scSteps.push(s); renderScenario(scSteps); if (s.done) refreshAll(); });
   T.api("/api/scenario").then((d) => { scSteps = d.steps; renderScenario(scSteps); }).catch(() => {});
 
-  const refreshAll = () => Promise.allSettled([loadPortfolio(), loadContract(), loadEvents(), loadAtk(), loadLedger()]);
+  async function loadQuick() {
+    const q = await T.api("/api/quick/sims");
+    $("#qk-state").textContent = q.enabled ? "açık" : "kapalı";
+    $("#qk-state").className = "badge " + (q.enabled ? "badge-warn" : "badge-muted");
+    if (!q.enabled) { $("#qk-body").innerHTML = `<p>Hızlı komutlar kapalı (QUICK_COMMANDS=false). Kullanıcı emir yolu yoktur; emirleri yalnızca ajan verir.</p>`; return; }
+    const s = q.settings;
+    const sims = q.sims.map((x) => `<li class="lvl-karar"><time>${F.time(x.openedAt)}</time><span><span class="badge badge-muted">SİMÜLASYON</span> ${T.esc(x.instId.replace("-USDT", ""))} ${x.side} ${x.leverage}x · teminat ${x.marginUsdt} · giriş ${F.price(x.entryPx)} · likidasyon ${F.price(x.liqPx)} · <b class="${T.cls(x.pnlUsdt)}">${F.signed(x.pnlUsdt, 3)} USDT</b>${x.liquidated ? " · likide oldu" : ""}</span></li>`).join("");
+    $("#qk-body").innerHTML = `<p>Telegram ve mentorda <span class="mono">/al SOL 5</span>, <span class="mono">/sat SOL</span>, <span class="mono">/kapat SOL</span>: komutun kendisi onaydır; sert limitler ve zorunlu stop geçerli. Kaldıraçlı <span class="mono">/l</span>, <span class="mono">/s</span> yalnızca SİMÜLASYON.</p>
+      <form id="qk-form" style="display:grid;gap:8px;grid-template-columns:1fr 1fr 1fr;align-items:end">
+        <label>Varsayılan tutar (USDT)<input id="qk-amt" type="number" min="1" max="5" step="0.5" value="${s.amountUsdt}" style="width:100%"></label>
+        <label>Stop türü<select id="qk-mode" style="width:100%"><option value="atr" ${s.stopMode === "atr" ? "selected" : ""}>ATR × k</option><option value="pct" ${s.stopMode === "pct" ? "selected" : ""}>%</option></select></label>
+        <label>Değer<input id="qk-val" type="number" min="0.3" max="10" step="0.1" value="${s.stopValue}" style="width:100%"></label>
+      </form>${sims ? `<h3 style="margin-top:10px">Simülasyon pozisyonları</h3><ul class="log">${sims}</ul>` : ""}`;
+    const save = () => T.api("/api/settings/quick", { body: { amountUsdt: Number($("#qk-amt").value), stopMode: $("#qk-mode").value, stopValue: Number($("#qk-val").value) } }).then(() => T.toast("Hızlı mod ayarları kaydedildi."));
+    ["#qk-amt", "#qk-mode", "#qk-val"].forEach((id) => $(id).addEventListener("change", save));
+  }
+
+  const refreshAll = () => Promise.allSettled([loadPortfolio(), loadContract(), loadEvents(), loadAtk(), loadLedger(), loadQuick()]);
   refreshAll();
   T.on("status", renderStatus);
   if (T.status) renderStatus(T.status);

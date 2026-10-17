@@ -1,7 +1,7 @@
 // Yapay zeka mentorları: GeminiMentor (varsayılan) ve ClaudeMentor. Harici SDK yok, yalnızca fetch.
 // Araç döngüsü en fazla 4 tur; araç sonuçları <durum_verisi> bloğunda veri olarak verilir.
 import type { MentorTools } from "./tools.js";
-import { TOOL_DEFS } from "./tools.js";
+import { activeToolDefs } from "./tools.js";
 import { SYSTEM_PROMPT } from "./systemPrompt.js";
 import type { ChatMessage } from "../state/store.js";
 import { mask } from "../util/log.js";
@@ -44,7 +44,7 @@ export class GeminiMentor implements MentorProvider {
   }
 
   async reply({ text, history, tools }: LlmInput): Promise<string> {
-    const decl = TOOL_DEFS.map((t) => (Object.keys(t.parameters.properties).length ? { name: t.name, description: t.description, parameters: t.parameters } : { name: t.name, description: t.description }));
+    const decl = activeToolDefs(tools).map((t) => (Object.keys(t.parameters.properties).length ? { name: t.name, description: t.description, parameters: t.parameters } : { name: t.name, description: t.description }));
     const contents: any[] = history.slice(-8).map((m) => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.text }] }));
     contents.push({ role: "user", parts: [{ text }] });
     for (let turn = 0; turn <= MAX_TOOL_TURNS; turn++) {
@@ -111,7 +111,7 @@ export class ClaudeMentor implements MentorProvider {
   }
 
   async reply({ text, history, tools }: LlmInput): Promise<string> {
-    const toolDefs = TOOL_DEFS.map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters }));
+    const toolDefs = activeToolDefs(tools).map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters }));
     const messages: any[] = [];
     for (const m of history.slice(-8)) {
       const role = m.role === "user" ? "user" : "assistant";

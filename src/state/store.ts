@@ -54,6 +54,7 @@ export class Store {
     riskPct: 1,
     paused: false,
     halveAfterLosses: true,
+    quick: { amountUsdt: 5, stopMode: "atr" as "atr" | "pct", stopValue: 1.6 },
     autonomous: true,
     notifications: { developments: true, critical: true, opportunitySummary: false, quietUntil: 0 } as NotificationSettings,
   };

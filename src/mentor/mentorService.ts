@@ -71,12 +71,19 @@ export class MentorService {
     if (pending && (YES_RE.test(text) || NO_RE.test(text))) {
       const r = await this.tools.confirm(pending.id, YES_RE.test(text));
       reply = { text: r.ok ? (YES_RE.test(text) ? `Tamam, yapıldı: ${pending.summary}` : "Vazgeçtim, hiçbir şey değişmedi.") : r.error ?? "Olmadı.", provider: "kural tabanlı", ai: false, pending: null };
+    } else if (this.ctx.env.quickCommands && this.ctx.extras.quick && /^\/(al|sat|kapat|l|s)\s/i.test(text)) {
+      // Kullanıcının açık komutu: komutun kendisi onaydır (sert limit kapısı yine geçerli).
+      const r = await this.ctx.extras.quick.run(text, via);
+      reply = { text: r.text, provider: "hızlı komut", ai: false, pending: null };
+    } else if (/^\/(al|sat|kapat|l|s)\s/i.test(text)) {
+      reply = { text: "Hızlı komutlar kapalı (QUICK_COMMANDS=false). Emir veremem; emirleri yalnızca ajan, sözleşme ve sert limitler içinde verir.", provider: "kural tabanlı", ai: false, pending: null };
     } else if (INJECTION_RE.test(text.toLocaleLowerCase("tr"))) {
       // Kural delme / prompt sızdırma girişimleri modele hiç gitmez.
       reply = { ...(await this.rule.reply(text)), provider: "kural tabanlı", ai: false, pending: null };
     } else {
       const limited = this.usedLastHour() >= this.ctx.env.mentorHourlyLimit;
       if (!limited) {
+        this.tools.currentUserText = text;
         for (const p of this.chain) {
           if (!p.available()) continue;
           try {

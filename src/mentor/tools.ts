@@ -11,6 +11,7 @@ export interface ToolDef {
   description: string;
   parameters: { type: "object"; properties: Record<string, { type: string; description: string; items?: { type: string } }>; required?: string[] };
   needsConfirm?: boolean;
+  quickOnly?: boolean;
 }
 
 export const TOOL_DEFS: ToolDef[] = [
@@ -27,10 +28,16 @@ export const TOOL_DEFS: ToolDef[] = [
   { name: "bildirim_ayarla", description: "Telegram bildirimlerini ayarlar. Onay gerekir.", parameters: { type: "object", properties: { gelismeler: { type: "boolean", description: "takip edilen coin gelişmeleri" }, sessiz_dakika: { type: "number", description: "şu kadar dakika sessiz" } } }, needsConfirm: true },
   { name: "ajan_modu", description: "Otonom modu açar/kapatır veya ajanı duraklatır/devam ettirir. Onay gerekir.", parameters: { type: "object", properties: { otonom: { type: "boolean", description: "otonom mod" }, duraklat: { type: "boolean", description: "duraklat" } } }, needsConfirm: true },
   { name: "tara", description: "Ajana hemen yeni bir tarama yaptırır.", parameters: { type: "object", properties: {} } },
+  { name: "hizli_islem", description: "YALNIZCA kullanıcı açıkça alım/kapatma komutu verdiyse (ör. 'SOL için 5 USDT al', 'SOL pozisyonunu kapat'). Kendiliğinden asla çağırma. Sert limitler ve zorunlu stop geçerli.", parameters: { type: "object", properties: { komut: { type: "string", description: "al | kapat" }, sembol: { type: "string", description: "ör. SOL" }, tutar: { type: "number", description: "USDT (al için)" } }, required: ["komut", "sembol"] }, quickOnly: true },
   { name: "senaryo_baslat", description: "Deterministik demo senaryosunu başlatır. Onay gerekir.", parameters: { type: "object", properties: {} }, needsConfirm: true },
 ];
 
 export const TOOL_NAMES = new Set(TOOL_DEFS.map((t) => t.name));
+
+/** Modele gösterilen araçlar: hizli_islem yalnızca QUICK_COMMANDS=true iken. */
+export function activeToolDefs(tools: MentorTools): ToolDef[] {
+  return TOOL_DEFS.filter((d) => !d.quickOnly || tools.quickEnabled());
+}
 
 export function normSymbol(s: unknown): string | null {
   if (typeof s !== "string") return null;
@@ -49,7 +56,13 @@ export interface ToolResult {
 export class MentorTools {
   /** Son çağrıda oluşan onay bekleyen eylem (arayüz düğmesi için). */
   lastPending: { id: string; summary: string } | null = null;
+  /** Kullanıcının son mesajı: hizli_islem yalnızca açık komutla çalışır. */
+  currentUserText = "";
   constructor(private readonly ctx: AppContext) {}
+
+  quickEnabled(): boolean {
+    return this.ctx.env.quickCommands;
+  }
 
   describePending(name: string, args: Record<string, any>): string {
     switch (name) {
@@ -69,6 +82,7 @@ export class MentorTools {
   /** Model veya kural motoru bir aracı çağırdığında. Onay isteyenler bekleyen eyleme dönüşür. */
   async call(name: string, args: Record<string, any> = {}): Promise<ToolResult> {
     const def = TOOL_DEFS.find((d) => d.name === name);
+    if (def?.quickOnly && !this.ctx.env.quickCommands) return { ok: false, error: "Hızlı komutlar kapalı; emirleri yalnızca ajan verir." };
     if (!def) return { ok: false, error: `Böyle bir araç yok: ${name}. Mentor emir veremez; emirleri yalnızca ajan verir.` };
     if (def.needsConfirm) {
       const id = crypto.randomUUID().slice(0, 8);
@@ -164,6 +178,15 @@ export class MentorTools {
       case "tara": {
         await a.scanOnce();
         return { ok: true, data: { tarama: a.scanCount, ilkUc: a.queue().slice(0, 3).map((c) => `${c.base} (${c.decision})`) } };
+      }
+      case "hizli_islem": {
+        const q = ctx.extras.quick;
+        const explicit = /(\bal\b|alım|satın|kapat|\/al|\/kapat|\/sat)/i.test(this.currentUserText);
+        if (!q || !explicit) return { ok: false, error: "Hızlı işlem yalnızca kullanıcının açık komutuyla yapılır." };
+        const sym = normSymbol(args.sembol);
+        if (!sym) return { ok: false, error: "Geçersiz sembol." };
+        const r = args.komut === "kapat" ? await q.run(`/kapat ${sym.split("-")[0]}`, "mentor") : await q.run(`/al ${sym.split("-")[0]}${args.tutar ? " " + Number(args.tutar) : ""}`, "mentor");
+        return { ok: r.ok, data: r.text, error: r.ok ? undefined : r.text };
       }
       case "senaryo_baslat": {
         if (!ctx.extras.scenario) return { ok: false, error: "Senaryo modülü yüklü değil." };

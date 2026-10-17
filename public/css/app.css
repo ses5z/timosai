@@ -422,3 +422,5 @@ tr:last-child td { border-bottom: 0; }
 .roadmap { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .roadmap li { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; }
 .tg-photo { display: block; width: 100%; border-radius: 10px; margin-bottom: 6px; aspect-ratio: 16 / 9; background: var(--ink-850); }
+#qk-form label { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+#qk-form input, #qk-form select { min-height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--ink-850); color: var(--text); padding: 0 8px; font: inherit; }

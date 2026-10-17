@@ -7,6 +7,7 @@ import { TelegramBot, candidateChart } from "./telegram/bot.js";
 import { AlertEngine } from "./alerts/alertEngine.js";
 import { AvalancheProofAnchor, loadDeployment, makeViemWriter } from "./proof/avalancheAnchor.js";
 import { NoopProofAnchor } from "./proof/proofAnchor.js";
+import { QuickTrader } from "./trading/quick.js";
 import { log } from "./util/log.js";
 
 export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typeof fetch } = {}): Promise<void> {
@@ -16,6 +17,8 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
   ctx.extras.analyze = async (instId: string) => mentor.analyze(instId);
   ctx.extras.explainPlan = async (plan: any) => mentor.explainPlan(plan);
 
+  const quick = new QuickTrader(ctx);
+  ctx.extras.quick = quick;
   const bot = new TelegramBot(ctx, mentor, { token: ctx.env.telegramToken, allowedUserId: ctx.env.telegramAllowedUserId, fetchImpl: opts.fetchImpl });
   ctx.extras.telegram = bot;
   ctx.agent.onDevelopment((d) => {
@@ -75,6 +78,22 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
       void scenario.start();
       res.json({ ok: true });
     });
+    // Hızlı komut: QUICK_COMMANDS=false iken bu uç nokta YOKTUR (404).
+    app.post("/api/quick", async (req, res, next) => {
+      if (!quick.enabled()) return next();
+      const text = typeof req.body?.text === "string" ? req.body.text : "";
+      res.json(await quick.run(text, "web"));
+    });
+    app.post("/api/settings/quick", (req, res, next) => {
+      if (!quick.enabled()) return next();
+      const q = ctx.store.settings.quick;
+      const b = req.body ?? {};
+      if (typeof b.amountUsdt === "number" && b.amountUsdt > 0) q.amountUsdt = Math.min(b.amountUsdt, ctx.limits.maxOrderNotionalUsdt);
+      if (b.stopMode === "atr" || b.stopMode === "pct") q.stopMode = b.stopMode;
+      if (typeof b.stopValue === "number" && b.stopValue > 0 && b.stopValue <= 10) q.stopValue = b.stopValue;
+      res.json(q);
+    });
+    app.get("/api/quick/sims", (_req, res) => res.json({ enabled: quick.enabled(), sims: quick.simView(), settings: ctx.store.settings.quick }));
     app.get("/api/telegram/chart/:file", (req, res) => {
       const id = req.params.file.replace(/\.png$/, "");
       const c = ctx.agent.candidates.get(id);
