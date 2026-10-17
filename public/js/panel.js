@@ -12,9 +12,6 @@
     $("#eq-mode").className = "badge " + (p.mode === "PAPER" ? "badge-dry" : "badge-live");
     T.lineChart($("#eq-chart"), p.equityHistory.map((x) => ({ v: x.equity, t: x.ts })), { label: "Değer çizgisi", fmt: (v) => F.num(v, 2), levels: [{ v: p.startEquity, label: "başlangıç", color: "var(--faint)" }], empty: "Değer çizgisi ilk taramalardan sonra oluşur." });
     renderPositions(p.positions);
-    $("#risk-range").value = p.riskPct;
-    $("#risk-val").textContent = "%" + p.riskPct;
-    $("#risk-usdt").textContent = `Bu, işlem başına en fazla ≈ ${F.usd(p.riskBudgetUsdt, 2)} kayıp demek.`;
     const TAG = { ajan: "OTONOM", senaryo: "SENARYO", "hızlı": "HIZLI" };
     const MODE = { PAPER: "PAPER", CANLI: "CANLI" };
     const rows = p.trades.map((t) => `<tr><td>${F.time(t.ts)}</td><td>${T.esc(t.instId.replace("-USDT", ""))}</td><td>${t.side === "buy" ? "AL" : "SAT"}</td><td class="num">${F.price(t.px)}</td><td class="num">${F.num(t.notionalUsdt, 2)}</td><td class="num ${T.cls(t.pnl)}">${t.pnl == null ? "-" : F.signed(t.pnl, 3)}</td><td><span class="badge ${t.mode === "PAPER" ? "badge-dry" : "badge-live"}">${MODE[t.mode] || T.esc(t.mode)}</span> <span class="badge badge-muted">${TAG[t.origin] || T.esc(t.origin)}</span>${t.ordId ? `<br><span class="mono faint">OKX #${T.esc(t.ordId)}</span>` : ""}</td><td class="pro-only">${T.esc(t.reason)}</td></tr>`).join("");
@@ -103,7 +100,6 @@
   $("#ag-pause").addEventListener("change", (e) => T.api("/api/agent", { body: { paused: e.target.checked } }).then(() => T.refreshStatus()));
   $("#ag-scan").addEventListener("click", async (e) => { e.target.disabled = true; try { await T.api("/api/agent/scan", { body: {} }); T.toast("Tarama tamamlandı."); } finally { e.target.disabled = false; refreshAll(); } });
   $("#halve").addEventListener("change", (e) => T.api("/api/settings/halve", { body: { on: e.target.checked } }).then(loadContract));
-  $("#risk-range").addEventListener("change", async (e) => { try { await T.api("/api/settings/risk", { body: { riskPct: Number(e.target.value) } }); loadPortfolio(); } catch (err) { T.toast(err.message); } });
   $("#scenario-btn").addEventListener("click", async (e) => {
     e.target.disabled = true;
     try { await T.api("/api/scenario/start", { body: {} }); T.toast("Senaryo başladı: adımları olay günlüğünden izle."); } catch (err) { T.toast(err.message); } finally { setTimeout(() => (e.target.disabled = false), 4000); }

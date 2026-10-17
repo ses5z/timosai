@@ -386,8 +386,8 @@ export function createApp(ctx: AppContext) {
     const live = agent.trading.mode === "CANLI";
     return { plan: store.settings.plan, live, balance: live ? round(agent.trading.equity(), 2) : null, coinsAvailable: [...CODE_ALLOWED_PAIRS], notes, fixedRules: ["Canlı modda tutarlar hesap bakiyesini aşamaz.", "Her girişte stop zorunlu; yalnızca spot (short yalnızca paper futures).", "Çekim, transfer, earn, bot ve event araçları her koşulda kapalı."] };
   };
-  app.get("/api/plan", (_req, res) => json(res, planPayload()));
-  app.post("/api/plan", (req, res) => {
+  app.get("/api/trading-plan", (_req, res) => json(res, planPayload()));
+  app.post("/api/trading-plan", (req, res) => {
     const live = agent.trading.mode === "CANLI";
     const { plan, notes } = sanitizePlan(req.body ?? {}, store.settings.plan, { live, balance: live ? agent.trading.equity() : null, validCoins: [...CODE_ALLOWED_PAIRS] });
     store.settings.plan = plan;
@@ -397,7 +397,7 @@ export function createApp(ctx: AppContext) {
     store.bus.publish("plan", plan);
     json(res, planPayload(notes));
   });
-  app.post("/api/plan/add", (req, res) => {
+  app.post("/api/trading-plan/add", (req, res) => {
     const id = String(req.body?.instId ?? "");
     if (!CODE_ALLOWED_PAIRS.includes(id)) return res.status(400).json({ error: `${id} plana eklenebilir coinler arasında değil (spot izin listesi).` });
     const p = store.settings.plan;

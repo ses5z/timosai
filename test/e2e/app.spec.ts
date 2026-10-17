@@ -445,6 +445,30 @@ test("G3 madde 1: Mentor işlemi kartı (360/1440), sabit ibare, Plana ekle", as
   const s = await (await page.request.get("/api/setup/SOL-USDT")).json();
   expect(s.disclaimer).toBe("Ajan kurulum taslağı; yatırım tavsiyesi değildir.");
   expect(s.frames.map((f: any) => f.tf)).toEqual(["15m", "1H", "4H", "1D"]);
-  const add = await page.request.post("/api/plan/add", { data: { instId: "SOL-USDT" } });
+  const add = await page.request.post("/api/trading-plan/add", { data: { instId: "SOL-USDT" } });
   expect((await add.json()).plan.coins).toContain("SOL-USDT");
+});
+
+test("G3 madde 3: Planım (Basic sade / Pro tam), kaydet → limitler plana göre", async ({ page }) => {
+  await waitForScan(page);
+  for (const [mode, width] of [["basic", 360], ["pro", 1440]] as const) {
+    await page.addInitScript((m) => { try { localStorage.setItem("tms-mode", m); } catch {} }, mode);
+    await page.setViewportSize({ width, height: width === 360 ? 780 : 900 });
+    await page.goto("/panel");
+    const card = page.locator("#planim");
+    await expect(card.locator("#plan-coin-list .plan-coin").first()).toBeVisible();
+    await expect(card.locator('[name="maxLeverage"]')).toBeVisible({ visible: mode === "pro" });
+    await card.screenshot({ path: `${SHOTS}/g3-madde3-planim-${mode}-${width}.png` });
+  }
+  const card = page.locator("#planim");
+  await card.locator("#plan-coin-q").fill("SOL");
+  await expect(card.locator(".plan-coin")).toHaveCount(1);
+  await card.locator('[name="maxPositions"]').fill("2");
+  await card.locator('[name="maxOrderUsdt"]').fill("60");
+  await card.locator('button[type="submit"]').click();
+  await expect(page.locator(".toast").last()).toContainText("Plan kaydedildi");
+  const c = await (await page.request.get("/api/contract")).json();
+  expect(c.limits.maxOpenPositions).toBe(2);
+  expect(c.limits.maxOrderNotionalUsdt).toBe(60);
+  expect(JSON.stringify(c)).not.toMatch(/maxOrderNotionalUsdt":5,/);
 });

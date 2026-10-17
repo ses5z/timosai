@@ -73,13 +73,40 @@
       <p class="faint" style="font-size:.82rem;margin:0">Sözleşme uyarır, kilitlemez. Sert limitler hiçbir yolla aşılamaz.</p>
     </section>
 
-    <section class="card" aria-labelledby="rb-h">
-      <div class="card-head"><h2 id="rb-h">Risk bütçesi</h2></div>
-      <label for="risk-range" class="kpi-small">İşlem başına risk: <b id="risk-val" class="num">%1</b></label>
-      <input type="range" id="risk-range" min="0.25" max="2" step="0.25" value="1" style="width:100%;accent-color:var(--amber)">
-      <p class="kpi-small" id="risk-usdt">-</p>
-      <label class="switch" style="margin:6px 0 10px"><input type="checkbox" id="halve" role="switch"> <span>Art arda 3 zararda boyutu yarıya indir</span></label>
-      <p class="faint" style="font-size:.82rem">Boyut = risk tutarı ÷ stop mesafesi; tek emir en fazla 5 USDT, toplam 15 USDT. Zarardan sonra hiçbir şey durdurulmaz; ilk kazançla boyut normale döner.</p>
+    <section class="card span-2" aria-labelledby="plan-h" id="planim">
+      <div class="card-head"><h2 id="plan-h">Planım</h2><span class="badge badge-muted" id="plan-mode">-</span></div>
+      <p class="kpi-small" style="margin-top:0">Planı ve limitleri sen yaparsın; ajan yalnızca bu plana göre otonom işlem açar ve her emri plana referansla açıklar.</p>
+      <form id="plan-form" class="plan-form" novalidate>
+        <fieldset class="plan-coins"><legend>İzinli coinler</legend>
+          <input type="search" id="plan-coin-q" placeholder="Coin ara (ör. SOL)" aria-label="Coin ara" autocomplete="off">
+          <div class="plan-coin-list" id="plan-coin-list" role="group" aria-label="Coin seçimi"></div>
+          <p class="faint plan-coin-sum" id="plan-coin-sum"></p>
+        </fieldset>
+        <div class="plan-grid">
+          <label>Yön<select name="direction"><option value="long">Yalnızca long</option><option value="longshort">Long + short (short yalnızca paper futures)</option></select></label>
+          <label>Vade<select name="horizon"><option value="scalp">Scalp (1s + 4s yön, 15dk giriş)</option><option value="swing">Swing (4s + 1g yön, 1s giriş)</option><option value="pozisyon">Pozisyon (4s + 1g yön, 4s giriş)</option></select></label>
+          <label>İşlem başı risk (%)<input name="riskPct" type="number" min="0.1" max="10" step="0.1" inputmode="decimal"></label>
+          <label>Tek işlem maks (USDT)<input name="maxOrderUsdt" type="number" min="1" step="1" inputmode="decimal"></label>
+          <label>Toplam açık maks (USDT)<input name="maxTotalUsdt" type="number" min="1" step="1" inputmode="decimal"></label>
+          <label>Maks pozisyon<input name="maxPositions" type="number" min="1" max="50" step="1" inputmode="numeric"></label>
+          <label class="pro-only">Saatlik maks emir<input name="maxOrdersPerHour" type="number" min="1" max="120" step="1"></label>
+          <label class="pro-only">Kaldıraç tavanı (paper futures)<input name="maxLeverage" type="number" min="1" max="50" step="1"></label>
+          <label class="pro-only">Min R:R<input name="minRR" type="number" min="0.5" max="10" step="0.1"></label>
+          <label class="pro-only">Min fırsat puanı<input name="minOpportunity" type="number" min="0" max="100" step="1"></label>
+          <label class="pro-only">Hedef 1'de kısmi kapanış (%)<input name="partialPct" type="number" min="0" max="100" step="5"></label>
+          <label class="pro-only">İz süren stop<select name="trailMode"><option value="atrTrend">Trend çizgisi</option><option value="atr">ATR</option></select></label>
+          <label class="pro-only">Maks süre (saat)<input name="maxHoldHours" type="number" min="1" max="720" step="1"></label>
+          <label class="pro-only">Günlük zarar uyarı eşiği (USDT)<input name="dailyLossWarnUsdt" type="number" min="0.1" step="0.5"></label>
+        </div>
+        <div class="plan-switches pro-only">
+          <label class="switch"><input type="checkbox" name="followLine" role="switch"> <span>Yalnızca trend çizgisiyle uyumlu girişler</span></label>
+          <label class="switch"><input type="checkbox" name="avoidCrowded" role="switch"> <span>Kalabalık taraftan kaçın (vadeli L/S)</span></label>
+          <label class="switch"><input type="checkbox" name="requireStop" role="switch" checked disabled> <span>Stop zorunlu (değiştirilemez)</span></label>
+        </div>
+        <label class="switch" style="margin:6px 0"><input type="checkbox" id="halve" role="switch"> <span>Art arda 3 zararda boyutu yarıya indir</span></label>
+        <div class="plan-actions"><button type="submit" class="btn btn-primary">Planı kaydet</button><span class="kpi-small" id="plan-ref"></span></div>
+        <ul class="faint plan-fixed" id="plan-fixed"></ul>
+      </form>
     </section>
 
     <section class="card" aria-labelledby="ps-h" id="paper-card">
@@ -125,5 +152,6 @@
 </main>
 <script src="/js/common.js"></script>
 <script src="/js/panel.js"></script>
+<script src="/js/plan.js"></script>
 </body>
 </html>

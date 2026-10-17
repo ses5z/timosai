@@ -607,3 +607,18 @@ body { --bg: var(--ink-900); --surface: var(--ink-800); --surface-2: var(--ink-7
 .setup-none { margin: 6px 0; }
 .setup-disc { font-size: .78rem; color: var(--muted); margin: 6px 0 0; border-top: 1px dashed var(--line); padding-top: 6px; }
 .setup-actions { margin-top: 6px; }
+
+/* ---- G3: Planım ---- */
+.plan-form fieldset { border: 0; padding: 0; margin: 0 0 10px; }
+.plan-form legend { font-weight: 600; margin-bottom: 6px; }
+.plan-coin-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 132px; overflow-y: auto; margin-top: 8px; }
+.plan-coin { min-height: 32px; padding: 4px 10px; font-size: .82rem; }
+.plan-coin input { accent-color: var(--amber); }
+.plan-coin:has(input:checked) { border-color: var(--amber); background: var(--surface-2); }
+.plan-form input[type="search"] { width: 100%; }
+.plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 14px; margin: 8px 0; }
+.plan-grid label { display: flex; flex-direction: column; gap: 4px; font-size: .84rem; color: var(--muted); }
+.plan-grid input, .plan-grid select, .plan-form input[type="search"] { min-height: 38px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: .92rem; }
+.plan-switches { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.plan-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
+.plan-fixed { font-size: .78rem; margin: 10px 0 0; padding-left: 18px; }

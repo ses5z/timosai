@@ -89,7 +89,7 @@ Portlar ve uygulamaları (`src/ports.ts`; her biri için gerçek ve `Mock*`, `AT
 
 ## Planım ve sabit kurallar (G3)
 
-Planı ve limitleri **kullanıcı** yapar (`src/plan/plan.ts`, `GET/POST /api/plan`); ajan yalnızca bu plana göre otonom işlem açar ve her emir günlüğünde plana referans verir (ör. `Plan: risk %1 · R:R ≥ 2 · trend çizgisi uyumlu ✓`). Kapı `TradingClient` içindedir; plan değerleri `applyPlan` ile limit kapısına uygulanır.
+Planı ve limitleri **kullanıcı** yapar (`src/plan/plan.ts`, `GET/POST /api/trading-plan`); ajan yalnızca bu plana göre otonom işlem açar ve her emir günlüğünde plana referans verir (ör. `Plan: risk %1 · R:R ≥ 2 · trend çizgisi uyumlu ✓`). Kapı `TradingClient` içindedir; plan değerleri `applyPlan` ile limit kapısına uygulanır.
 
 - Paper varsayılanları: 1000 USDT · risk %1 · tek işlem 100 · toplam 400 · 4 pozisyon
 - Canlı ilk açılış (`LIVE=true`): risk %0,5 · tek işlem 5 · toplam 15 · 3 pozisyon · stop zorunlu

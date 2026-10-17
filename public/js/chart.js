@@ -295,7 +295,7 @@
     if (!b) return;
     b.addEventListener("click", async () => {
       try {
-        await T.api("/api/plan/add", { method: "POST", body: { instId: s.instId } });
+        await T.api("/api/trading-plan/add", { method: "POST", body: { instId: s.instId } });
         T.toast(`${s.instId.split("-")[0]} plana eklendi. Ajan yalnızca plan koşulları sağlanırsa işlem açar.`);
         b.disabled = true;
         b.textContent = "Planda";
