@@ -220,7 +220,7 @@
   let es;
   function connect() {
     es = new EventSource("/api/stream");
-    ["hello", "prices", "scan", "candidates", "positions", "event", "warning", "follows", "chat", "agent", "priority", "scenario", "pending"].forEach((type) =>
+    ["hello", "prices", "scan", "candidates", "positions", "event", "warning", "follows", "chat", "agent", "priority", "scenario", "pending", "telegram"].forEach((type) =>
       es.addEventListener(type, (ev) => {
         let data;
         try { data = JSON.parse(ev.data); } catch { return; }

@@ -332,3 +332,22 @@ tr:last-child td { border-bottom: 0; }
 .confirm-box { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; background: var(--caution-soft); border: 1px solid rgba(242, 193, 78, 0.4); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
 .scenario-steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
 .scenario-steps li::marker { color: var(--amber); font-weight: 700; }
+
+/* ---------- Telegram ---------- */
+.phone { width: min(330px, 100%); margin: 0 auto; border-radius: 38px; padding: 12px; background: #05080e; border: 2px solid var(--ink-600); box-shadow: var(--shadow); }
+.phone-screen { border-radius: 28px; overflow: hidden; background: #121a28; height: 520px; display: flex; flex-direction: column; }
+.phone-top { padding: 12px 14px; background: #1a2436; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--ink-600); }
+.phone-top img { width: 32px; height: 32px; border-radius: 50%; }
+.phone-msgs { flex: 1; overflow: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; overscroll-behavior: contain; }
+.tg-msg { max-width: 86%; padding: 8px 11px; border-radius: 14px; font-size: 0.86rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+.tg-msg.out { background: #22304a; align-self: flex-start; border-bottom-left-radius: 4px; }
+.tg-msg.in { background: #3b4f2e; align-self: flex-end; border-bottom-right-radius: 4px; }
+.tg-msg small { display: block; color: var(--faint); font-size: 0.7rem; margin-top: 4px; }
+.tg-btns { display: flex; gap: 6px; margin-top: 6px; }
+.tg-btns span { flex: 1; text-align: center; padding: 6px; border-radius: 8px; background: rgba(255, 255, 255, 0.08); font-size: 0.8rem; }
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: start; }
+.steps li::before { content: counter(s); width: 36px; height: 36px; border-radius: 50%; background: var(--amber-soft); color: var(--amber); display: grid; place-items: center; font-weight: 700; font-family: var(--font-display); }
+.setting-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(58, 72, 102, 0.45); }
+.setting-row:last-child { border-bottom: 0; }
+.setting-row p { margin: 0; font-size: 0.82rem; color: var(--faint); }

@@ -1,3 +1,58 @@
 <!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TimosAI</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/css/app.css"></head>
-<body><main id="main" tabindex="-1"><h1>Hazırlanıyor</h1><p class="muted">Bu sayfa sonraki dilimde gelecek. <a href="/panel">Panele geç</a>.</p></main><script src="/js/common.js"></script></body></html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Telegram · TimosAI</title>
+  <meta name="description" content="TimosAI Telegram botu: sessiz, yalnızca anlamlı gelişmeler ve sohbet.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<main id="main" tabindex="-1">
+  <div class="page-head">
+    <div>
+      <h1>Telegram botu</h1>
+      <p>Sessiz çalışır: kendiliğinden aday yağdırmaz. Yalnızca takip ettiğin ya da ajanın elinde tuttuğu coinlerdeki anlamlı gelişmeleri, kritik durumları ve sohbeti yazar. Takip listesi ve sohbet web ile ortaktır. Bot emir vermez.</p>
+    </div>
+    <span class="badge badge-muted" id="tg-status">Durum: -</span>
+  </div>
+  <div class="grid-2">
+    <div class="grid" style="align-content:start">
+      <section class="card" aria-labelledby="st-h">
+        <div class="card-head"><h2 id="st-h">Bağlantı</h2></div>
+        <div id="tg-info" class="kpi-small">Yükleniyor…</div>
+      </section>
+      <section class="card" aria-labelledby="g-h">
+        <h2 id="g-h">4 adımda kurulum</h2>
+        <ol class="steps">
+          <li><div><b>Bot oluştur</b><p class="muted" style="margin:0">Telegram'da BotFather ile yeni bir bot aç ve verdiği jetonu kopyala.</p></div></li>
+          <li><div><b>.env dosyasına yaz</b><p class="muted" style="margin:0"><span class="mono">TELEGRAM_BOT_TOKEN</span> satırına jetonu yapıştır. Jeton hiçbir ekranda ve günlükte görünmez.</p></div></li>
+          <li><div><b>Kimliğini öğren</b><p class="muted" style="margin:0">Sunucuyu başlatıp bota <span class="mono">/id</span> yaz; gelen sayıyı <span class="mono">TELEGRAM_ALLOWED_USER_ID</span> satırına koy. Bot yalnızca bu kimliğe cevap verir.</p></div></li>
+          <li><div><b>Başla</b><p class="muted" style="margin:0">Sunucuyu yeniden başlat, bota <span class="mono">/kesfet</span> yaz: kalp takibe alır, kırık kalp geçer.</p></div></li>
+        </ol>
+      </section>
+      <section class="card" aria-labelledby="n-h">
+        <h2 id="n-h">Bildirim ayarları</h2>
+        <div class="setting-row"><div><b>Takip edilen coin gelişmeleri</b><p>Büyük hareket, karar değişimi, stop/hedefe yaklaşma, pozisyon açılış/kapanış. Coin başına 30 dk'da en fazla 1, saatte en fazla 6.</p></div><label class="switch"><input type="checkbox" id="n-dev" role="switch" aria-label="Gelişme bildirimleri"></label></div>
+        <div class="setting-row"><div><b>Kritik durumlar</b><p>Stop/hedef tetiklenmesi ve günlük zarar uyarısı. Sessiz modda da gelir.</p></div><label class="switch"><input type="checkbox" id="n-crit" role="switch" aria-label="Kritik bildirimler"></label></div>
+        <div class="setting-row"><div><b>Saatlik fırsat özeti</b><p>Varsayılan kapalı.</p></div><label class="switch"><input type="checkbox" id="n-sum" role="switch" aria-label="Fırsat özeti"></label></div>
+        <div class="setting-row"><div><b>Sessiz mod</b><p id="quiet-info">Kapalı</p></div><div style="display:flex;gap:6px"><button class="btn btn-sm" data-quiet="60" type="button">60 dk</button><button class="btn btn-sm btn-ghost" data-quiet="0" type="button">Kapat</button></div></div>
+      </section>
+    </div>
+    <section aria-labelledby="pv-h">
+      <h2 id="pv-h" style="text-align:center">Canlı mesaj önizlemesi</h2>
+      <div class="phone" role="img" aria-label="Telegram telefon önizlemesi">
+        <div class="phone-screen">
+          <div class="phone-top"><img src="/img/logo.svg" alt=""><div><b id="pv-name">TimosAI botu</b><br><span class="faint" style="font-size:.75rem" id="pv-sub">bot</span></div></div>
+          <div class="phone-msgs" id="pv-msgs"></div>
+        </div>
+      </div>
+      <p class="kpi-small" style="text-align:center;margin-top:10px">Bot kapalıyken de mesajlar burada "gönderilmedi" etiketiyle görünür.</p>
+    </section>
+  </div>
+</main>
+<script src="/js/common.js"></script>
+<script src="/js/telegram.js"></script>
+</body>
+</html>
