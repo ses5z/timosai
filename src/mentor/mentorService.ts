@@ -24,6 +24,9 @@ export interface MentorReply {
 const YES_RE = /^(evet|onayl[ıi]yorum|onayla|tamam|olur|kabul|yes)\b/i;
 const NO_RE = /^(hay[ıi]r|vazge[çc]|iptal|istemiyorum|no)\b/i;
 
+/** Model bazen sistem talimatındaki <cevap_modu> etiketini cevaba kopyalar: kullanıcıya gösterilmez. */
+export const stripModeTag = (t: string) => t.replace(/<\/?cevap_modu>\s*(kisa|ayrintili)?\s*(<\/cevap_modu>)?/gi, "").replace(/[ \t]+\n/g, "\n").trim();
+
 export class MentorService {
   readonly tools: MentorTools;
   readonly rule: RuleMentor;
@@ -61,7 +64,7 @@ export class MentorService {
       if (!p.available()) continue;
       try {
         this.calls.push(Date.now());
-        const out = await p.reply({ text: prompt, history: [], tools: this.tools, detail: false });
+        const out = stripModeTag(await p.reply({ text: prompt, history: [], tools: this.tools, detail: false }));
         const lines = out.split(/\n+/).map((l) => l.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, "").replace(/\*\*/g, "").trim()).filter((l) => l.length > 8).map((l) => l[0].toLocaleUpperCase("tr-TR") + l.slice(1)).slice(0, 3);
         if (lines.length >= 2) return { lines, provider: p.name };
       } catch {
@@ -113,6 +116,7 @@ export class MentorService {
           try {
             this.calls.push(Date.now());
             let out = await p.reply({ text, history, tools: this.tools, detail });
+            out = stripModeTag(out);
             if (!detail) {
               const s = enforceShort(out);
               if (s.trimmed) log.warn(`Mentor: uzun cevap (${p.name}); kısa modda ilk 4 cümle gönderildi.`);

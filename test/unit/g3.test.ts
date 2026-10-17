@@ -296,3 +296,9 @@ test("Canlı kapanış: bağlı stop varlığı donduruyorsa önce iptal edilir,
   assert.match(String(rr?.message ?? JSON.stringify(rr) + calls.slice(before).join(",")), /emri numarası dönmedi/);
   assert.ok((t as any).positions.has("p2"));
 });
+
+test("Mentor cevabında <cevap_modu> etiketi görünmez", async () => {
+  const { stripModeTag } = await import("../../src/mentor/mentorService.js");
+  assert.equal(stripModeTag("SOL yukarı trendde. <cevap_modu>kisa</cevap_modu>"), "SOL yukarı trendde.");
+  assert.equal(stripModeTag("<cevap_modu>ayrintili</cevap_modu>\nUzun cevap"), "Uzun cevap");
+});
