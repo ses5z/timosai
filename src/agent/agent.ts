@@ -6,6 +6,12 @@ import type { Store } from "../state/store.js";
 import type { WarningCenter } from "../contract/warnings.js";
 import { checkAgentEntry, computeRiskScore, planBlockText, type ContractRules, type RiskScore } from "../contract/contract.js";
 import { planRef } from "../plan/plan.js";
+
+/** "Limit doluluğu: açık tutar 13/15 · pozisyon 3/3. Yeni işlem açılmayacak, mevcutlar yönetiliyor." */
+export function limitFillText(x: { open: number; maxOpen: number; count: number; maxCount: number }): string {
+  const full = x.open >= x.maxOpen - 1e-9 || x.count >= x.maxCount;
+  return `Limit doluluğu: açık tutar ${Math.round(x.open)}/${x.maxOpen} · pozisyon ${x.count}/${x.maxCount}. ${full ? "Yeni işlem açılmayacak, mevcutlar yönetiliyor." : "Limite yaklaşıldı; ajan plan sınırları içinde kalır."}`;
+}
 import type { HardLimits } from "../trading/hardLimits.js";
 import { HardLimitError, type EntryRequest, type Position, type TradingClient } from "../trading/tradingClient.js";
 import type { Thresholds } from "./thresholds.js";
@@ -574,7 +580,7 @@ export class Agent {
     if (t.listPositions().length >= L.maxOpenPositions) items.push({ label: "Açık pozisyon sayısı", value: String(t.listPositions().length), limit: String(L.maxOpenPositions) });
     if (t.ordersLastHour() >= L.maxOrdersPerHour - 1) items.push({ label: "Son 1 saatteki emir", value: String(t.ordersLastHour()), limit: String(L.maxOrdersPerHour) });
     if (items.length) {
-      this.d.warnings.raise("limite_yakin", items.map((i) => i.label).join(","), "Ajan sert limite yaklaştı", "Ajan sert limitlere yaklaştı. Limitler aşılamaz; ajan sınır dolarsa yeni giriş yapmaz, mevcut pozisyonları yönetmeye devam eder.", items, this.riskScore().score);
+      this.d.warnings.raise("limite_yakin", items.map((i) => i.label).join(","), "Limit doluluğu", limitFillText({ open: t.openNotional(), maxOpen: L.maxTotalOpenUsdt, count: t.listPositions().length, maxCount: L.maxOpenPositions }), items, this.riskScore().score);
     }
   }
 
@@ -593,6 +599,7 @@ export class Agent {
         "Bugünkü zarar uyarı eşiğini geçti. Hiçbir şey durdurulmadı; ajan sözleşme ve sert limitler içinde çalışmaya devam ediyor. Her işlemde stop zorunlu.",
         [{ label: "Günlük PnL", value: `${pnl.toFixed(2)} USDT`, limit: `uyarı eşiği -${L.dailyLossWarnUsdt} USDT` }],
         rs.score,
+        { critical: t.mode === "CANLI" }, // canlıda günlük zarar kritik: pencere açılır; paper'da toast
       );
       this.dev({ symbol: "PORTFÖY", kind: "günlük_zarar", text: `Günlük zarar ${pnl.toFixed(2)} USDT; uyarı eşiği aşıldı. Ajan çalışmaya devam ediyor.`, critical: true });
     }

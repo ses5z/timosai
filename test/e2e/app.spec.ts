@@ -77,22 +77,39 @@ test("keşfet: sürükleme, ok tuşları ve geri al akışı", async ({ page }) 
   await expect(page.locator("#plan-box")).toContainText("ajan");
 });
 
-test("15 coin listeye alınınca uyarı penceresi: odak Tamam'da, Esc kapatır, kilit yok", async ({ page }) => {
+test("15 coin listeye alınınca uyarı toast olur (pencere yok), kilit yok", async ({ page }) => {
   await waitForScan(page);
   await page.goto("/panel");
   await page.waitForTimeout(500);
   const cands = await (await page.request.get("/api/candidates")).json();
   for (const c of cands.slice(0, 15)) await page.request.post("/api/follows", { data: { instId: c.instId } });
+  await expect(page.locator(".toast").filter({ hasText: /coin var|kalabalık/ }).first()).toBeVisible();
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  const r = await page.request.post("/api/follows", { data: { instId: cands[15].instId } });
+  expect(r.status()).toBe(200);
+});
+
+test("G3 madde 5: kritik uyarı (devre kesici) pencere açar: odak Tamam'da, Esc kapatır", async ({ page }) => {
+  await waitForScan(page);
+  await page.goto("/panel");
+  await page.evaluate(() => (window as any).TimosAI.showWarning({ critical: true, title: "Devre kesici açıldı", text: "Teknik arıza", items: [], riskScore: 10 }));
   const dlg = page.getByRole("alertdialog");
   await expect(dlg).toBeVisible();
-  await expect(dlg).toContainText("Takip listen kalabalıklaştı");
-  await expect(dlg.getByRole("button")).toHaveCount(2 - 1 + 1); // Tamam + açıklama balonu düğmesi
   await expect(page.getByRole("button", { name: "Tamam" })).toBeFocused();
   await expect(dlg).not.toContainText("Yine de");
   await page.keyboard.press("Escape");
   await expect(dlg).toBeHidden();
-  const r = await page.request.post("/api/follows", { data: { instId: cands[15].instId } });
-  expect(r.status()).toBe(200);
+  await page.evaluate(() => (window as any).TimosAI.showWarning({ critical: false, title: "Limit doluluğu", text: "Limit doluluğu: açık tutar 13/15 · pozisyon 3/3. Yeni işlem açılmayacak, mevcutlar yönetiliyor.", items: [], riskScore: 10 }));
+  await expect(page.locator(".toast").last()).toContainText("Limit doluluğu: açık tutar 13/15 · pozisyon 3/3");
+  await expect(dlg).toHaveCount(0);
+  await page.evaluate(() => localStorage.setItem("tms-mode", "pro"));
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.reload();
+  await page.evaluate(() => (window as any).TimosAI.toast("Limit doluluğu: açık tutar 13/15 · pozisyon 3/3. Yeni işlem açılmayacak, mevcutlar yönetiliyor.", 8000));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360); // Pro + mobil: taşma yok
+  const tb = (await page.locator(".toast").last().boundingBox())!;
+  expect(tb.x + tb.width).toBeLessThanOrEqual(360);
+  await page.screenshot({ path: `${SHOTS}/g3-madde5-toast-360.png` });
 });
 
 test("ısı haritası: tıkla → çekmece → URL; Al/Sat düğmesi yok", async ({ page }) => {
@@ -128,14 +145,13 @@ test("kullanıcı emir yolu yok: API'de emir uç noktası bulunmaz, sayfalarda A
   }
 });
 
-test("panel: senaryo uyarı penceresini açar; olay günlüğünde kaydırma canlı yenilemede korunur", async ({ page }) => {
+test("panel: senaryo plana referanslı engel toast'ı gösterir; Pro günlükte kaydırma canlı yenilemede korunur", async ({ page }) => {
   await waitForScan(page);
+  await page.addInitScript(() => { try { localStorage.setItem("tms-mode", "pro"); } catch {} });
   await page.goto("/panel");
   await page.click("#scenario-btn");
-  const dlg = page.getByRole("alertdialog");
-  await expect(dlg).toBeVisible({ timeout: 30_000 });
-  await expect(dlg).toContainText("sözleşmeye aykırı buldu ve vermedi");
-  await page.getByRole("button", { name: "Tamam" }).click();
+  await expect(page.locator(".toast").filter({ hasText: "long planına uymadı" }).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
   await expect(page.locator("#sc-step")).toHaveText("tamamlandı", { timeout: 30_000 });
   for (let i = 0; i < 3; i++) await page.request.post("/api/agent/scan");
   const log = page.locator("#ev-list");
@@ -208,7 +224,7 @@ test("ısı haritası çekmecesi: vadeli durum ve hold raporu, Lightweight Chart
   await expect(drawer.locator(".tv-box canvas").first()).toBeVisible();
 });
 
-test("Güncelleme2 madde 2: çekmece AI analizi, Trend çizgisi ve Seviyeler düğmeleri (seviyeler varsayılan kapalı)", async ({ page }) => {
+test("Güncelleme2 madde 2 (+G3): çekmece AI analizi, Trend çizgisi ve Mentor işlemi düğmeleri (varsayılan kapalı)", async ({ page }) => {
   await waitForScan(page);
   for (const width of [360, 1440]) {
     await page.setViewportSize({ width, height: width === 360 ? 780 : 900 });
@@ -217,8 +233,9 @@ test("Güncelleme2 madde 2: çekmece AI analizi, Trend çizgisi ve Seviyeler dü
     await expect(drawer.locator(".ai-card")).toContainText("AI analizi");
     await expect(drawer.locator(".ai-card")).toContainText("Vadeli");
     await expect(drawer.locator(".ai-card")).toContainText("Hold / arz");
-    const lv = drawer.getByRole("button", { name: "Seviyeler" });
+    const lv = drawer.getByRole("button", { name: "Mentor işlemi" });
     await expect(lv).toHaveAttribute("aria-pressed", "false");
+    await expect(drawer.getByRole("button", { name: "Seviyeler" })).toHaveCount(0);
     const tr = drawer.getByRole("button", { name: "Trend çizgisi" });
     await tr.click();
     await expect(drawer.locator(".chart-legend")).toBeVisible();

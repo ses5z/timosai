@@ -1,4 +1,5 @@
-// Uyarı merkezi: bilgilendirir ve uyarır (tek düğme: Tamam). Aynı uyarı 60 sn içinde tekrar çıkmaz.
+// Uyarı merkezi: bilgilendirir ve uyarır. G3: yalnızca kritik uyarılar (devre kesici, canlı günlük zarar) pencere açar;
+// diğerleri arayüzde kısa bildirim (toast) olur. Aynı uyarı 60 sn içinde tekrar çıkmaz.
 import crypto from "node:crypto";
 import type { ContractItem } from "./contract.js";
 
@@ -12,6 +13,8 @@ export interface AppWarning {
   items: ContractItem[];
   riskScore: number;
   ts: number;
+  /** true: pencere (modal) açılır; false: toast. */
+  critical: boolean;
 }
 
 export class WarningCenter {
@@ -30,13 +33,13 @@ export class WarningCenter {
   }
 
   /** Uyarı üretir; 60 sn içinde aynı (tür+anahtar) uyarı varsa null döner. Hiçbir şeyi kilitlemez. */
-  raise(kind: WarningKind, key: string, title: string, text: string, items: ContractItem[], riskScore: number): AppWarning | null {
+  raise(kind: WarningKind, key: string, title: string, text: string, items: ContractItem[], riskScore: number, opts: { critical?: boolean } = {}): AppWarning | null {
     const k = `${kind}:${key}`;
     const t = this.now();
     const prev = this.last.get(k);
     if (prev !== undefined && t - prev < this.dedupeMs) return null;
     this.last.set(k, t);
-    const w: AppWarning = { id: crypto.randomUUID().slice(0, 8), kind, title, text, items, riskScore: Math.round(riskScore), ts: t };
+    const w: AppWarning = { id: crypto.randomUUID().slice(0, 8), kind, title, text, items, riskScore: Math.round(riskScore), ts: t, critical: opts.critical ?? kind === "devre_kesici" };
     this.history.push(w);
     if (this.history.length > 200) this.history.shift();
     this.counts.set(kind, (this.counts.get(kind) ?? 0) + 1);

@@ -161,3 +161,14 @@ test("Emir defteri: durumlar (açıldı/hedef 1/stop/süre doldu/kapandı) ve g�
   assert.equal(logKind({ level: "bilgi", text: "Avalanche kanıtı yazıldı" }), "zincir");
   assert.equal(logKind({ level: "bilgi", text: "Telegram bildirimi gönderildi" }), "bildirim");
 });
+
+test("Toast/modal: yalnızca devre kesici ve canlı günlük zarar kritik; limit doluluğu metni", async () => {
+  const { WarningCenter } = await import("../../src/contract/warnings.js");
+  const { limitFillText } = await import("../../src/agent/agent.js");
+  const w = new WarningCenter();
+  assert.equal(w.raise("devre_kesici", "a", "t", "x", [], 1)!.critical, true);
+  assert.equal(w.raise("limite_yakin", "a", "t", "x", [], 1)!.critical, false);
+  assert.equal(w.raise("ajan_engelledi", "a", "t", "x", [], 1)!.critical, false);
+  assert.equal(w.raise("gunluk_zarar", "a", "t", "x", [], 1, { critical: true })!.critical, true);
+  assert.equal(limitFillText({ open: 13.2, maxOpen: 15, count: 3, maxCount: 3 }), "Limit doluluğu: açık tutar 13/15 · pozisyon 3/3. Yeni işlem açılmayacak, mevcutlar yönetiliyor.");
+});

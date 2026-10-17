@@ -262,7 +262,12 @@
   // ---------- Uyarı penceresi (tek düğme: Tamam) ----------
   const queue = [];
   let open = false;
-  T.showWarning = (w) => { queue.push(w); if (!open) next(); };
+  // G3: yalnızca kritik uyarılar (devre kesici, canlı günlük zarar) pencere açar; diğerleri kısa bildirimdir.
+  T.showWarning = (w) => {
+    if (!w.critical) return T.toast(w.text, 6000);
+    queue.push(w);
+    if (!open) next();
+  };
   function next() {
     const w = queue.shift();
     if (!w) { open = false; return; }

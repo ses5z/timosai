@@ -231,7 +231,7 @@ tr:last-child td { border-bottom: 0; }
 
 /* Bildirim (toast) */
 .toast-wrap { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 90; display: grid; gap: 8px; width: min(440px, calc(100% - 32px)); }
-.toast { background: var(--cream-100); color: var(--on-accent); padding: 12px 16px; border-radius: 14px; box-shadow: var(--shadow); font-weight: 500; font-size: 0.92rem; animation: rise 0.2s ease-out; }
+.toast { background: var(--text); color: var(--bg); border: 1px solid var(--amber); padding: 12px 16px; border-radius: 14px; box-shadow: var(--shadow); font-weight: 500; font-size: 0.92rem; animation: rise 0.2s ease-out; }
 
 /* Uyarı şeridi (canlı veri yok vb.) */
 .notice { border-radius: 14px; padding: 10px 14px; font-size: 0.9rem; display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; }
@@ -344,7 +344,8 @@ tr:last-child td { border-bottom: 0; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
 .history { max-height: 420px; overflow: auto; overscroll-behavior: contain; }
 .confirm-box { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; background: var(--caution-soft); border: 1px solid rgba(242, 193, 78, 0.4); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
-.scenario-steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+.scenario-steps { margin: 0; padding-left: 22px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.scenario-steps li { min-width: 0; overflow-wrap: anywhere; }
 .scenario-steps li::marker { color: var(--amber); font-weight: 700; }
 
 /* ---------- Telegram ---------- */
