@@ -3,6 +3,13 @@
 (function () {
   "use strict";
   const T = window.TimosAI;
+  T.renderBacktest = function (r) {
+    const sgn = (v) => `${v >= 0 ? "+" : ""}${v}R`;
+    return `<div class="kpi-row bt-kpis"><div class="stat"><span class="kpi-small">İşlem</span><b class="num">${r.trades}</b></div><div class="stat"><span class="kpi-small">Hedefe ulaşan</span><b class="num">%${r.hitPct}</b></div><div class="stat"><span class="kpi-small">Ort. R</span><b class="num ${T.cls(r.avgR)}">${sgn(r.avgR)}</b></div><div class="stat"><span class="kpi-small">Maks düşüş</span><b class="num">${r.maxDrawdownR}R</b></div><div class="stat"><span class="kpi-small">Long / short</span><b class="num">${r.long.trades} (${sgn(r.long.avgR)}) / ${r.short.trades} (${sgn(r.short.avgR)})</b></div></div>
+      <p class="faint bt-meta">${T.esc(r.plan)} · vade ${T.esc(r.horizon)} · 4s kapanışları, ileriye bakış yok · ${r.coins.map((c) => c.split("-")[0]).join(", ")}${r.coinsNote ? ` · ${T.esc(r.coinsNote)}` : ""}</p>
+      ${r.trades ? "" : `<p class="faint">Bu dönemde plan koşullarını sağlayan kurulum çıkmadı.</p>`}
+      <p class="bt-note"><b>${T.esc(r.note)}</b></p>`;
+  };
   const form = document.getElementById("plan-form");
   if (!form) return;
   const $ = (s) => document.querySelector(s);
@@ -57,13 +64,6 @@
   async function loadStats() {
     try { const st = await T.api("/api/setups/stats"); $("#setup-stats").textContent = `${st.text} (Mentor işlemi kurulumları)`; } catch { $("#setup-stats").textContent = "Kurulum istatistiği alınamadı."; }
   }
-  T.renderBacktest = function (r) {
-    const sgn = (v) => `${v >= 0 ? "+" : ""}${v}R`;
-    return `<div class="kpi-row bt-kpis"><div class="stat"><span class="kpi-small">İşlem</span><b class="num">${r.trades}</b></div><div class="stat"><span class="kpi-small">Hedefe ulaşan</span><b class="num">%${r.hitPct}</b></div><div class="stat"><span class="kpi-small">Ort. R</span><b class="num ${T.cls(r.avgR)}">${sgn(r.avgR)}</b></div><div class="stat"><span class="kpi-small">Maks düşüş</span><b class="num">${r.maxDrawdownR}R</b></div><div class="stat"><span class="kpi-small">Long / short</span><b class="num">${r.long.trades} (${sgn(r.long.avgR)}) / ${r.short.trades} (${sgn(r.short.avgR)})</b></div></div>
-      <p class="faint bt-meta">${T.esc(r.plan)} · vade ${T.esc(r.horizon)} · 4s kapanışları, ileriye bakış yok · ${r.coins.map((c) => c.split("-")[0]).join(", ")}${r.coinsNote ? ` · ${T.esc(r.coinsNote)}` : ""}</p>
-      ${r.trades ? "" : `<p class="faint">Bu dönemde plan koşullarını sağlayan kurulum çıkmadı.</p>`}
-      <p class="bt-note"><b>${T.esc(r.note)}</b></p>`;
-  };
   $("#bt-run").addEventListener("click", async () => {
     const b = $("#bt-run");
     b.disabled = true;

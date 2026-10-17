@@ -368,12 +368,13 @@ test("Güncelleme2 madde 9: Pro Terminal düzeni ve gündüz/gece (4 palet, terc
     await expect(page.locator("#tw-body tr").first()).toBeVisible();
     await expect(page.locator("#tc-chart .tv-box canvas").first()).toBeVisible();
     await expect(page.locator("#ob-box")).toContainText("Fiyat");
+    await page.locator('[data-rt="ls"]').click(); // G3: sağ sütun sekmeli
     await expect(page.locator("#ls2-box")).toContainText("OKX hesap");
-    for (const t of ["Pozisyonlar", "Emir geçmişi", "Paper istatistikleri", "Güvenlik taraması", "ATK çağrı günlüğü"]) await expect(page.getByRole("tab", { name: t })).toBeVisible();
-    await page.getByRole("tab", { name: "Paper istatistikleri" }).click();
+    for (const t of ["Pozisyonlar", "Emir defteri", "Paper istatistik", "Güvenlik taraması", "ATK günlüğü"]) await expect(page.getByRole("tab", { name: t, exact: true })).toBeAttached();
+    await page.getByRole("tab", { name: "Paper istatistik", exact: true }).click();
     await expect(page.locator("#tb-box")).toContainText("Kazanma oranı");
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    expect(overflow).toBeLessThanOrEqual(1);
+    expect(overflow, `genişlik ${width}`).toBeLessThanOrEqual(1);
     await page.screenshot({ path: `${SHOTS}/g2-madde9-terminal-${width}.png`, fullPage: width === 1440 });
   }
   // gündüz/gece
@@ -565,4 +566,37 @@ test("G3 madde 8: Basic rehber, Pro gezinme + kısayollar, geçiş katmanı (aza
   await ctx2.close();
   await page.setViewportSize({ width: 360, height: 780 });
   await page.screenshot({ path: `${SHOTS}/g3-madde8-pro-360.png` });
+});
+
+test("G3 madde 9: Terminal ızgarası (≈22/53/25, eşit yükseklik), sekmeler, <1280 sağ sütun alta", async ({ page }) => {
+  await waitForScan(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/terminal");
+  await expect(page.locator("#tw-body tr").first()).toBeVisible();
+  const box = async (s: string) => (await page.locator(s).boundingBox())!;
+  const [w, c, r] = [await box(".term-watch"), await box(".term-center"), await box(".term-side")];
+  const total = w.width + c.width + r.width;
+  expect(w.width / total).toBeGreaterThan(0.19); expect(w.width / total).toBeLessThan(0.25);
+  expect(c.width / total).toBeGreaterThan(0.49); expect(c.width / total).toBeLessThan(0.57);
+  expect(r.width / total).toBeGreaterThan(0.22); expect(r.width / total).toBeLessThan(0.28);
+  expect(Math.abs(w.height - c.height)).toBeLessThan(4);
+  expect(Math.abs(c.height - r.height)).toBeLessThan(4);
+  await expect(page.locator("[data-tb]")).toHaveText(["Pozisyonlar", "Emir defteri", "Paper istatistik", "Backtest", "Güvenlik taraması", "ATK günlüğü"]);
+  await expect(page.locator("[data-rt]")).toHaveText(["Order book", "Vadeli", "L/S", "Arz"]);
+  await page.locator('[data-rt="dv"]').click();
+  await expect(page.locator('[data-rp="dv"]')).toBeVisible();
+  await expect(page.locator('[data-rp="ob"]')).toBeHidden();
+  await expect(page.locator("#ts-box")).toContainText("Mentor işlemi");
+  await page.locator('[data-tb="bt"]').click();
+  await page.locator("#t-bt").click();
+  await expect(page.locator("#t-bt-out")).toContainText("Geçmiş performans geleceği garanti etmez.");
+  await page.locator("#tc-search").fill("BT");
+  await expect(page.locator("#tw-body tr")).toHaveCount(1);
+  await page.screenshot({ path: `${SHOTS}/g3-madde9-terminal-e2e-1440.png` });
+  await page.setViewportSize({ width: 1100, height: 900 });
+  const [c2, r2] = [await box(".term-center"), await box(".term-side")];
+  expect(r2.y).toBeGreaterThan(c2.y + c2.height - 4); // sağ sütun ortanın altında
+  await page.setViewportSize({ width: 360, height: 780 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  await page.screenshot({ path: `${SHOTS}/g3-madde9-terminal-e2e-360.png` });
 });

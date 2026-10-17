@@ -555,10 +555,38 @@ body[data-mode="pro"] { font-variant-numeric: tabular-nums; }
 
 /* ---------- Pro Terminal ---------- */
 .term-page main.term-main { max-width: 1600px; padding: 12px; }
+/* G3 madde 9: sabit yükseklikli 3 sütun (≈22/53/25). <1280 px: sağ sütun ortanın altına; <760 px: tek sütun. */
+.term-page { --term-h: max(720px, calc(100vh - 140px)); }
 .term-grid { display: grid; gap: 10px; grid-template-columns: 1fr; }
-@media (min-width: 1100px) { .term-grid { grid-template-columns: 390px minmax(0, 1fr) 320px; align-items: start; } }
-.term-side { display: grid; gap: 10px; }
-.term-bottom { margin-top: 10px; }
+.term-center, .term-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.term-watch { display: flex; flex-direction: column; }
+.tw-tools { display: flex; gap: 6px; margin-bottom: 8px; }
+.tw-tools input, .tw-tools select { min-height: 34px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: .85rem; min-width: 0; }
+.tw-tools input { flex: 1; }
+.tw-scroll { flex: 1; min-height: 0; overflow-y: auto; max-height: 420px; }
+.term-bottom { display: flex; flex-direction: column; }
+.term-bottom .tb-box { flex: 1; min-height: 0; overflow-y: auto; max-height: 360px; }
+.term-rtabs { display: flex; flex-direction: column; }
+.rt-box { flex: 1; min-height: 0; overflow-y: auto; margin-top: 8px; max-height: 460px; }
+.term-setup .setup-card, .term-setup #ts-box { font-size: .86rem; }
+.term-setup .setup-grid { font-size: .84rem; }
+@media (min-width: 760px) {
+  .term-grid { grid-template-columns: minmax(230px, 30%) minmax(0, 1fr); }
+  .term-side { grid-column: 2; display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  .term-watch { grid-row: span 2; height: var(--term-h); }
+  .tw-scroll { max-height: none; }
+}
+@media (min-width: 1280px) {
+  .term-grid { grid-template-columns: 22fr 53fr 25fr; align-items: stretch; }
+  .term-watch { grid-row: auto; }
+  .term-watch, .term-center, .term-side { height: var(--term-h); }
+  .term-side { grid-column: auto; display: flex; }
+  .term-bottom { flex: 1; min-height: 0; }
+  .term-bottom .tb-box { max-height: none; }
+  .term-rtabs { flex: 1; min-height: 0; }
+  .rt-box { max-height: none; }
+  .term-setup { flex: 0 0 auto; max-height: 46%; overflow-y: auto; }
+}
 .tb-box { margin-top: 10px; }
 table.dense th, table.dense td { padding: 5px 7px; font-size: 0.82rem; }
 table.dense tbody th { position: static; text-transform: none; letter-spacing: 0; font-size: 0.82rem; color: var(--text); background: transparent; font-weight: 600; }
@@ -668,3 +696,13 @@ body[data-mode="pro"] .page-head p { font-size: .9rem; }
 .guide-q { font-family: var(--font-display); font-size: 1.15rem; margin: 0 0 8px; text-align: center; color: var(--cream-50); }
 .guide-home .guide-grid a { background: rgba(20, 22, 30, .55); border-color: rgba(255,255,255,.18); color: var(--cream-50); }
 .guide-home .guide-grid span { color: var(--cream-300); }
+/* Terminal: sıkı sekmeler (tek satır, gerekirse yatay kaydırma) */
+.term-page .term-bottom .tabs, .term-page .term-rtabs .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding: 3px; }
+.term-page .term-bottom .tabs button, .term-page .term-rtabs .tabs button { min-height: 30px; padding: 4px 10px; font-size: .8rem; white-space: nowrap; flex: 0 0 auto; }
+.term-page .term-rtabs .tabs button { flex: 1 0 auto; }
+.term-page .tb-box { margin-top: 8px; }
+.term-page .tb-box { overflow-x: auto; }
+.term-page .tb-box .kpi-row { flex-wrap: wrap; }
+.term-page .tb-box .kpi-row .stat { min-width: 0; }
+.term-page main.term-main { overflow-x: clip; }
+.term-grid > * { min-width: 0; }

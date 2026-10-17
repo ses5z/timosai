@@ -15,31 +15,52 @@
   <div class="term-grid">
     <section class="card term-watch" aria-labelledby="tw-h">
       <div class="card-head"><h2 id="tw-h">İzleme listesi</h2><span class="kpi-small" id="tw-info"></span></div>
-      <div class="table-wrap" style="max-height:none"><table class="dense"><thead><tr><th>Coin</th><th class="num">Fiyat</th><th class="num">24 sa</th><th class="num">Funding</th><th class="num">Long%</th></tr></thead><tbody id="tw-body"></tbody></table></div>
+      <div class="tw-tools">
+        <input type="search" id="tc-search" placeholder="Ara ( / )" aria-label="İzleme listesinde ara" autocomplete="off">
+        <select id="tw-sort" aria-label="Sırala"><option value="opp">Fırsat</option><option value="chg">24 sa değişim</option><option value="vol">Hacim</option><option value="az">A → Z</option></select>
+      </div>
+      <div class="table-wrap tw-scroll"><table class="dense"><thead><tr><th>Coin</th><th class="num">Fiyat</th><th class="num">24 sa</th><th class="num">Long%</th></tr></thead><tbody id="tw-body"></tbody></table></div>
     </section>
-    <section class="card term-chart" aria-labelledby="tc-h">
-      <div class="card-head"><h2 id="tc-h"><span id="tc-sym">-</span> <span class="kpi-small" id="tc-px"></span></h2><span class="pill" id="tc-dec"></span></div>
-      <div id="tc-chart"></div>
-      <p class="kpi-small" id="tc-reason" style="margin:8px 0 0"></p>
-    </section>
+    <div class="term-center">
+      <section class="card term-chart" aria-labelledby="tc-h">
+        <div class="card-head"><h2 id="tc-h"><span id="tc-sym">-</span> <span class="kpi-small" id="tc-px"></span></h2><span class="pill" id="tc-dec"></span></div>
+        <div id="tc-chart"></div>
+      </section>
+      <section class="card term-bottom" aria-labelledby="tb-h">
+        <h2 id="tb-h" class="visually-hidden">Hesap ve kayıtlar</h2>
+        <div class="tabs" role="tablist" aria-label="Alt paneller">
+          <button role="tab" aria-selected="true" data-tb="pos">Pozisyonlar</button>
+          <button role="tab" aria-selected="false" data-tb="hist">Emir defteri</button>
+          <button role="tab" aria-selected="false" data-tb="stats">Paper istatistik</button>
+          <button role="tab" aria-selected="false" data-tb="bt">Backtest</button>
+          <button role="tab" aria-selected="false" data-tb="sec">Güvenlik taraması</button>
+          <button role="tab" aria-selected="false" data-tb="atk">ATK günlüğü</button>
+        </div>
+        <div id="tb-box" class="tb-box" role="tabpanel"></div>
+      </section>
+    </div>
     <aside class="term-side">
-      <section class="card" aria-labelledby="ob-h"><div class="card-head"><h2 id="ob-h">Order book</h2><span class="kpi-small" id="ob-spread"></span></div><div id="ob-box" class="ob"></div></section>
-      <section class="card" aria-labelledby="dv-h"><h2 id="dv-h">Vadeli durum</h2><div id="dv-box"></div></section>
-      <section class="card" aria-labelledby="ls2-h"><h2 id="ls2-h">Long/Short</h2><div id="ls2-box"></div></section>
-      <section class="card" aria-labelledby="sp-h"><h2 id="sp-h">Arz özeti</h2><div id="sp-box"></div></section>
+      <section class="card term-rtabs" aria-labelledby="rt-h">
+        <h2 id="rt-h" class="visually-hidden">Piyasa ayrıntıları</h2>
+        <div class="tabs" role="tablist" aria-label="Sağ paneller">
+          <button role="tab" aria-selected="true" data-rt="ob">Order book</button>
+          <button role="tab" aria-selected="false" data-rt="dv">Vadeli</button>
+          <button role="tab" aria-selected="false" data-rt="ls">L/S</button>
+          <button role="tab" aria-selected="false" data-rt="sp">Arz</button>
+        </div>
+        <div class="rt-box">
+          <div data-rp="ob"><div class="kpi-small" id="ob-spread"></div><div id="ob-box" class="ob"></div></div>
+          <div data-rp="dv" hidden><div id="dv-box"></div></div>
+          <div data-rp="ls" hidden><div id="ls2-box"></div></div>
+          <div data-rp="sp" hidden><div id="sp-box"></div></div>
+        </div>
+      </section>
+      <section class="card term-setup" aria-labelledby="ts-h">
+        <h2 id="ts-h" class="visually-hidden">Mentor işlemi özeti</h2>
+        <div id="ts-box"><p class="kpi-small">Mentor işlemi hesaplanıyor…</p></div>
+      </section>
     </aside>
   </div>
-  <section class="card term-bottom" aria-labelledby="tb-h">
-    <h2 id="tb-h" class="visually-hidden">Hesap ve kayıtlar</h2>
-    <div class="tabs" role="tablist" aria-label="Alt paneller">
-      <button role="tab" aria-selected="true" data-tb="pos">Pozisyonlar</button>
-      <button role="tab" aria-selected="false" data-tb="hist">Emir geçmişi</button>
-      <button role="tab" aria-selected="false" data-tb="stats">Paper istatistikleri</button>
-      <button role="tab" aria-selected="false" data-tb="sec">Güvenlik taraması</button>
-      <button role="tab" aria-selected="false" data-tb="atk">ATK çağrı günlüğü</button>
-    </div>
-    <div id="tb-box" class="tb-box" role="tabpanel"></div>
-  </section>
 </main>
 <script src="/vendor/lightweight-charts.standalone.production.js"></script>
 <script src="/js/common.js"></script>
@@ -47,6 +68,7 @@
 <script src="/js/supply.js"></script>
 <script src="/js/longshort.js"></script>
 <script src="/js/security.js"></script>
+<script src="/js/plan.js"></script>
 <script src="/js/terminal.js"></script>
 </body>
 </html>

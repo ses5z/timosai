@@ -1,18 +1,21 @@
-/* Pro Terminal: yoğun bilgi düzeni. Solda izleme listesi, ortada büyük grafik, sağda order book + vadeli + L/S + arz,
-   altta pozisyonlar / emir geçmişi / paper istatistikleri / güvenlik taraması / ATK günlüğü. */
+/* Pro Terminal (G3 madde 9): sol ~%22 izleme listesi (arama, sıralama, sabit yükseklik, iç kaydırma);
+   orta ~%53 grafik + sekmeli panel (Pozisyonlar · Emir defteri · Paper istatistik · Backtest · Güvenlik taraması · ATK günlüğü);
+   sağ ~%25 sekmeli kart (Order book · Vadeli · L/S · Arz) + Mentor işlemi özeti. <1280 px'te sağ sütun ortanın altına iner. */
 (function () {
   "use strict";
   const T = window.TimosAI, $ = (s) => document.querySelector(s), F = T.fmt;
   if (document.body.dataset.mode !== "pro") document.body.dataset.mode = "pro";
-  let cands = [], ls = null, sel = new URLSearchParams(location.search).get("s") || null, chart = null, tab = "pos";
+  let cands = [], ls = null, sel = new URLSearchParams(location.search).get("s") || null, chart = null, tab = "pos", rtab = "ob";
 
   const longOf = (id) => { const r = ls && ls.rows.find((x) => x.instId === id); return r ? (r.okxTopAccount ?? r.bnTopAccount) : null; };
   function renderWatch() {
-    $("#tw-info").textContent = `${cands.length} coin`;
-    $("#tw-body").innerHTML = cands.map((c) => {
-      const f = c.funding, l = longOf(c.instId);
-      return `<tr data-id="${T.esc(c.instId)}" tabindex="0" aria-selected="${c.instId === sel}" class="${c.instId === sel ? "sel" : ""}"><th scope="row">${T.esc(c.base)}</th><td class="num" data-p>${F.price(c.price)}</td><td class="num ${T.cls(c.change24hPct)}" data-c>${F.pct(c.change24hPct)}</td><td class="num">${f == null ? "–" : (f * 100).toFixed(4) + "%"}</td><td class="num">${l == null ? "–" : F.num(l, 0) + "%"}</td></tr>`;
-    }).join("");
+    const q = $("#tc-search").value.trim().toUpperCase(), sort = $("#tw-sort").value;
+    const list = cands.filter((c) => !q || c.base.includes(q)).sort((a, b) => sort === "chg" ? b.change24hPct - a.change24hPct : sort === "vol" ? b.volUsdt24h - a.volUsdt24h : sort === "az" ? a.base.localeCompare(b.base) : 0);
+    $("#tw-info").textContent = `${list.length}/${cands.length} coin`;
+    $("#tw-body").innerHTML = list.map((c) => {
+      const l = longOf(c.instId);
+      return `<tr data-id="${T.esc(c.instId)}" tabindex="0" aria-selected="${c.instId === sel}" class="${c.instId === sel ? "sel" : ""}"><th scope="row">${T.esc(c.base)}</th><td class="num" data-p>${F.price(c.price)}</td><td class="num ${T.cls(c.change24hPct)}" data-c>${F.pct(c.change24hPct)}</td><td class="num">${l == null ? "–" : F.num(l, 0) + "%"}</td></tr>`;
+    }).join("") || `<tr><td colspan="4" class="faint">Eşleşen coin yok.</td></tr>`;
   }
   function select(id) {
     sel = id;
@@ -23,9 +26,9 @@
     $("#tc-px").textContent = c ? `${F.price(c.price)} · ${F.pct(c.change24hPct)}` : "";
     $("#tc-dec").textContent = c ? `ajan: ${c.decision}` : "";
     $("#tc-dec").className = c ? `pill pill-${c.decision}` : "pill";
-    $("#tc-reason").textContent = c ? `${c.direction} · ${c.reason}` : "";
     if (chart) chart.destroy();
-    chart = T.tvChart($("#tc-chart"), id, { height: 420, frames: ["15m", "1H", "4H", "1D"], timeframes: true, candles: true, showTrend: true, levels: c ? { entry: c.entry, stop: c.stop, target: c.target } : null });
+    chart = T.tvChart($("#tc-chart"), id, { height: 360, candles: true, showTrend: true });
+    loadSetup();
     loadBook();
     T.api(`/api/derivatives/${encodeURIComponent(id)}`).then((d) => ($("#dv-box").innerHTML = T.derivCard(d))).catch(() => ($("#dv-box").innerHTML = `<p class="kpi-small">Vadeli veri yok.</p>`));
     renderLs();
@@ -44,6 +47,21 @@
       $("#ob-box").innerHTML = `<div class="ob-head"><span>Fiyat</span><span>Miktar</span></div>${b.asks.slice(0, 10).reverse().map((r) => row(r, "ask")).join("")}<div class="ob-mid num">${b.bids[0] ? px(b.bids[0][0]) : "–"}</div>${b.bids.slice(0, 10).map((r) => row(r, "bid")).join("")}<p class="faint" style="font-size:.72rem;margin:6px 0 0">${b.live ? "ATK market_get_orderbook" : "Örnek veri"}</p>`;
     } catch { $("#ob-box").innerHTML = `<p class="kpi-small">Order book verisi yok.</p>`; }
   }
+  async function loadSetup() {
+    const box = $("#ts-box"), id = sel;
+    box.innerHTML = `<p class="kpi-small">Mentor işlemi hesaplanıyor (15dk · 1s · 4s · 1g)…</p>`;
+    try {
+      const s = await T.api(`/api/setup/${encodeURIComponent(id)}`);
+      if (id !== sel) return;
+      box.innerHTML = T.setupCardHtml(s, true);
+      T.bindSetupCard(box, s);
+    } catch { box.innerHTML = `<p class="kpi-small">Mentor işlemi hesaplanamadı.</p>`; }
+  }
+  function renderRt() {
+    document.querySelectorAll("[data-rt]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.rt === rtab)));
+    document.querySelectorAll("[data-rp]").forEach((p) => (p.hidden = p.dataset.rp !== rtab));
+  }
+  document.querySelectorAll("[data-rt]").forEach((b) => b.addEventListener("click", () => { rtab = b.dataset.rt; renderRt(); }));
   function renderLs() {
     if (!ls || !sel) { $("#ls2-box").innerHTML = `<p class="kpi-small">L/S verisi yükleniyor…</p>`; return; }
     const r = ls.rows.find((x) => x.instId === sel), all = ls.summary.find((x) => x.label === "All");
@@ -58,10 +76,21 @@
   async function renderTab() {
     const box = $("#tb-box");
     document.querySelectorAll("[data-tb]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tb === tab)));
+    if (tab === "bt") {
+      box.innerHTML = `<p class="kpi-small">Planındaki coinlerde son 30 günün 4s kapanışlarıyla test (ileriye bakış yok).</p><button type="button" class="btn" id="t-bt">Bu planı son 30 günde test et</button><div id="t-bt-out"></div>`;
+      $("#t-bt").addEventListener("click", async () => {
+        $("#t-bt-out").innerHTML = `<p class="faint">Test ediliyor…</p>`;
+        try { $("#t-bt-out").innerHTML = T.renderBacktest(await T.api("/api/backtest", { method: "POST", body: {} })); } catch (e) { $("#t-bt-out").innerHTML = `<p class="faint">${T.esc(e.message)}</p>`; }
+      });
+      return;
+    }
     if (tab === "pos" || tab === "hist") {
       const p = await T.api("/api/portfolio");
       if (tab === "pos") box.innerHTML = p.positions.length ? `<div class="table-wrap"><table class="dense"><thead><tr><th>Coin</th><th>Mod</th><th class="num">Giriş</th><th class="num">Son</th><th class="num">Stop</th><th class="num">Hedef</th><th class="num">USDT</th><th class="num">PnL</th></tr></thead><tbody>${p.positions.map((x) => `<tr><th scope="row">${T.esc(x.instId)}</th><td>${T.esc(x.mode)}</td><td class="num">${F.price(x.entryPx)}</td><td class="num">${F.price(x.lastPx)}</td><td class="num">${F.price(x.stopPx)}</td><td class="num">${F.price(x.targetPx)}</td><td class="num">${F.num(x.costUsdt, 2)}</td><td class="num ${T.cls(x.pnlUsdt)}">${F.signed(x.pnlUsdt, 3)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="kpi-small">Açık pozisyon yok.</p>`;
-      else box.innerHTML = p.trades.length ? `<div class="table-wrap"><table class="dense"><thead><tr><th>Saat</th><th>Coin</th><th>Yön</th><th class="num">Fiyat</th><th class="num">USDT</th><th class="num">PnL</th><th>Etiket</th></tr></thead><tbody>${p.trades.map((t) => `<tr><td>${F.time(t.ts)}</td><th scope="row">${T.esc(t.instId)}</th><td>${t.side === "buy" ? "AL" : "SAT"}</td><td class="num">${F.price(t.px)}</td><td class="num">${F.num(t.notionalUsdt, 2)}</td><td class="num ${T.cls(t.pnl)}">${t.pnl == null ? "–" : F.signed(t.pnl, 3)}</td><td>${T.esc(t.mode)} · ${{ ajan: "OTONOM", "hızlı": "HIZLI", senaryo: "SENARYO" }[t.origin] || T.esc(t.origin)}${t.ordId ? ` · OKX #${T.esc(t.ordId)}` : ""}</td></tr>`).join("")}</tbody></table></div>` : `<p class="kpi-small">İşlem yok.</p>`;
+      else {
+        const rows = await T.api("/api/order-log");
+        box.innerHTML = rows.length ? `<div class="table-wrap"><table class="dense"><thead><tr><th>Saat</th><th>Coin</th><th>Yön</th><th class="num">Fiyat</th><th class="num">Tutar</th><th>Durum</th><th class="num">PnL</th><th>Mod</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${F.time(r.ts)}</td><th scope="row">${T.esc(r.coin)}</th><td>${r.side}</td><td class="num">${F.price(r.px)}</td><td class="num">${F.num(r.usdt, 2)}</td><td>${T.esc(r.status)}</td><td class="num ${T.cls(r.pnl)}">${r.pnl == null ? "–" : F.signed(r.pnl, 3)}</td><td>${T.esc(r.mode)}${r.ordId ? ` · OKX #${T.esc(r.ordId)}` : ""}</td></tr>`).join("")}</tbody></table></div>` : `<p class="kpi-small">Henüz emir yok.</p>`;
+      }
     } else if (tab === "stats") {
       const d = await T.api("/api/paper"), s = d.stats;
       box.innerHTML = `<div class="kpi-row">${[["İşlem", s.trades], ["Kazanma oranı", s.trades ? F.num(s.winRate * 100, 1) + "%" : "–"], ["Ortalama R", s.trades ? F.signed(s.avgR, 2) + "R" : "–"], ["Maks drawdown", F.num(s.maxDrawdownPct, 2) + "%"], ["Toplam PnL", F.signed(s.totalPnl, 3) + " USDT"], ["Futures (SİM) gerçekleşen", F.signed(d.futuresStats.realized, 3) + " USDT"]].map(([k, v]) => `<div class="stat"><span class="kpi-small">${k}</span><b class="num">${v}</b></div>`).join("")}</div>`;
@@ -85,8 +114,11 @@
     if (sel && !chart) select(sel);
     T.api("/api/longshort").then((d) => { ls = d; renderWatch(); renderLs(); }).catch(() => {});
   }
+  $("#tc-search").addEventListener("input", renderWatch);
+  $("#tw-sort").addEventListener("change", renderWatch);
   load();
   renderTab();
+  renderRt();
   T.on("prices", (p) => {
     document.querySelectorAll("#tw-body tr").forEach((tr) => { const v = p[tr.dataset.id]; if (!v) return; tr.querySelector("[data-p]").textContent = F.price(v.p); const c = tr.querySelector("[data-c]"); c.textContent = F.pct(v.c); c.className = "num " + T.cls(v.c); });
   });
