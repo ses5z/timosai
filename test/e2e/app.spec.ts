@@ -279,3 +279,25 @@ test("Güncelleme2 madde 5: CEX araması (öneri, klavye, / odak), parite sekmel
   await expect(page.locator("#dex-name-result")).toContainText("Aynı isimli sahte tokenlar olabilir");
   await page.screenshot({ path: `${SHOTS}/g2-madde5-dex-1440.png` });
 });
+
+test("Güncelleme2 madde 6: güvenlik tablosu (kaynak sütunları, özet filtreleri, BLOCK, Timos kararı, ham değerler)", async ({ page }) => {
+  await waitForScan(page);
+  for (const width of [360, 1440]) {
+    await page.setViewportSize({ width, height: width === 360 ? 780 : 900 });
+    await page.goto("/kesfet?tab=dex&chain=56&ca=0x000000000000000000000000000000000000dEaD");
+    const box = page.locator("#scan-result");
+    await expect(box.locator(".verdict")).toHaveText("BLOCK");
+    for (const h of ["GoPlus", "Honeypot.is", "OKX OnchainOS", "Timos kararı"]) await expect(box.locator("thead")).toContainText(h);
+    await expect(box).toContainText("Tehlike (");
+    await expect(box.locator(".sec-row")).toHaveCount(13);
+    await box.getByRole("button", { name: /^Tehlike/ }).click();
+    const visible = await box.locator(".sec-row:visible").count();
+    expect(visible).toBeLessThan(13);
+    await box.getByRole("button", { name: /^Tehlike/ }).click();
+    const first = box.locator(".sec-row").first();
+    await first.click();
+    await expect(box.locator('[data-raw="0"]')).toBeVisible();
+    await page.screenshot({ path: `${SHOTS}/g2-madde6-guvenlik-${width}.png`, fullPage: true });
+  }
+  await expect(page).toHaveURL(/tab=dex&chain=56&ca=0x/);
+});

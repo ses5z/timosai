@@ -467,3 +467,26 @@ tr:last-child td { border-bottom: 0; }
 @media (min-width: 980px) { .cex-grid { grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); align-items: start; } }
 .cex-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 tr.sel td { background: rgba(242, 169, 59, 0.08); }
+.sdot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; flex: none; vertical-align: middle; }
+.sdot-safe { background: var(--safe); }
+.sdot-warn { background: var(--caution); }
+.sdot-danger { background: var(--risky); }
+.sdot-unknown { background: var(--ink-500); }
+.sec-wrap { margin-top: 12px; }
+.sec-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.verdict { font-size: 1rem; padding: 6px 14px; }
+.sec-pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.sec-pills .chip[aria-pressed="true"] { border-color: var(--amber); background: var(--surface-2); }
+.sec-table td, .sec-table th { white-space: nowrap; }
+.sec-table td span { vertical-align: middle; }
+.sec-row { cursor: pointer; }
+.sec-row:focus-visible { outline: 3px solid var(--amber); outline-offset: -3px; }
+.sec-row.conflict th, .sec-row.conflict td { box-shadow: inset 0 2px 0 var(--caution), inset 0 -2px 0 var(--caution); }
+.conflict-note { color: var(--caution); font-size: 0.75rem; font-weight: 600; }
+.timos-col { background: rgba(242, 169, 59, 0.06); font-weight: 600; }
+.src-h { display: inline-flex; gap: 4px; align-items: center; }
+.src-h .icon { width: 16px; height: 16px; }
+.src-note { font-size: 0.7rem; text-transform: none; letter-spacing: 0; font-weight: 500; }
+@media (min-width: 640px) { #dex-name-form { grid-template-columns: 1fr auto; } }
+.sec-table thead th { text-transform: none; letter-spacing: 0; font-size: 0.82rem; }
+.sec-table tbody th { position: static; text-transform: none; letter-spacing: 0; font-size: 0.88rem; color: var(--text); background: transparent; font-weight: 600; }

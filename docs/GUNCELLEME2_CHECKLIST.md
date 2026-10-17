@@ -81,23 +81,23 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [x] DONE 5.17 Test + ekran görüntüsü + commit
 
 ## Madde 6 – Güvenlik taraması tablosu
-- [ ] 6.1 DEX sekmesinde token seçilince açılır; Pro'da Terminal içinde panel
-- [ ] 6.2 Sütun GoPlus
-- [ ] 6.3 Sütun Honeypot.is (desteklenmeyen zincirde "desteklenmiyor")
-- [ ] 6.4 Sütun OKX OnchainOS
-- [ ] 6.5 Sütun Timos simülasyonu (anvil yoksa gizli)
-- [ ] 6.6 Logo yok; kaynak adı metin + kendi sade SVG ikonumuz
-- [ ] 6.7 Satırlar: Kontrat doğrulanmış, Honeypot, Alım vergisi, Satış vergisi, Proxy, Mintable, Vergi değiştirilebilir, Blacklist, Transfer durdurulabilir, Gizli/geri alınabilir sahiplik, Sahip bakiye değiştirebilir, LP kilitli/yakılmış, Holder sayısı / ilk 10 payı (etiketli)
-- [ ] 6.8 Hücre: değer + durum noktası (yeşil/sarı/kırmızı/gri) + metin; alan yoksa "–"
-- [ ] 6.9 Özet pill'leri Tehlike/Uyarı/Nötr (n), tıklanınca filtre
-- [ ] 6.10 Karar rozeti PASS/WARN/BLOCK
-- [ ] 6.11 Her satırda (i) "neden önemli"
-- [ ] 6.12 Çelişkide sarı kenarlık + "Kaynaklar çelişiyor"
-- [ ] 6.13 En sağda "Timos kararı" sütunu (oylama kuralları)
-- [ ] 6.14 Satıra tıklayınca ham değerler (Pro'da varsayılan açık)
-- [ ] 6.15 Demo düğmeleri: 1 temiz + 1 doğrulanmış honeypot (Honeypot.is destekli zincir)
-- [ ] 6.16 Sonuç SignalLedger'a; Telegram /tara metin tablo
-- [ ] 6.17 Test + ekran görüntüsü + commit
+- [~] PARTIAL 6.1 (DEX sekmesinde açılıyor; Pro Terminal paneli madde 9'da) DEX sekmesinde token seçilince açılır; Pro'da Terminal içinde panel
+- [x] DONE 6.2 Sütun GoPlus
+- [x] DONE 6.3 Sütun Honeypot.is (desteklenmeyen zincirde "desteklenmiyor")
+- [~] PARTIAL 6.4 (sütun var, "Web3 API anahtarı gerekli" ve tüm hücreler "–"; OnchainOS anahtar/x402 istediği için veri BLOCKED) Sütun OKX OnchainOS
+- [x] DONE 6.5 (anvil bu ortamda yok → sütun gizli; karar mantığı simülasyonu destekliyor, test: "simülasyon çelişkide kazanır") Sütun Timos simülasyonu (anvil yoksa gizli)
+- [x] DONE 6.6 Logo yok; kaynak adı metin + kendi sade SVG ikonumuz
+- [x] DONE 6.7 Satırlar: Kontrat doğrulanmış, Honeypot, Alım vergisi, Satış vergisi, Proxy, Mintable, Vergi değiştirilebilir, Blacklist, Transfer durdurulabilir, Gizli/geri alınabilir sahiplik, Sahip bakiye değiştirebilir, LP kilitli/yakılmış, Holder sayısı / ilk 10 payı (etiketli)
+- [x] DONE 6.8 Hücre: değer + durum noktası (yeşil/sarı/kırmızı/gri) + metin; alan yoksa "–"
+- [x] DONE 6.9 Özet pill'leri Tehlike/Uyarı/Nötr (n), tıklanınca filtre
+- [x] DONE 6.10 Karar rozeti PASS/WARN/BLOCK
+- [x] DONE 6.11 Her satırda (i) "neden önemli"
+- [x] DONE 6.12 Çelişkide sarı kenarlık + "Kaynaklar çelişiyor"
+- [x] DONE 6.13 En sağda "Timos kararı" sütunu (oylama kuralları)
+- [x] DONE 6.14 Satıra tıklayınca ham değerler (Pro'da varsayılan açık)
+- [~] PARTIAL 6.15 (2 temiz demo: BSC USDT ve Avalanche USDC; doğrulanmış gerçek honeypot adresi bulunamadı, uydurulmadı → honeypot düğmesi BLOCKED) Demo düğmeleri: 1 temiz + 1 doğrulanmış honeypot (Honeypot.is destekli zincir)
+- [x] DONE 6.16 Sonuç SignalLedger'a; Telegram /tara metin tablo
+- [x] DONE 6.17 Test + ekran görüntüsü + commit
 
 ## Madde 7 – Arz dedektörü
 - [ ] 7.1 Görünür: Keşfet CEX görünümü, Isı haritası çekmecesi, Pro Terminal, Telegram /arz

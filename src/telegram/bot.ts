@@ -348,9 +348,15 @@ export class TelegramBot implements Notifier {
         return void (await this.send(holdText(await holdReportFor(this.ctx, id))));
       }
       case "/tara": {
-        if (args.length < 2) return void (await this.send("Kullanım: /tara avax 0x... (zincirler: eth, bsc, avax, polygon, arbitrum, base, optimism)"));
+        if (args.length < 2) return void (await this.send("Kullanım: /tara bsc 0x... (zincirler: eth, bsc, base, avax, arbitrum, polygon, optimism, solana)"));
+        const { resolveChain, validateAddress } = await import("../discover/dex.js");
+        const { tableText } = await import("../security/table.js");
+        const chain = resolveChain(args[0]);
+        if (!chain) return void (await this.send("Desteklenmeyen zincir."));
+        const v = validateAddress(chain, args[1]);
+        if (!v.ok) return void (await this.send(v.error!));
         try {
-          return void (await this.send(scanText(await scanToken(this.ctx, args[0], args[1]))));
+          return void (await this.send(tableText(await this.ctx.extras.scanTable(chain, args[1]))));
         } catch (e) {
           return void (await this.send((e as Error).message));
         }

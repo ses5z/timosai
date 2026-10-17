@@ -1,7 +1,20 @@
 {
   "_aciklama": "Demo için önceden GoPlus ile doğrulanmış gerçek adresler. Uydurma adres eklenmez; yeni adres eklendikten sonra 'npm run scam:verify' ile doğrulayın.",
   "tokens": [
-    { "label": "Temiz örnek: USDC (Avalanche, Circle yerel)", "chain": "avax", "address": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E", "expected": "PASS veya WARN (merkezi ihraççı: mint/proxy)" }
+    {
+      "label": "Temiz: USDT (BNB Chain)",
+      "chain": "bsc",
+      "chainId": "56",
+      "address": "0x55d398326f99059fF775485246999027B3197955",
+      "expected": "PASS (Honeypot.is + GoPlus doğrulandı)"
+    },
+    {
+      "label": "Temiz: USDC (Avalanche)",
+      "chain": "avax",
+      "chainId": "43114",
+      "address": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
+      "expected": "PASS (GoPlus; Honeypot.is Avalanche'ı desteklemiyor)"
+    }
   ],
   "honeypot": null,
   "_honeypot_not": "Doğrulanmış bir honeypot adresi henüz eklenmedi. Mentorlardan ya da GoPlus'ta is_honeypot=1 dönen gerçek bir adres alıp buraya { chain, address } olarak yazın."

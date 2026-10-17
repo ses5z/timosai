@@ -11,6 +11,7 @@ import { QuickTrader } from "./trading/quick.js";
 import { PaperFutures } from "./trading/paperFutures.js";
 import { CexService, PAIR_RE } from "./discover/cex.js";
 import { DEX_CHAINS, onchainOsStatus, resolveChain, validateAddress } from "./discover/dex.js";
+import { buildSecurityTable } from "./security/table.js";
 import { analyzeCandidate } from "./mentor/analysis.js";
 import { holdReportFor } from "./fundamentals/view.js";
 import { derivAnalysisFor } from "./derivatives/view.js";
@@ -48,6 +49,15 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
       break;
     }
   });
+  // Güvenlik tablosu: mock modda deterministik örnek yanıtlar (ÖRNEK VERİ), canlıda GoPlus + Honeypot.is.
+  const secFetch: typeof fetch = ctx.env.atkMode === "mock" ? mockSecurityFetch : opts.fetchImpl ?? fetch;
+  const scanTable = async (chain: string, ca: string) => {
+    const t = await buildSecurityTable(chain, ca, secFetch);
+    ctx.ledger.append("decision", { tur: "guvenlik_tablosu", zincir: t.chainName, adres: ca, karar: t.verdict, ozet: t.summary, gerekce: t.reasons.slice(0, 4) });
+    ctx.store.addEvent(t.verdict === "BLOCK" ? "uyarı" : "bilgi", `Güvenlik taraması ${t.chainName} ${ca.slice(0, 10)}… (${t.token?.symbol ?? "?"}): ${t.verdict}. ${t.reasons[0]}`);
+    return t;
+  };
+  ctx.extras.scanTable = scanTable;
   const cex = new CexService(ctx);
   ctx.extras.cex = cex;
   const quick = new QuickTrader(ctx);
@@ -166,6 +176,18 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
       if (!chain) return res.status(400).json({ ok: false, error: "Desteklenmeyen zincir." });
       res.json({ chain, ...validateAddress(chain, String(req.query.ca ?? "").trim()) });
     });
+    app.get("/api/dex/scan", async (req, res) => {
+      const chain = resolveChain(String(req.query.chain ?? ""));
+      const ca = String(req.query.ca ?? "").trim();
+      if (!chain) return res.status(400).json({ error: "Desteklenmeyen zincir." });
+      const v = validateAddress(chain, ca);
+      if (!v.ok) return res.status(400).json({ error: v.error });
+      try {
+        res.json(await scanTable(chain, ca));
+      } catch (e) {
+        res.status(502).json({ error: (e as Error).message });
+      }
+    });
     app.get("/api/dex/search", (req, res) => {
       res.json({ query: String(req.query.q ?? ""), results: [], onchainos: onchainOsStatus(), warning: "Aynı isimli sahte tokenlar olabilir; kontrat adresini doğrula." });
     });
@@ -213,3 +235,17 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
     });
   });
 }
+
+/** Mock mod için güvenlik kaynakları (ÖRNEK VERİ): adresi "dead" ile biten token honeypot. */
+const mockSecurityFetch = (async (url: string) => {
+  const u = new URL(url);
+  const addr = (u.searchParams.get("contract_addresses") ?? u.searchParams.get("address") ?? "").toLowerCase();
+  const hp = addr.endsWith("dead");
+  if (u.hostname.includes("gopluslabs")) {
+    return new Response(JSON.stringify({ code: 1, result: { [addr]: { token_name: "Örnek token", token_symbol: "ORN", is_open_source: "1", is_honeypot: hp ? "1" : "0", buy_tax: hp ? "0.05" : "0", sell_tax: hp ? "1" : "0", is_proxy: "0", is_mintable: hp ? "1" : "0", slippage_modifiable: hp ? "1" : "0", is_blacklisted: "0", transfer_pausable: "0", hidden_owner: "0", owner_change_balance: hp ? "1" : "0", holder_count: hp ? "42" : "12000", holders: [{ percent: "0.3", is_contract: 1 }], lp_holders: [{ is_locked: hp ? 0 : 1, percent: "0.95" }] } } }), { status: 200 });
+  }
+  if (u.hostname.includes("honeypot")) {
+    return new Response(JSON.stringify({ token: { name: "Örnek token", symbol: "ORN", totalHolders: hp ? 42 : 12000 }, simulationSuccess: true, honeypotResult: { isHoneypot: hp }, simulationResult: { buyTax: hp ? 5 : 0, sellTax: hp ? 100 : 0 }, contractCode: { openSource: true, isProxy: false }, pair: { liquidity: 25000 } }), { status: 200 });
+  }
+  return new Response("{}", { status: 404 });
+}) as unknown as typeof fetch;
