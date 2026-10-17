@@ -54,7 +54,6 @@
         rightPriceScale: { borderColor: "rgba(120,130,160,.4)" },
         timeScale: { borderColor: "rgba(120,130,160,.4)", timeVisible: true, secondsVisible: false },
         crosshair: { mode: 0 },
-        localization: prec === null ? undefined : { priceFormatter: (p) => Number(p).toFixed(prec) },
       });
       let main;
       if (pro || opts.candles) {
@@ -64,7 +63,8 @@
         chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
         vol.setData(d.candles.map((c) => ({ time: c.time, value: c.vol, color: c.close >= c.open ? "rgba(47,191,113,.35)" : "rgba(240,106,102,.35)" })));
       } else {
-        main = chart.addSeries(LC.AreaSeries, { lineColor: "#f2a93b", topColor: "rgba(242,169,59,.28)", bottomColor: "rgba(242,169,59,0)", lineWidth: 2, priceFormat });
+        const acc = css("--amber");
+        main = chart.addSeries(LC.AreaSeries, { lineColor: acc, topColor: acc + "47", bottomColor: acc + "00", lineWidth: 2, priceFormat });
         main.setData(d.candles.map((c) => ({ time: c.time, value: c.close })));
       }
       let markers = pro ? d.markers.slice() : [];
@@ -86,6 +86,7 @@
     }
     load();
     T.on("mode", () => draw());
+    T.on("theme", () => draw());
     return { destroy() { destroyed = true; if (chart) chart.remove(); }, reload: load };
   };
 })();

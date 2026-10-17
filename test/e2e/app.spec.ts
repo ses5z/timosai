@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 
-const PAGES = ["/", "/kesfet", "/mentor", "/panel", "/isi-haritasi", "/telegram", "/hakkimizda"];
+const PAGES = ["/", "/kesfet", "/mentor", "/panel", "/isi-haritasi", "/telegram", "/hakkimizda", "/terminal"];
 const SHOTS = "artifacts/screens";
 
 function watchErrors(page: Page) {
@@ -32,6 +32,7 @@ test("tüm sayfalar 200, konsol hatası yok, 360 ve 1440 px'te yatay kaydırma y
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow, `${p} @${width}px yatay taşma`).toBeLessThanOrEqual(1);
       await expect(page.locator(".site-footer")).toContainText("yatırım tavsiyesi değildir");
+      await page.evaluate(() => { try { localStorage.setItem("tms-mode", "basic"); } catch {} });
       await expect(page.locator("#mode-badge")).toHaveText("Paper trade");
       await page.screenshot({ path: `${SHOTS}/${width}${p === "/" ? "-karsilama" : p.replace("/", "-")}.png`, fullPage: true });
       expect(errors, `${p} konsol hataları`).toEqual([]);
@@ -104,7 +105,7 @@ test("ısı haritası: tıkla → çekmece → URL; Al/Sat düğmesi yok", async
   const drawer = page.getByRole("dialog");
   await expect(drawer).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`\\?s=${id}`));
-  await expect(drawer).toContainText("Ajanın görüşü");
+  await expect(drawer).toContainText("AI analizi");
   await expect(drawer.getByRole("button", { name: /^(Al|Sat|Satın al|Emir)/ })).toHaveCount(0);
   await expect(drawer.getByRole("button", { name: /Ajana öncelik ver/ })).toBeVisible();
   await page.keyboard.press("Escape");
@@ -171,9 +172,10 @@ test("Basic/Pro: iki modda tüm sayfalar düzgün; Basic'te Pro alanları görü
       const errors = watchErrors(page);
       await page.goto(p);
       await page.waitForTimeout(500);
-      expect(await page.evaluate(() => document.body.dataset.mode)).toBe(mode);
+      expect(await page.evaluate(() => document.body.dataset.mode)).toBe(p === "/terminal" ? "pro" : mode);
+      if (p === "/terminal") await page.evaluate((m) => localStorage.setItem("tms-mode", m), mode);
       const visiblePro = await page.locator(".pro-only:visible").count();
-      if (mode === "basic") expect(visiblePro, `${p} Basic'te görünen Pro alanı`).toBe(0);
+      if (mode === "basic" && p !== "/terminal") expect(visiblePro, `${p} Basic'te görünen Pro alanı`).toBe(0);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow).toBeLessThanOrEqual(1);
       expect(errors, `${p} (${mode}) konsol hataları`).toEqual([]);
@@ -295,7 +297,7 @@ test("Güncelleme2 madde 6: güvenlik tablosu (kaynak sütunları, özet filtrel
     expect(visible).toBeLessThan(13);
     await box.getByRole("button", { name: /^Tehlike/ }).click();
     const first = box.locator(".sec-row").first();
-    await first.click();
+    await first.locator("td").first().click();
     await expect(box.locator('[data-raw="0"]')).toBeVisible();
     await page.screenshot({ path: `${SHOTS}/g2-madde6-guvenlik-${width}.png`, fullPage: true });
   }
@@ -335,4 +337,36 @@ test("Güncelleme2 madde 8: Long/Short kartı (Özet/Kategori/Coin, kaynak etike
     await box.scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${SHOTS}/g2-madde8-ls-${width}.png` });
   }
+});
+
+test("Güncelleme2 madde 9: Pro Terminal düzeni ve gündüz/gece (4 palet, tercih saklanır)", async ({ page }) => {
+  await waitForScan(page);
+  for (const width of [360, 1440]) {
+    await page.setViewportSize({ width, height: width === 360 ? 780 : 900 });
+    await page.goto("/terminal");
+    expect(await page.evaluate(() => document.body.dataset.mode)).toBe("pro");
+    await expect(page.locator("#tw-body tr").first()).toBeVisible();
+    await expect(page.locator("#tc-chart .tv-box canvas").first()).toBeVisible();
+    await expect(page.locator("#ob-box")).toContainText("Fiyat");
+    await expect(page.locator("#ls2-box")).toContainText("OKX hesap");
+    for (const t of ["Pozisyonlar", "Emir geçmişi", "Paper istatistikleri", "Güvenlik taraması", "ATK çağrı günlüğü"]) await expect(page.getByRole("tab", { name: t })).toBeVisible();
+    await page.getByRole("tab", { name: "Paper istatistikleri" }).click();
+    await expect(page.locator("#tb-box")).toContainText("Kazanma oranı");
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+    await page.screenshot({ path: `${SHOTS}/g2-madde9-terminal-${width}.png`, fullPage: width === 1440 });
+  }
+  // gündüz/gece
+  const before = await page.evaluate(() => document.body.dataset.theme);
+  await page.getByRole("button", { name: /moduna geç/ }).click();
+  const theme = before === "light" ? "dark" : "light";
+  await expect.poll(() => page.evaluate(() => document.body.dataset.theme)).toBe(theme);
+  expect(await page.evaluate(() => localStorage.getItem("tms-theme"))).toBe(theme);
+  await page.reload();
+  expect(await page.evaluate(() => document.body.dataset.theme)).toBe(theme);
+  await page.screenshot({ path: `${SHOTS}/g2-madde9-terminal-${theme}.png` });
+  // Terminal'de Basic → Panel
+  await page.getByRole("button", { name: "Basic" }).click();
+  await expect(page).toHaveURL(/\/panel$/);
+  await page.screenshot({ path: `${SHOTS}/g2-madde9-basic-${theme}.png` });
 });

@@ -81,6 +81,9 @@
     arrowUp: '<path d="M12 19V5M6 11l6-6 6 6"/>',
     check: '<path d="M5 12l5 5 9-10"/>',
     eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+    terminal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/>',
   };
   T.icon = (name, cls = "icon") => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${P[name] || ""}</svg>`;
 
@@ -122,15 +125,28 @@
   const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
   T.store = store;
   document.body.dataset.mode = store.get("tms-mode") === "pro" ? "pro" : "basic";
+  // Gündüz/gece: tercih yoksa sistem temasına uyar.
+  const mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+  const applyTheme = () => { const t = store.get("tms-theme"); document.body.dataset.theme = t === "light" || t === "dark" ? t : mq && mq.matches ? "light" : "dark"; };
+  applyTheme();
+  if (mq && mq.addEventListener) mq.addEventListener("change", () => { if (!store.get("tms-theme")) { applyTheme(); fire("theme", document.body.dataset.theme); } });
+  const reduced = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  T.transition = (fn) => (document.startViewTransition && !reduced() ? document.startViewTransition(fn) : fn());
   T.detailToggle = () => "";
   const modeToggle = () => `<div class="segment mode-switch" role="group" aria-label="Görünüm modu"><button type="button" data-mode="basic" aria-pressed="${document.body.dataset.mode === "basic"}">Basic</button><button type="button" data-mode="pro" aria-pressed="${document.body.dataset.mode === "pro"}">Pro</button></div>`;
   document.addEventListener("click", (e) => {
     const b = e.target.closest("button[data-mode]");
     if (!b) return;
-    document.body.dataset.mode = b.dataset.mode;
-    store.set("tms-mode", b.dataset.mode);
-    document.querySelectorAll("button[data-mode]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.mode === b.dataset.mode)));
-    fire("mode", b.dataset.mode);
+    const mode = b.dataset.mode;
+    store.set("tms-mode", mode);
+    const path = location.pathname.replace(/\/$/, "") || "/";
+    if (mode === "pro" && path === "/panel") { location.href = "/terminal"; return; }
+    if (mode === "basic" && path === "/terminal") { location.href = "/panel"; return; }
+    T.transition(() => {
+      document.body.dataset.mode = mode;
+      document.querySelectorAll("button[data-mode]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.mode === mode)));
+    });
+    fire("mode", mode);
   });
 
   // ---------- Gezinme + alt bilgi ----------
@@ -142,9 +158,10 @@
     ["/isi-haritasi", "Isı haritası"],
     ["/telegram", "Telegram"],
     ["/hakkimizda", "Hakkımızda"],
+    ["/terminal", "Terminal"],
   ];
   const here = location.pathname.replace(/\/$/, "") || "/";
-  const links = LINKS.map(([h, t]) => `<li><a href="${h}"${h === here ? ' aria-current="page"' : ""}>${t}</a></li>`).join("");
+  const links = LINKS.map(([h, t]) => `<li${h === "/terminal" ? ' class="pro-only"' : ""}><a href="${h}"${h === here ? ' aria-current="page"' : ""}>${t}</a></li>`).join("");
   const header = document.createElement("header");
   header.className = "site-header";
   header.innerHTML = `
@@ -154,6 +171,7 @@
       <ul class="nav-links">${links}</ul>
       <div class="nav-right">
         ${modeToggle()}
+        <button type="button" class="theme-btn" id="theme-btn"></button>
         <span id="mode-badge" class="badge badge-dry" title="Gerçek piyasa verisi, sanal bakiye; emir borsaya gitmez.">Paper trade</span>
         <button class="menu-btn" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="Menüyü aç">${T.icon("menu")}</button>
       </div>
@@ -161,6 +179,21 @@
     <div class="mobile-menu" id="mobile-menu"><ul>${links}</ul></div>
     <div class="ticker-strip" aria-hidden="true"><div class="ticker-track" id="ticker-track"></div></div>`;
   document.body.prepend(header);
+  const themeBtn = header.querySelector("#theme-btn");
+  const paintThemeBtn = () => {
+    const light = document.body.dataset.theme === "light";
+    themeBtn.innerHTML = T.icon(light ? "moon" : "sun");
+    themeBtn.setAttribute("aria-label", light ? "Gece moduna geç" : "Gündüz moduna geç");
+    themeBtn.title = light ? "Gece modu" : "Gündüz modu";
+  };
+  paintThemeBtn();
+  themeBtn.addEventListener("click", () => {
+    const next = document.body.dataset.theme === "light" ? "dark" : "light";
+    store.set("tms-theme", next);
+    T.transition(() => { document.body.dataset.theme = next; paintThemeBtn(); });
+    fire("theme", next);
+  });
+  T.on("theme", paintThemeBtn);
   const menuBtn = header.querySelector(".menu-btn");
   menuBtn.addEventListener("click", () => {
     const m = header.querySelector("#mobile-menu");

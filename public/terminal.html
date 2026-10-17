@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Terminal · TimosAI</title>
+  <meta name="description" content="TimosAI Pro Terminal: izleme listesi, büyük grafik, order book derinliği, vadeli durum, long/short ve arz özeti.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/app.css">
+  <script>try { localStorage.setItem("tms-mode", "pro"); } catch (e) {}</script>
+</head>
+<body class="term-page">
+<main id="main" tabindex="-1" class="term-main">
+  <h1 class="visually-hidden">Pro Terminal</h1>
+  <div class="term-grid">
+    <section class="card term-watch" aria-labelledby="tw-h">
+      <div class="card-head"><h2 id="tw-h">İzleme listesi</h2><span class="kpi-small" id="tw-info"></span></div>
+      <div class="table-wrap" style="max-height:none"><table class="dense"><thead><tr><th>Coin</th><th class="num">Fiyat</th><th class="num">24 sa</th><th class="num">Funding</th><th class="num">Long%</th></tr></thead><tbody id="tw-body"></tbody></table></div>
+    </section>
+    <section class="card term-chart" aria-labelledby="tc-h">
+      <div class="card-head"><h2 id="tc-h"><span id="tc-sym">-</span> <span class="kpi-small" id="tc-px"></span></h2><span class="pill" id="tc-dec"></span></div>
+      <div id="tc-chart"></div>
+      <p class="kpi-small" id="tc-reason" style="margin:8px 0 0"></p>
+    </section>
+    <aside class="term-side">
+      <section class="card" aria-labelledby="ob-h"><div class="card-head"><h2 id="ob-h">Order book</h2><span class="kpi-small" id="ob-spread"></span></div><div id="ob-box" class="ob"></div></section>
+      <section class="card" aria-labelledby="dv-h"><h2 id="dv-h">Vadeli durum</h2><div id="dv-box"></div></section>
+      <section class="card" aria-labelledby="ls2-h"><h2 id="ls2-h">Long/Short</h2><div id="ls2-box"></div></section>
+      <section class="card" aria-labelledby="sp-h"><h2 id="sp-h">Arz özeti</h2><div id="sp-box"></div></section>
+    </aside>
+  </div>
+  <section class="card term-bottom" aria-labelledby="tb-h">
+    <h2 id="tb-h" class="visually-hidden">Hesap ve kayıtlar</h2>
+    <div class="tabs" role="tablist" aria-label="Alt paneller">
+      <button role="tab" aria-selected="true" data-tb="pos">Pozisyonlar</button>
+      <button role="tab" aria-selected="false" data-tb="hist">Emir geçmişi</button>
+      <button role="tab" aria-selected="false" data-tb="stats">Paper istatistikleri</button>
+      <button role="tab" aria-selected="false" data-tb="sec">Güvenlik taraması</button>
+      <button role="tab" aria-selected="false" data-tb="atk">ATK çağrı günlüğü</button>
+    </div>
+    <div id="tb-box" class="tb-box" role="tabpanel"></div>
+  </section>
+</main>
+<script src="/vendor/lightweight-charts.standalone.production.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/chart.js"></script>
+<script src="/js/supply.js"></script>
+<script src="/js/longshort.js"></script>
+<script src="/js/security.js"></script>
+<script src="/js/terminal.js"></script>
+</body>
+</html>

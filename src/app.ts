@@ -16,6 +16,7 @@ const PAGES: Record<string, string> = {
   "/isi-haritasi": "isi-haritasi.html",
   "/hakkimizda": "hakkimizda.html",
   "/panel": "panel.html",
+  "/terminal": "terminal.html",
 };
 
 export function validPair(s: unknown): s is string {
@@ -202,6 +203,32 @@ export function createApp(ctx: AppContext) {
       position: agent.positionsView().find((p) => p.instId === id) ?? null,
       live: ctx.market.isLive(),
     });
+  });
+
+  // Order book derinliği (ATK market_get_orderbook); mock modda örnek seviyeler.
+  app.get("/api/orderbook/:instId", async (req, res) => {
+    const id = String(req.params.instId).toUpperCase();
+    if (!validPair(id)) return res.status(400).json({ error: "geçersiz parite" });
+    try {
+      let bids: [number, number][] = [];
+      let asks: [number, number][] = [];
+      if (ctx.atk && ctx.env.atkMode === "live") {
+        const data: any = await ctx.atk.call("market_get_orderbook", { instId: id, sz: 15 });
+        const book = Array.isArray(data) ? data[0] : data;
+        bids = (book?.bids ?? []).slice(0, 15).map((r: string[]) => [Number(r[0]), Number(r[1])]);
+        asks = (book?.asks ?? []).slice(0, 15).map((r: string[]) => [Number(r[0]), Number(r[1])]);
+      } else {
+        const ob = await ctx.market.orderbook(id);
+        if (ob) for (let i = 0; i < 15; i++) {
+          bids.push([ob.bid * (1 - i * 0.0004), 10 + ((i * 37) % 50)]);
+          asks.push([ob.ask * (1 + i * 0.0004), 10 + ((i * 53) % 50)]);
+        }
+      }
+      await ctx.instruments.ensure().catch(() => undefined);
+      json(res, { instId: id, bids, asks, tickSz: ctx.instruments.get(id)?.tickSz ?? 0, live: ctx.env.atkMode === "live", ts: Date.now() });
+    } catch (e) {
+      res.status(502).json({ error: (e as Error).message });
+    }
   });
 
   app.get("/api/supply/:base", async (req, res) => {

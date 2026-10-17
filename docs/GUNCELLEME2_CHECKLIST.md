@@ -14,7 +14,7 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [!] BLOCKED P6 Follow Line (lisans başlığı ve kaynak kod sayfadan doğrulanamadı; kendi ATR trend çizgimiz kullanılıyor, arayüzde "Follow Line" adı yok) – lisans başlığı kontrol edildi; izin yoksa BLOCKED + kendi ATR-trend çizgisi, "Follow Line" adı kullanılmaz; izin varsa dosya başı link/yazar/lisans notu
 - [x] DONE P6a Lightweight Charts (TradingView) atfı korunuyor
 - [ ] P7 Mentor kısa cevap kuralı (önceki işte yapıldı; doğrula: cevap_modu etiketi, few-shot, 220/800 token, sıcaklık 0.3, web+Telegram Ayrıntı düğmesi, aday analizi kısa)
-- [ ] P8 17:00'de madde 9 başlamadıysa kapsam küçültme (tema + basit Terminal) ve buraya not
+- [x] DONE P8 (madde 9 saat 15:35'te başladı; kapsam küçültülmedi, tam uygulandı) 17:00'de madde 9 başlamadıysa kapsam küçültme (tema + basit Terminal) ve buraya not
 - [ ] P9 Durum raporları: madde 2, 4, 6, 8 sonrası
 - [ ] P10 Bitiş tablosu (DONE/PARTIAL/BLOCKED + kanıt) ve elle deneme listesi
 
@@ -81,7 +81,7 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [x] DONE 5.17 Test + ekran görüntüsü + commit
 
 ## Madde 6 – Güvenlik taraması tablosu
-- [~] PARTIAL 6.1 (DEX sekmesinde açılıyor; Pro Terminal paneli madde 9'da) DEX sekmesinde token seçilince açılır; Pro'da Terminal içinde panel
+- [x] DONE 6.1 (DEX sekmesi + Terminal alt sekmesi "Güvenlik taraması") DEX sekmesinde token seçilince açılır; Pro'da Terminal içinde panel
 - [x] DONE 6.2 Sütun GoPlus
 - [x] DONE 6.3 Sütun Honeypot.is (desteklenmeyen zincirde "desteklenmiyor")
 - [~] PARTIAL 6.4 (sütun var, "Web3 API anahtarı gerekli" ve tüm hücreler "–"; OnchainOS anahtar/x402 istediği için veri BLOCKED) Sütun OKX OnchainOS
@@ -100,7 +100,7 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [x] DONE 6.17 Test + ekran görüntüsü + commit
 
 ## Madde 7 – Arz dedektörü
-- [~] PARTIAL 7.1 (Keşfet CEX, ısı haritası çekmecesi, Telegram /arz DONE; Pro Terminal madde 9'da) Görünür: Keşfet CEX görünümü, Isı haritası çekmecesi, Pro Terminal, Telegram /arz
+- [x] DONE 7.1 (Keşfet CEX, ısı haritası çekmecesi, Terminal "Arz özeti", Telegram /arz) Görünür: Keşfet CEX görünümü, Isı haritası çekmecesi, Pro Terminal, Telegram /arz
 - [x] DONE 7.2 Arz yapısı: max/total/circulating, dolaşım %, FDV/MC, Sınırlı/Sınırsız arz rozeti
 - [x] DONE 7.3 Arz değişimi 1G/1A/1Y (market_chart, MC/fiyat), yıllık enflasyon, "tahmini (MC/fiyat)" etiketi
 - [x] DONE 7.4 Arz azalıyorsa "deflasyonist (yakım)"
@@ -128,15 +128,15 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [x] DONE 8.12 Test + ekran görüntüsü + commit
 
 ## Madde 9 – Basic / Pro + gündüz/gece
-- [ ] 9.1 Basic mevcut tasarım korunur
-- [ ] 9.2 Pro "Terminal" düzeni: solda izleme listesi (fiyat, 24 sa, funding, long%)
-- [ ] 9.3 Ortada büyük grafik (Follow Line, hacim, zaman aralığı)
-- [ ] 9.4 Sağda order book derinliği + vadeli kartı + L/S + arz özeti
-- [ ] 9.5 Altta sekmeler: pozisyonlar, emir geçmişi, paper istatistikleri, güvenlik taraması, ATK günlüğü
-- [ ] 9.6 Pro renk dili: soğuk lacivert, yeşil/kırmızı PnL, amber yok, tabular-nums
-- [ ] 9.7 Geçiş View Transitions API; reduced-motion'da animasyon yok
-- [ ] 9.8 Gündüz/gece her iki sürümde; 4 palet; localStorage (try/catch); varsayılan sistem teması; AA kontrast
-- [ ] 9.9 Test + ekran görüntüsü + commit
+- [x] DONE 9.1 Basic mevcut tasarım korunur
+- [x] DONE 9.2 Pro "Terminal" düzeni: solda izleme listesi (fiyat, 24 sa, funding, long%)
+- [x] DONE 9.3 (Follow Line yerine "Trend çizgisi · TimosAI ATR" — P6 BLOCKED) Ortada büyük grafik (Follow Line, hacim, zaman aralığı)
+- [x] DONE 9.4 Sağda order book derinliği + vadeli kartı + L/S + arz özeti
+- [x] DONE 9.5 Altta sekmeler: pozisyonlar, emir geçmişi, paper istatistikleri, güvenlik taraması, ATK günlüğü
+- [x] DONE 9.6 Pro renk dili: soğuk lacivert, yeşil/kırmızı PnL, amber yok, tabular-nums
+- [x] DONE 9.7 Geçiş View Transitions API; reduced-motion'da animasyon yok
+- [x] DONE 9.8 Gündüz/gece her iki sürümde; 4 palet; localStorage (try/catch); varsayılan sistem teması; AA kontrast
+- [x] DONE 9.9 Test + ekran görüntüsü + commit
 
 ## Güvenlik hatırlatması
 - [ ] G1 Tünel açıkken LIVE=false
