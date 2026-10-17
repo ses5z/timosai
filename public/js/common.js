@@ -146,13 +146,20 @@
     const mode = b.dataset.mode;
     store.set("tms-mode", mode);
     const path = location.pathname.replace(/\/$/, "") || "/";
-    if (mode === "pro" && path === "/panel") { location.href = "/terminal"; return; }
-    if (mode === "basic" && path === "/terminal") { location.href = "/panel"; return; }
-    T.transition(() => {
+    if (mode === document.body.dataset.mode) return;
+    // G3: tam ekran geçiş (~600 ms): logo + "Pro sürüme geçiliyor…"; azaltılmış hareket tercihinde yalnızca metin.
+    const ov = document.createElement("div");
+    ov.className = `mode-overlay${reduced() ? " still" : ""}`;
+    ov.setAttribute("role", "status");
+    ov.innerHTML = `${reduced() ? "" : `<img src="/img/logo.svg" alt="" width="72" height="72">`}<p>${mode === "pro" ? "Pro sürüme geçiliyor…" : "Basic sürüme geçiliyor…"}</p>`;
+    document.body.append(ov);
+    if (mode === "basic" && path === "/terminal") { setTimeout(() => (location.href = "/panel"), 300); return; }
+    setTimeout(() => {
       document.body.dataset.mode = mode;
       document.querySelectorAll("button[data-mode]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.mode === mode)));
-    });
-    fire("mode", mode);
+      fire("mode", mode);
+    }, 280);
+    setTimeout(() => { ov.classList.add("out"); setTimeout(() => ov.remove(), 220); }, 600);
   });
 
   // ---------- Gezinme + alt bilgi ----------
@@ -167,8 +174,18 @@
     ["/terminal", "Terminal"],
     ["/long-short", "Long/Short"],
   ];
+  // Pro gezinme: Terminal · Long/Short · Tarama · Planım · Emirler (kısayollar 1-4, P, L, /).
+  const LINKS_PRO = [
+    ["/terminal", "Terminal"],
+    ["/long-short", "Long/Short"],
+    ["/kesfet", "Tarama"],
+    ["/panel#planim", "Planım"],
+    ["/panel#emirler", "Emirler"],
+  ];
   const here = location.pathname.replace(/\/$/, "") || "/";
-  const links = LINKS.map(([h, t]) => `<li${h === "/terminal" || h === "/long-short" ? ' class="pro-only"' : ""}><a href="${h}"${h === here ? ' aria-current="page"' : ""}>${t}</a></li>`).join("");
+  const links = LINKS.filter(([h]) => h !== "/terminal" && h !== "/long-short").map(([h, t]) => `<li class="basic-only"><a href="${h}"${h === here ? ' aria-current="page"' : ""}>${t}</a></li>`).join("") +
+    LINKS_PRO.map(([h, t], i) => `<li class="pro-only"><a href="${h}"${h === here ? ' aria-current="page"' : ""} title="Kısayol: ${["1", "2", "3", "4", "5"][i]}${t === "Planım" ? " / P" : t === "Long/Short" ? " / L" : ""}">${t}</a></li>`).join("");
+  T.LINKS_PRO = LINKS_PRO;
   const header = document.createElement("header");
   header.className = "site-header";
   header.innerHTML = `
@@ -405,4 +422,22 @@
     const len = 2 * Math.PI * 40, off = len * (1 - s / 100);
     return `<svg viewBox="0 0 100 100" role="img" aria-label="Risk skoru ${s}"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--ink-600)" stroke-width="10"/><circle cx="50" cy="50" r="40" fill="none" stroke="${c}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${len}" stroke-dashoffset="${off}" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset .6s ease"/><text x="50" y="57" text-anchor="middle" fill="var(--cream-100)" font-size="24" font-family="var(--font-display)">${Math.round(s)}</text></svg>`;
   };
+
+  // ---------- G3: Pro klavye kısayolları ----------
+  // "/" arama · 1-4 Pro sayfaları (grafikli sayfada 1-7 zaman aralığı seçer) · P Planım · L Long/Short.
+  document.addEventListener("keydown", (e) => {
+    if (document.body.dataset.mode !== "pro" || e.metaKey || e.ctrlKey || e.altKey) return;
+    const a = document.activeElement;
+    if (/INPUT|TEXTAREA|SELECT/.test(a?.tagName || "") || a?.isContentEditable || document.querySelector(".modal-backdrop")) return;
+    const go = (h) => { e.preventDefault(); location.href = h; };
+    if (e.key === "/") {
+      const s = document.querySelector('main input[type="search"], #tc-search, main input[type="text"]');
+      if (s) { e.preventDefault(); s.focus(); }
+      return;
+    }
+    if (e.key === "p" || e.key === "P") return go("/panel#planim");
+    if (e.key === "l" || e.key === "L") return go("/long-short");
+    const n = Number(e.key);
+    if (n >= 1 && n <= 4 && !(T.activeChart && T.activeChart())) go(T.LINKS_PRO[n - 1][0]);
+  });
 })();

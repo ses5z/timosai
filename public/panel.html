@@ -18,6 +18,14 @@
     
   </div>
   <div id="notices"></div>
+  <section class="card guide basic-only" aria-labelledby="guide-h">
+    <h2 id="guide-h">Ne yapmak istersin?</h2>
+    <div class="guide-grid">
+      <a href="/kesfet"><b>Keşfet</b><span>Coinlere bak, Mentor işlemi kartını aç, beğendiğini plana ekle.</span></a>
+      <a href="/panel#planim"><b>Planım</b><span>Hangi coinler, ne kadar risk, kaç pozisyon: kuralları sen koy.</span></a>
+      <a href="/panel#order-log-card"><b>Emir defteri</b><span>Ajanın planına göre verdiği emirler ve sonuçları.</span></a>
+    </div>
+  </section>
   <div id="breaker-box"></div>
   <section class="card" id="scenario-card" hidden aria-labelledby="sc-h" style="margin-bottom:16px">
     <div class="card-head"><h2 id="sc-h">Senaryo</h2><span class="badge badge-muted" id="sc-step">-</span></div>
@@ -144,7 +152,7 @@
       <ul class="log" id="ev-list" aria-live="polite"></ul>
     </section>
 
-    <section class="card span-2" aria-labelledby="tr-h">
+    <section class="card span-2" aria-labelledby="tr-h" id="emirler">
       <div class="card-head"><h2 id="tr-h">İşlem geçmişi</h2></div>
       <div class="table-wrap" id="tr-wrap"></div>
     </section>

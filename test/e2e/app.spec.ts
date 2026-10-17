@@ -338,8 +338,11 @@ test("Güncelleme2 madde 7: arz dedektörü Keşfet CEX görünümünde ve ısı
   await expect(page.getByRole("dialog").locator("#dr-supply")).toContainText("Arz baskısı");
 });
 
-test("Güncelleme2 madde 8: Long/Short kartı (Özet/Kategori/Coin, kaynak etiketleri, güncelleme zamanı)", async ({ page }) => {
+test("Güncelleme2 madde 8 (+G3: yalnızca Pro): Long/Short kartı (Özet/Kategori/Coin, kaynak etiketleri, güncelleme zamanı)", async ({ page }) => {
   await waitForScan(page);
+  await page.goto("/isi-haritasi");
+  await expect(page.locator("#ls-box")).toBeHidden(); // Basic'te L/S yok
+  await page.addInitScript(() => { try { localStorage.setItem("tms-mode", "pro"); } catch {} });
   for (const width of [360, 1440]) {
     await page.setViewportSize({ width, height: width === 360 ? 780 : 900 });
     await page.goto("/isi-haritasi");
@@ -520,4 +523,46 @@ test("G3 madde 6: 7 gün kurulum özeti ve 'Bu planı son 30 günde test et'", a
     await expect(page.locator("#bt-out")).toContainText("ileriye bakış yok");
     await page.locator(".plan-perf").screenshot({ path: `${SHOTS}/g3-madde6-backtest-${width}.png` });
   }
+});
+
+test("G3 madde 8: Basic rehber, Pro gezinme + kısayollar, geçiş katmanı (azaltılmış hareket: yalnızca metin)", async ({ page, browser }) => {
+  await waitForScan(page);
+  await page.addInitScript(() => { try { if (!sessionStorage.getItem("g3m8")) { localStorage.setItem("tms-mode", "basic"); sessionStorage.setItem("g3m8", "1"); } } catch {} });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/panel");
+  await expect(page.locator(".guide")).toBeVisible();
+  await expect(page.locator(".guide-grid a")).toHaveText([/Keşfet/, /Planım/, /Emir defteri/]);
+  await page.screenshot({ path: `${SHOTS}/g3-madde8-basic-1440.png` });
+  await page.locator('button[data-mode="pro"]').first().click();
+  const ov = page.locator(".mode-overlay");
+  await expect(ov).toContainText("Pro sürüme geçiliyor…");
+  await expect(ov.locator("img")).toHaveCount(1);
+  await expect(ov).toHaveCount(0, { timeout: 2000 });
+  await expect(page.locator("body")).toHaveAttribute("data-mode", "pro");
+  await expect(page.locator(".guide")).toBeHidden();
+  await expect(page.locator(".nav-links li.pro-only a")).toHaveText(["Terminal", "Long/Short", "Tarama", "Planım", "Emirler"]);
+  await page.screenshot({ path: `${SHOTS}/g3-madde8-pro-1440.png` });
+  await page.locator("body").click({ position: { x: 5, y: 300 } });
+  await page.keyboard.press("l");
+  await expect(page).toHaveURL(/\/long-short/);
+  await page.keyboard.press("/");
+  await expect(page.locator("#lsa-q")).toBeFocused();
+  await page.locator("body").click({ position: { x: 5, y: 300 } });
+  await page.keyboard.press("p");
+  await expect(page).toHaveURL(/\/panel#planim/);
+  await page.locator("body").click({ position: { x: 5, y: 300 } });
+  await page.keyboard.press("2");
+  await expect(page).toHaveURL(/\/long-short/);
+  // azaltılmış hareket: logo yok, yalnızca metin
+  const ctx2 = await browser.newContext({ reducedMotion: "reduce", baseURL: "http://127.0.0.1:3123" });
+  const p2 = await ctx2.newPage();
+  await p2.goto("/kesfet");
+  await p2.locator('button[data-mode="pro"]').first().click();
+  await expect(p2.locator(".mode-overlay")).toContainText("Pro sürüme geçiliyor…");
+  await expect(p2.locator(".mode-overlay img")).toHaveCount(0);
+  await p2.setViewportSize({ width: 360, height: 780 });
+  await p2.locator('button[data-mode="basic"]').first().click().catch(() => undefined);
+  await ctx2.close();
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.screenshot({ path: `${SHOTS}/g3-madde8-pro-360.png` });
 });
