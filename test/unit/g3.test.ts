@@ -148,3 +148,16 @@ test("Gemini: 429 kota dolunca sıradaki flash modeline geçer", async () => {
   await g.reply({ text: "tekrar", history: [], tools: new MentorTools(ctx) });
   assert.ok(!urls.some((u) => u.includes("3.8")), "kotası dolan model tekrar denenmez");
 });
+
+test("Emir defteri: durumlar (açıldı/hedef 1/stop/süre doldu/kapandı) ve günlük sınıfları", async () => {
+  const { orderStatus, logKind } = await import("../../src/trading/orderLog.js");
+  assert.equal(orderStatus({ side: "buy", reason: "x" }), "açıldı");
+  assert.equal(orderStatus({ side: "sell", reason: "Kısmi kâr (+1.5R)" }), "hedef 1");
+  assert.equal(orderStatus({ side: "sell", reason: "Stop tetiklendi" }), "stop");
+  assert.equal(orderStatus({ side: "sell", reason: "Süre stopu (24 saatte ilerleme yok)" }), "süre doldu");
+  assert.equal(orderStatus({ side: "sell", reason: "Hızlı komut: kapat (web)" }), "kapandı");
+  assert.equal(logKind({ level: "emir", text: "PAPER emir: SOL" }), "emir");
+  assert.equal(logKind({ level: "uyarı", text: "ADA long planına uymadı" }), "uyarı");
+  assert.equal(logKind({ level: "bilgi", text: "Avalanche kanıtı yazıldı" }), "zincir");
+  assert.equal(logKind({ level: "bilgi", text: "Telegram bildirimi gönderildi" }), "bildirim");
+});

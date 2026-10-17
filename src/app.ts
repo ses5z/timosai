@@ -9,6 +9,7 @@ import { round } from "./util/math.js";
 import { applyPlan, CODE_ALLOWED_PAIRS } from "./trading/hardLimits.js";
 import { planRef, sanitizePlan } from "./plan/plan.js";
 import { computeSetupWithRationale } from "./mentor/setup.js";
+import { logKind, orderRows } from "./trading/orderLog.js";
 import { mask } from "./util/log.js";
 
 const PAGES: Record<string, string> = {
@@ -327,7 +328,8 @@ export function createApp(ctx: AppContext) {
     });
   });
 
-  app.get("/api/events", (_req, res) => json(res, store.events.slice(-120).reverse()));
+  app.get("/api/events", (_req, res) => json(res, store.events.slice(-120).reverse().map((e) => ({ ...e, kind: logKind(e) }))));
+  app.get("/api/order-log", (_req, res) => json(res, orderRows(agent.trading.listTrades(100))));
   app.get("/api/atk", (_req, res) => json(res, { ...ledger.atkStats(), connected: ctx.atk?.available() ?? false, tools: ctx.atk?.toolNames() ?? [] }));
   app.get("/api/ledger", async (_req, res) =>
     json(res, { head: ledger.headHash(), count: ledger.count(), valid: ledger.verify(), entries: ledger.list(["decision", "order", "warning", "plan", "position"], 60), anchor: ctx.proof.status() }),

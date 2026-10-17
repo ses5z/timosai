@@ -122,8 +122,20 @@
       <div id="qk-body" class="kpi-small"></div>
     </section>
 
-    <section class="card span-2" aria-labelledby="ev-h">
-      <div class="card-head"><h2 id="ev-h">Olay günlüğü</h2><span class="kpi-small">Canlı</span></div>
+    <section class="card span-2 basic-only" aria-labelledby="ob-h" id="order-log-card">
+      <div class="card-head"><h2 id="ob-h">Emir defteri</h2><span class="kpi-small">Ajanın verdiği emirler</span></div>
+      <div class="table-wrap" id="ob-wrap"></div>
+    </section>
+
+    <section class="card span-2 pro-only" aria-labelledby="ev-h">
+      <div class="card-head"><h2 id="ev-h">Ayrıntılı günlük</h2><span class="kpi-small">Canlı</span></div>
+      <div class="tf ev-filter" role="group" aria-label="Günlük filtresi">
+        <button type="button" class="chip" data-ev="all" aria-pressed="true">Tümü</button>
+        <button type="button" class="chip" data-ev="emir" aria-pressed="false">Emir</button>
+        <button type="button" class="chip" data-ev="uyarı" aria-pressed="false">Uyarı</button>
+        <button type="button" class="chip" data-ev="bildirim" aria-pressed="false">Bildirim</button>
+        <button type="button" class="chip" data-ev="zincir" aria-pressed="false">Zincir</button>
+      </div>
       <ul class="log" id="ev-list" aria-live="polite"></ul>
     </section>
 

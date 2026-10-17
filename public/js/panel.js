@@ -46,11 +46,26 @@
     }).join("");
   }
 
+  let evFilter = "all";
   async function loadEvents() {
     const ev = await T.api("/api/events");
-    T.renderKeep($("#ev-list"), ev.map(evRow).join("") || `<li><span></span><span class="muted">Henüz olay yok.</span></li>`);
+    const list = ev.filter((e) => evFilter === "all" || e.kind === evFilter);
+    T.renderKeep($("#ev-list"), list.map(evRow).join("") || `<li><span></span><span class="muted">Bu filtrede olay yok.</span></li>`);
   }
-  const evRow = (e) => `<li class="lvl-${T.esc(e.level)}"><time datetime="${new Date(e.ts).toISOString()}">${F.time(e.ts)}</time><span>${T.esc(e.text)}</span></li>`;
+  const KIND_LABEL = { emir: "emir", "uyarı": "uyarı", bildirim: "bildirim", zincir: "zincir", "diğer": "bilgi" };
+  const evRow = (e) => `<li class="lvl-${T.esc(e.level)}" data-kind="${T.esc(e.kind || "")}"><time datetime="${new Date(e.ts).toISOString()}">${F.time(e.ts)}</time><span><span class="badge badge-muted ev-kind">${KIND_LABEL[e.kind] || T.esc(e.level)}</span> ${T.esc(e.text)}</span></li>`;
+  document.querySelectorAll("[data-ev]").forEach((b) => b.addEventListener("click", () => {
+    evFilter = b.dataset.ev;
+    document.querySelectorAll("[data-ev]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    document.querySelectorAll("#ev-list li[data-kind]").forEach((li) => { li.hidden = evFilter !== "all" && li.dataset.kind !== evFilter; });
+    loadEvents();
+  }));
+
+  const STATUS_CLS = { "açıldı": "badge-muted", "hedef 1": "badge-ok", stop: "badge-bad", "süre doldu": "badge-muted", "kapandı": "badge-muted" };
+  async function loadOrderLog() {
+    const rows = await T.api("/api/order-log");
+    T.renderKeep($("#ob-wrap"), rows.length ? `<table class="order-log"><thead><tr><th>Saat</th><th>Coin</th><th>Yön</th><th class="num">Fiyat</th><th class="num">Tutar</th><th>Durum</th><th class="num">PnL</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${F.time(r.ts)}</td><th scope="row">${T.esc(r.coin)}</th><td>${r.side}</td><td class="num">${F.price(r.px)}</td><td class="num">${F.num(r.usdt, 2)}</td><td><span class="badge ${STATUS_CLS[r.status] || "badge-muted"}">${T.esc(r.status)}</span>${r.mode === "CANLI" ? ' <span class="badge badge-live">CANLI</span>' : ""}</td><td class="num ${T.cls(r.pnl)}">${r.pnl == null ? "–" : F.signed(r.pnl, 3)}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Henüz emir yok. Ajan planına uyan bir kurulum görünce emir verir; burada tek satır olarak görünür.</div>`);
+  }
 
   async function loadAtk() {
     const a = await T.api("/api/atk");
@@ -152,11 +167,12 @@
     ["#qk-amt", "#qk-mode", "#qk-val"].forEach((id) => $(id).addEventListener("change", save));
   }
 
-  const refreshAll = () => Promise.allSettled([loadPortfolio(), loadContract(), loadEvents(), loadAtk(), loadLedger(), loadQuick(), loadPaper()]);
+  const refreshAll = () => Promise.allSettled([loadPortfolio(), loadContract(), loadEvents(), loadOrderLog(), loadAtk(), loadLedger(), loadQuick(), loadPaper()]);
   refreshAll();
   T.on("status", renderStatus);
   if (T.status) renderStatus(T.status);
-  T.on("event", (e) => { const ul = $("#ev-list"); const st = ul.scrollTop; ul.insertAdjacentHTML("afterbegin", evRow(e)); if (st > 0) ul.scrollTop = st + ul.firstElementChild.offsetHeight; while (ul.children.length > 150) ul.lastElementChild.remove(); });
+  const kindOf = (e) => (/avalanche|zincir|snowtrace|fuji|kanıt/i.test(e.text) ? "zincir" : /telegram|bildirim/i.test(e.text) ? "bildirim" : e.level === "emir" ? "emir" : e.level === "uyarı" || e.level === "hata" ? "uyarı" : "diğer");
+  T.on("event", (e) => { e = { ...e, kind: e.kind || kindOf(e) }; if (e.level === "emir") loadOrderLog(); if (evFilter !== "all" && e.kind !== evFilter) return; const ul = $("#ev-list"); const st = ul.scrollTop; ul.insertAdjacentHTML("afterbegin", evRow(e)); if (st > 0) ul.scrollTop = st + ul.firstElementChild.offsetHeight; while (ul.children.length > 150) ul.lastElementChild.remove(); });
   let t1 = 0;
   const soon = () => { clearTimeout(t1); t1 = setTimeout(refreshAll, 400); };
   T.on("positions", (p) => renderPositions(p));

@@ -472,3 +472,22 @@ test("G3 madde 3: Planım (Basic sade / Pro tam), kaydet → limitler plana gör
   expect(c.limits.maxOrderNotionalUsdt).toBe(60);
   expect(JSON.stringify(c)).not.toMatch(/maxOrderNotionalUsdt":5,/);
 });
+
+test("G3 madde 4: Basic emir defteri, Pro filtreli ayrıntılı günlük", async ({ page }) => {
+  await waitForScan(page);
+  await page.addInitScript(() => { try { localStorage.setItem("tms-mode", "basic"); } catch {} });
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.goto("/panel");
+  await expect(page.locator("#order-log-card")).toBeVisible();
+  await expect(page.locator("#ev-h")).toBeHidden();
+  await page.locator("#order-log-card").screenshot({ path: `${SHOTS}/g3-madde4-emir-defteri-360.png` });
+  await page.addInitScript(() => { try { localStorage.setItem("tms-mode", "pro"); } catch {} });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/panel");
+  await expect(page.locator("#order-log-card")).toBeHidden();
+  await page.locator('[data-ev="uyarı"]').click();
+  await expect(page.locator('[data-ev="uyarı"]')).toHaveAttribute("aria-pressed", "true");
+  const kinds = await page.locator("#ev-list li[data-kind]:not([hidden])").evaluateAll((els) => els.map((e) => e.getAttribute("data-kind")));
+  expect(kinds.filter((k) => k !== "uyarı")).toEqual([]);
+  await page.locator("#ev-list").screenshot({ path: `${SHOTS}/g3-madde4-pro-gunluk-1440.png` });
+});
