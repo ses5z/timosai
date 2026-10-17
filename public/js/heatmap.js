@@ -123,7 +123,7 @@
     if (push) history.replaceState(null, "", `?s=${encodeURIComponent(id)}`);
     document.querySelectorAll(".tile").forEach((t) => t.setAttribute("aria-pressed", String(t.dataset.id === id)));
     const root = $("#drawer-root");
-    root.innerHTML = `<div class="drawer-backdrop" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-h" id="drawer"><div class="grabber"></div><div id="dr-body"><p class="muted">Yükleniyor…</p></div></aside>`;
+    root.innerHTML = `<div class="drawer-backdrop" data-close></div><aside class="drawer drawer-wide" role="dialog" aria-modal="true" aria-labelledby="dr-h" id="drawer"><div class="grabber"></div><div id="dr-body"><p class="muted">Yükleniyor…</p></div></aside>`;
     root.querySelector("[data-close]").addEventListener("click", closeDrawer);
     await refreshDrawer(true);
   }
@@ -146,8 +146,16 @@
     body.innerHTML = `
       <div class="card-head" style="margin-bottom:4px"><h2 id="dr-h">${T.esc(c.base)} <span class="cat">${T.esc(c.category)}</span></h2><button class="btn btn-sm btn-ghost" type="button" data-x aria-label="Çekmeceyi kapat">${T.icon("x")}</button></div>
       <div class="price-row"><span class="kpi" data-price>${F.price(c.price)}</span><span data-chg class="${T.cls(c.change24hPct)}">${F.pct(c.change24hPct)}</span><span class="faint kpi-small">24 sa · hacim ${F.vol(c.volUsdt24h)} USDT</span></div>
-      <div id="dr-chart" style="margin-top:10px"></div>
-      <section><h3>Ajanın görüşü</h3><div class="view-box"><span class="pill pill-${T.esc(c.decision)}">${T.esc(c.decision)}</span> <b>${T.esc(c.direction)}</b><p style="margin:8px 0 0">${T.esc(c.reason)}</p></div></section>
+      <div class="dr-top">
+        <div id="dr-chart"></div>
+        <aside class="ai-card" aria-labelledby="ai-h">
+          <h3 id="ai-h">AI analizi</h3>
+          <p style="margin:0 0 6px"><span class="pill pill-${T.esc(c.decision)}">ajan: ${T.esc(c.decision)}</span> <b>${T.esc(c.direction)}</b></p>
+          <p style="margin:0 0 8px">${T.esc(c.reason)}</p>
+          <p class="kpi-small" style="margin:0 0 6px"><b>Vadeli:</b> <span id="ai-deriv">${c.derivatives && c.derivatives.available ? `${T.derivBadge(c.derivatives)} ${T.esc(c.derivatives.reasons[0])}` : "veri yok"}</span></p>
+          <p class="kpi-small" style="margin:0"><b>Hold / arz:</b> <span id="ai-hold">yükleniyor…</span></p>
+        </aside>
+      </div>
       <section><h3>Giriş, stop, hedef</h3><div class="levels"><div class="level"><span>Giriş</span><b>${F.price(c.entry)}</b></div><div class="level stop"><span>${T.term("stop", "Stop")}</span><b>${F.price(c.stop)}</b></div><div class="level target"><span>Hedef</span><b>${F.price(c.target)}</b></div><div class="level"><span>${T.term("rr", "R:R")}</span><b>${c.rr}</b></div></div>
         <p class="kpi-small" style="margin-top:8px">Risk bütçene göre örnek boyut: <b>${s.notionalUsdt > 0 ? F.usd(s.notionalUsdt) : "yok"}</b>${s.notionalUsdt > 0 ? ` · stop olursa ≈ ${F.num(s.riskUsdt, 3)} USDT` : ""}. <span class="pro-only">${T.esc(s.explain)}</span></p></section>
       <section data-pos>${posHtml(p)}</section>
@@ -162,7 +170,7 @@
       </section>
       <p class="faint" style="font-size:.8rem">Öncelik ajanın tarama sırasını yükseltir; emir değildir. Emirleri yalnızca ajan, sözleşme ve sert limitler içinde verir.</p>`;
     if (window.__drChart) window.__drChart.destroy();
-    window.__drChart = T.tvChart(body.querySelector("#dr-chart"), c.instId, { height: 240, levels: { entry: c.entry, stop: c.stop, target: c.target } });
+    window.__drChart = T.tvChart(body.querySelector("#dr-chart"), c.instId, { height: 280, levels: { entry: c.entry, stop: c.stop, target: c.target }, showLevels: false });
     body.querySelector("[data-x]").addEventListener("click", closeDrawer);
     body.querySelector("[data-follow]").addEventListener("click", async (e) => {
       const b = e.currentTarget, on = b.getAttribute("aria-pressed") === "true";
@@ -183,6 +191,8 @@
       const el = body.querySelector("#dr-hold"); if (!el) return;
       const m = h.metrics, n = (v, d = 2) => (v == null ? "-" : Number(v).toFixed(d));
       const cls = h.verdict === "hold profiline uygun" ? "badge-ok" : h.verdict === "kısa vade trade edilebilir" ? "badge-warn" : "badge-bad";
+      const aiH = body.querySelector("#ai-hold");
+      if (aiH) aiH.innerHTML = `<span class="badge ${cls}">${T.esc(h.verdict)}</span> ${T.esc(h.reasons[0] || "")}`;
       el.innerHTML = `<div class="view-box"><p style="margin:0 0 6px"><span class="badge ${cls}">${T.esc(h.verdict)}</span></p><ul class="cautions">${h.reasons.map((r) => `<li>${T.esc(r)}</li>`).join("")}</ul>
         <div class="pro-only kpi-small" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px">
           <span>Dolaşım oranı</span><b class="num">${m.circulatingRatio == null ? "-" : "%" + (m.circulatingRatio * 100).toFixed(0)}</b>
@@ -193,7 +203,10 @@
           <span>Cüzdan dağılımı</span><b>${T.esc(h.distribution.status)}</b>
         </div><p class="faint" style="font-size:.78rem;margin:8px 0 0">Arz: ${T.esc(h.supply ? h.supply.source : "veri yok")}. ${T.esc(h.distribution.note)}</p></div>`;
     }).catch(() => {});
-    T.api("/api/derivatives/" + encodeURIComponent(c.instId)).then((dv) => { const el = body.querySelector("#dr-deriv"); if (el) el.innerHTML = T.derivCard(dv); }).catch(() => {});
+    T.api("/api/derivatives/" + encodeURIComponent(c.instId)).then((dv) => {
+      const el = body.querySelector("#dr-deriv"); if (el) el.innerHTML = T.derivCard(dv);
+      const ai = body.querySelector("#ai-deriv"); if (ai) ai.innerHTML = dv.available ? `${T.derivBadge(dv)} ${T.esc(dv.reasons[0])}` : "veri yok";
+    }).catch(() => {});
   }
   function posHtml(p) {
     if (!p) return `<h3>Pozisyon</h3><p class="kpi-small">Bu coinde açık pozisyon yok.</p>`;

@@ -17,6 +17,7 @@ import { NoopProofAnchor } from "./proof/proofAnchor.js";
 import { LiveDerivativesData, MockDerivativesData, type DerivativesData } from "./derivatives/derivativesData.js";
 import { loadDerivConfig, type DerivConfig } from "./derivatives/rules.js";
 import { CoinGeckoFundamentals, MockFundamentals, type FundamentalsData } from "./fundamentals/holdReport.js";
+import { InstrumentCatalog, mockInstruments } from "./market/instruments.js";
 import { GoPlusSecurity, MockTokenSecurity, OnchainOsSecurity, ScamScanner } from "./security/tokenSecurity.js";
 import { Store } from "./state/store.js";
 import { loadHardLimits, type HardLimits } from "./trading/hardLimits.js";
@@ -38,6 +39,7 @@ export interface AppContext {
   derivConfig: DerivConfig;
   fundamentals: FundamentalsData;
   scanner: ScamScanner;
+  instruments: InstrumentCatalog;
   atk: AtkCaller | null;
   agent: Agent;
   proof: ProofAnchor;
@@ -113,7 +115,7 @@ export function createContext(env: AppEnv, opts: ContextOptions = {}): AppContex
     store.bus.publish("warning", w);
   });
 
-  return { env, store, ledger, warnings, limits, thresholds, contract, watchlist, market, mock, derivatives, derivConfig, fundamentals: env.atkMode === "live" ? new CoinGeckoFundamentals() : new MockFundamentals(), scanner: new ScamScanner(env.atkMode === "live" ? [new GoPlusSecurity(), new OnchainOsSecurity()] : [new MockTokenSecurity()]), atk, agent, proof: new NoopProofAnchor(), missingEnv: missingEnvLines(env), extras: {} };
+  return { env, store, ledger, warnings, limits, thresholds, contract, watchlist, market, mock, derivatives, derivConfig, instruments: new InstrumentCatalog(env.atkMode === "live" ? atk : null, mockInstruments(watchlist.map((w) => w.instId.split("-")[0]))), fundamentals: env.atkMode === "live" ? new CoinGeckoFundamentals() : new MockFundamentals(), scanner: new ScamScanner(env.atkMode === "live" ? [new GoPlusSecurity(), new OnchainOsSecurity()] : [new MockTokenSecurity()]), atk, agent, proof: new NoopProofAnchor(), missingEnv: missingEnvLines(env), extras: {} };
 }
 
 /** LIVE=true ise ve koşullar uygunsa canlı işlem istemcisine geçer; değilse PAPER kalır. */

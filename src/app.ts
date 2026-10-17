@@ -180,8 +180,16 @@ export function createApp(ctx: AppContext) {
       .map((t) => ({ time: sec(Math.floor(t.ts / barMs) * barMs), position: t.side === "buy" ? "belowBar" : "aboveBar", color: t.side === "buy" ? "#62c98f" : "#f06a66", shape: t.side === "buy" ? "arrowUp" : "arrowDown", text: `${t.side === "buy" ? "AL" : "SAT"}${t.origin === "hızlı" ? " (hızlı)" : ""}` }))
       .filter((m) => m.time >= sec(candles![0].ts))
       .sort((a, b) => a.time - b.time);
+    await ctx.instruments.ensure().catch(() => undefined);
+    const tickSz = ctx.instruments.get(id)?.tickSz ?? 0;
+    const flips = at
+      .map((p, i) => ({ p, i }))
+      .filter(({ p, i }) => i > 0 && p.dir !== at[i - 1].dir)
+      .map(({ p, i }) => ({ time: sec(candles![i].ts), position: p.dir === 1 ? "belowBar" : "aboveBar", color: p.dir === 1 ? "#4f8cff" : "#f06a66", shape: p.dir === 1 ? "arrowUp" : "arrowDown", text: p.dir === 1 ? "yukarı" : "aşağı" }));
     json(res, {
       bar,
+      tickSz,
+      trendFlips: flips,
       candles: candles.map((c: any) => ({ time: sec(c.ts), open: c.open, high: c.high, low: c.low, close: c.close, vol: c.vol })),
       atrTrend: at.map((p, i) => ({ time: sec(candles![i].ts), value: p.line, dir: p.dir })),
       markers,

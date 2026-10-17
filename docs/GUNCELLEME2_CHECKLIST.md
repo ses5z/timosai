@@ -12,7 +12,7 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [ ] P5a QUICK_COMMANDS varsayılanı: LIVE=false iken açık; LIVE=true iken varsayılan kapalı, yalnızca .env'de açıkça true ise çalışır
 - [ ] P5b Isı haritası/çekmecede Al/Sat düğmesi yok
 - [!] BLOCKED P6 Follow Line (lisans başlığı ve kaynak kod sayfadan doğrulanamadı; kendi ATR trend çizgimiz kullanılıyor, arayüzde "Follow Line" adı yok) – lisans başlığı kontrol edildi; izin yoksa BLOCKED + kendi ATR-trend çizgisi, "Follow Line" adı kullanılmaz; izin varsa dosya başı link/yazar/lisans notu
-- [ ] P6a Lightweight Charts (TradingView) atfı korunuyor
+- [x] DONE P6a Lightweight Charts (TradingView) atfı korunuyor
 - [ ] P7 Mentor kısa cevap kuralı (önceki işte yapıldı; doğrula: cevap_modu etiketi, few-shot, 220/800 token, sıcaklık 0.3, web+Telegram Ayrıntı düğmesi, aday analizi kısa)
 - [ ] P8 17:00'de madde 9 başlamadıysa kapsam küçültme (tema + basit Terminal) ve buraya not
 - [ ] P9 Durum raporları: madde 2, 4, 6, 8 sonrası
@@ -27,14 +27,14 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [x] DONE 1.6 Test + ekran görüntüsü + commit
 
 ## Madde 2 – Grafik çekmecesi
-- [ ] 2.1 Açılınca varsayılan: grafik + yanında "AI analizi" kartı (ajanın görüşü, gerekçe, vadeli özeti, hold/arz özeti)
-- [ ] 2.2 Giriş/stop/hedef çizgileri varsayılan KAPALI
-- [ ] 2.3 Grafik üstünde "Follow Line · Kıvanç Özbilgiç" düğmesi (lisans uygunsa; değilse BLOCKED + kendi çizgimiz farklı adla)
-- [ ] 2.4 Çizgi mavi/kırmızı, yön dönüş marker'ları
-- [ ] 2.5 Lejant: ad + yazar + kısa açıklama + script linki
-- [ ] 2.6 "Seviyeler" düğmesi: giriş/stop/hedef çizgileri aç/kapa
-- [ ] 2.7 Fiyat formatı coinin tickSz'ine göre (düşük fiyatlılarda etiket çakışması yok)
-- [ ] 2.8 Test + ekran görüntüsü + commit
+- [x] DONE 2.1 Açılınca varsayılan: grafik + yanında "AI analizi" kartı (ajanın görüşü, gerekçe, vadeli özeti, hold/arz özeti)
+- [x] DONE 2.2 Giriş/stop/hedef çizgileri varsayılan KAPALI
+- [!] BLOCKED 2.3 (Follow Line lisansı doğrulanamadı; yerine "Trend çizgisi · TimosAI ATR" düğmesi, kanıt: e2e "madde 2") Grafik üstünde "Follow Line · Kıvanç Özbilgiç" düğmesi (lisans uygunsa; değilse BLOCKED + kendi çizgimiz farklı adla)
+- [x] DONE 2.4 Çizgi mavi/kırmızı, yön dönüş marker'ları
+- [~] PARTIAL 2.5 (lejantta ad + yazar (TimosAI) + açıklama var; Follow Line script linki BLOCKED nedeniyle yok) Lejant: ad + yazar + kısa açıklama + script linki
+- [x] DONE 2.6 "Seviyeler" düğmesi: giriş/stop/hedef çizgileri aç/kapa
+- [x] DONE 2.7 Fiyat formatı coinin tickSz'ine göre (düşük fiyatlılarda etiket çakışması yok)
+- [x] DONE 2.8 Test + ekran görüntüsü + commit
 
 ## Madde 3 – Canlı inceleme hataları
 - [ ] 3.1 Hold raporu hacim kuralı skor motorundaki hacim ölçüsüyle aynı fonksiyon ve eşik

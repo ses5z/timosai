@@ -205,3 +205,26 @@ test("ısı haritası çekmecesi: vadeli durum ve hold raporu, Lightweight Chart
   await expect(drawer.locator("#dr-hold")).toContainText(/hold profiline uygun|kısa vade trade edilebilir|ikisi de riskli/);
   await expect(drawer.locator(".tv-box canvas").first()).toBeVisible();
 });
+
+test("Güncelleme2 madde 2: çekmece AI analizi, Trend çizgisi ve Seviyeler düğmeleri (seviyeler varsayılan kapalı)", async ({ page }) => {
+  await waitForScan(page);
+  for (const width of [360, 1440]) {
+    await page.setViewportSize({ width, height: width === 360 ? 780 : 900 });
+    await page.goto("/isi-haritasi?s=TRX-USDT");
+    const drawer = page.getByRole("dialog");
+    await expect(drawer.locator(".ai-card")).toContainText("AI analizi");
+    await expect(drawer.locator(".ai-card")).toContainText("Vadeli");
+    await expect(drawer.locator(".ai-card")).toContainText("Hold / arz");
+    const lv = drawer.getByRole("button", { name: "Seviyeler" });
+    await expect(lv).toHaveAttribute("aria-pressed", "false");
+    const tr = drawer.getByRole("button", { name: "Trend çizgisi" });
+    await tr.click();
+    await expect(drawer.locator(".chart-legend")).toBeVisible();
+    await expect(drawer.locator(".chart-legend")).toContainText("TimosAI ATR");
+    await expect(drawer).not.toContainText("Follow Line");
+    await lv.click();
+    await expect(lv).toHaveAttribute("aria-pressed", "true");
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${SHOTS}/g2-madde2-cekmece-${width}.png` });
+  }
+});

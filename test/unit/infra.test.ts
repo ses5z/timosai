@@ -80,3 +80,19 @@ test("API: 15 coin takibe alınınca yumuşak uyarı döner, kilit yok", async (
     assert.equal(r16.status, 200);
   });
 });
+
+test("Güncelleme2: tickSz → ondalık; mum uç noktası tickSz ve trend dönüş işaretleri döndürür", async () => {
+  const { decimalsFromTick } = await import("../../src/market/instruments.js");
+  assert.equal(decimalsFromTick(0.001), 3);
+  assert.equal(decimalsFromTick(0.00001), 5);
+  assert.equal(decimalsFromTick(1), 0);
+  const ctx = mkCtx();
+  await ctx.agent.scanOnce();
+  await withServer(ctx, async (base) => {
+    const d: any = await (await fetch(base + "/api/candles/TRX-USDT?bar=15m")).json();
+    assert.equal(typeof d.tickSz, "number");
+    assert.ok(d.tickSz > 0);
+    assert.ok(Array.isArray(d.trendFlips));
+    assert.ok(d.atrTrend.length === d.candles.length);
+  });
+});

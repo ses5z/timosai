@@ -1,62 +1,91 @@
 /* TimosAI grafik modülü: TradingView Lightweight Charts (Apache 2.0, public/vendor). Veri bizim (ATK mumları).
-   Basic: fiyat çizgisi + giriş/stop/hedef. Pro: mumlar, hacim, ATR trend çizgisi, ajanın al/sat işaretleri, zaman aralığı. */
+   Üstte iki düğme: "Trend çizgisi" (TimosAI ATR trend: mavi yükseliş / kırmızı düşüş + yön dönüş işaretleri) ve
+   "Seviyeler" (giriş/stop/hedef; varsayılan KAPALI). Fiyat biçimi coinin tickSz'ine göre. */
 (function () {
   "use strict";
   const T = window.TimosAI;
   const LC = window.LightweightCharts;
   const css = (v) => getComputedStyle(document.body).getPropertyValue(v).trim() || "#999";
+  const decimals = (tick) => (tick > 0 ? Math.max(0, Math.min(12, Math.round(-Math.log10(tick)))) : null);
 
   T.tvChart = function (el, instId, opts = {}) {
     if (!LC) { el.innerHTML = `<div class="empty">Grafik kütüphanesi yüklenemedi.</div>`; return { destroy() {} }; }
     let chart = null, bar = opts.bar || "15m", destroyed = false;
+    let showTrend = opts.showTrend ?? (document.body.dataset.mode === "pro");
+    let showLevels = opts.showLevels ?? false;
+    const frames = opts.frames || ["15m", "1H", "4H"];
     const wrap = document.createElement("div");
-    wrap.innerHTML = `<div class="tf pro-only" role="group" aria-label="Zaman aralığı">${["15m", "1H", "4H"].map((b) => `<button type="button" class="chip" data-bar="${b}" aria-pressed="${b === bar}">${b === "15m" ? "15 dk" : b === "1H" ? "1 sa" : "4 sa"}</button>`).join("")}</div><div class="tv-box" style="height:${opts.height || 260}px"></div><p class="faint chart-note"></p>`;
+    wrap.className = "tv-wrap";
+    wrap.innerHTML = `<div class="chart-tools">
+        <div class="tf ${opts.timeframes ? "" : "pro-only"}" role="group" aria-label="Zaman aralığı">${frames.map((b) => `<button type="button" class="chip" data-bar="${b}" aria-pressed="${b === bar}">${{ "15m": "15 dk", "1H": "1 sa", "4H": "4 sa", "1D": "1 g" }[b]}</button>`).join("")}</div>
+        <div class="tf" role="group" aria-label="Grafik katmanları">
+          <button type="button" class="chip" data-layer="trend" aria-pressed="${showTrend}">Trend çizgisi</button>
+          <button type="button" class="chip" data-layer="levels" aria-pressed="${showLevels}">Seviyeler</button>
+        </div></div>
+      <p class="chart-legend" ${showTrend ? "" : "hidden"}><span class="lg-dot" style="background:#4f8cff"></span><span class="lg-dot" style="background:#f06a66"></span><b>Trend çizgisi · TimosAI ATR</b>: fiyat çizginin üstündeyse mavi (yükseliş), altındaysa kırmızı (düşüş); oklar yön dönüşleri. Bu projede yazılmış ATR tabanlı iz süren çizgi.</p>
+      <div class="tv-box" style="height:${opts.height || 260}px"></div><p class="faint chart-note"></p>`;
     el.innerHTML = "";
     el.append(wrap);
     const box = wrap.querySelector(".tv-box");
     wrap.querySelectorAll("[data-bar]").forEach((b) => b.addEventListener("click", () => { bar = b.dataset.bar; wrap.querySelectorAll("[data-bar]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); load(); }));
+    wrap.querySelectorAll("[data-layer]").forEach((b) => b.addEventListener("click", () => {
+      if (b.dataset.layer === "trend") showTrend = !showTrend; else showLevels = !showLevels;
+      b.setAttribute("aria-pressed", String(b.dataset.layer === "trend" ? showTrend : showLevels));
+      wrap.querySelector(".chart-legend").hidden = !showTrend;
+      draw();
+    }));
 
+    let data = null;
     async function load() {
-      let d;
-      try { d = await T.api(`/api/candles/${encodeURIComponent(instId)}?bar=${bar}`); } catch (e) { box.innerHTML = `<div class="empty">Mum verisi yok.</div>`; return; }
-      if (destroyed) return;
+      try { data = await T.api(`/api/candles/${encodeURIComponent(instId)}?bar=${bar}`); } catch (e) { box.innerHTML = `<div class="empty">Mum verisi yok.</div>`; return; }
+      if (!destroyed) draw();
+    }
+    function draw() {
+      const d = data;
+      if (!d) return;
       if (chart) { chart.remove(); chart = null; }
       const pro = document.body.dataset.mode === "pro";
+      const prec = decimals(d.tickSz);
+      const priceFormat = prec === null ? undefined : { type: "price", precision: prec, minMove: d.tickSz };
       chart = LC.createChart(box, {
         autoSize: true,
-        layout: { background: { type: "solid", color: "transparent" }, textColor: css("--cream-300"), fontFamily: "system-ui, sans-serif" },
-        grid: { vertLines: { color: "rgba(58,72,102,.25)" }, horzLines: { color: "rgba(58,72,102,.25)" } },
-        rightPriceScale: { borderColor: "rgba(58,72,102,.6)" },
-        timeScale: { borderColor: "rgba(58,72,102,.6)", timeVisible: true, secondsVisible: false },
+        layout: { background: { type: "solid", color: "transparent" }, textColor: css("--muted"), fontFamily: "system-ui, sans-serif" },
+        grid: { vertLines: { color: "rgba(120,130,160,.18)" }, horzLines: { color: "rgba(120,130,160,.18)" } },
+        rightPriceScale: { borderColor: "rgba(120,130,160,.4)" },
+        timeScale: { borderColor: "rgba(120,130,160,.4)", timeVisible: true, secondsVisible: false },
         crosshair: { mode: 0 },
+        localization: prec === null ? undefined : { priceFormatter: (p) => Number(p).toFixed(prec) },
       });
       let main;
-      if (pro) {
-        main = chart.addSeries(LC.CandlestickSeries, { upColor: "#62c98f", downColor: "#f06a66", borderVisible: false, wickUpColor: "#62c98f", wickDownColor: "#f06a66" });
+      if (pro || opts.candles) {
+        main = chart.addSeries(LC.CandlestickSeries, { upColor: "#2fbf71", downColor: "#f06a66", borderVisible: false, wickUpColor: "#2fbf71", wickDownColor: "#f06a66", priceFormat });
         main.setData(d.candles.map(({ time, open, high, low, close }) => ({ time, open, high, low, close })));
-        const vol = chart.addSeries(LC.HistogramSeries, { priceScaleId: "vol", priceFormat: { type: "volume" }, color: "rgba(242,169,59,.35)" });
+        const vol = chart.addSeries(LC.HistogramSeries, { priceScaleId: "vol", priceFormat: { type: "volume" } });
         chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
-        vol.setData(d.candles.map((c) => ({ time: c.time, value: c.vol, color: c.close >= c.open ? "rgba(98,201,143,.35)" : "rgba(240,106,102,.35)" })));
-        const at = chart.addSeries(LC.LineSeries, { lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-        at.setData(d.atrTrend.map((p) => ({ time: p.time, value: p.value, color: p.dir === 1 ? "#62c98f" : "#ef7d5e" })));
-        if (d.markers.length && LC.createSeriesMarkers) LC.createSeriesMarkers(main, d.markers);
+        vol.setData(d.candles.map((c) => ({ time: c.time, value: c.vol, color: c.close >= c.open ? "rgba(47,191,113,.35)" : "rgba(240,106,102,.35)" })));
       } else {
-        main = chart.addSeries(LC.AreaSeries, { lineColor: "#f2a93b", topColor: "rgba(242,169,59,.28)", bottomColor: "rgba(242,169,59,0)", lineWidth: 2 });
+        main = chart.addSeries(LC.AreaSeries, { lineColor: "#f2a93b", topColor: "rgba(242,169,59,.28)", bottomColor: "rgba(242,169,59,0)", lineWidth: 2, priceFormat });
         main.setData(d.candles.map((c) => ({ time: c.time, value: c.close })));
       }
+      let markers = pro ? d.markers.slice() : [];
+      if (showTrend) {
+        const at = chart.addSeries(LC.LineSeries, { lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, priceFormat });
+        at.setData(d.atrTrend.map((p) => ({ time: p.time, value: p.value, color: p.dir === 1 ? "#4f8cff" : "#f06a66" })));
+        markers = markers.concat(d.trendFlips || []);
+      }
+      if (markers.length && LC.createSeriesMarkers) LC.createSeriesMarkers(main, markers.sort((a, b) => a.time - b.time));
       const L = opts.levels || d.levels;
-      if (L) {
+      if (showLevels && L) {
         main.createPriceLine({ price: L.entry, color: "#d3c9b8", lineWidth: 1, lineStyle: 2, title: "giriş" });
         main.createPriceLine({ price: L.stop, color: "#f06a66", lineWidth: 1, lineStyle: 2, title: "stop" });
-        main.createPriceLine({ price: L.target, color: "#62c98f", lineWidth: 1, lineStyle: 2, title: "hedef" });
+        main.createPriceLine({ price: L.target, color: "#2fbf71", lineWidth: 1, lineStyle: 2, title: "hedef" });
       }
-      if (d.position) main.createPriceLine({ price: d.position.entryPx, color: "#f2a93b", lineWidth: 2, lineStyle: 0, title: "pozisyon" });
+      if (showLevels && d.position) main.createPriceLine({ price: d.position.entryPx, color: "#f2a93b", lineWidth: 2, lineStyle: 0, title: "pozisyon" });
       chart.timeScale().fitContent();
-      wrap.querySelector(".chart-note").textContent = `${d.live ? "OKX ATK mumları" : "Örnek veri"} · ${pro ? "mumlar, hacim, ATR trend çizgisi ve ajanın al/sat işaretleri" : "fiyat ve giriş/stop/hedef"} · Grafik: TradingView Lightweight Charts`;
+      wrap.querySelector(".chart-note").textContent = `${d.live ? "OKX ATK mumları" : "Örnek veri"}${d.tickSz ? ` · fiyat adımı ${d.tickSz}` : ""} · Grafik: TradingView Lightweight Charts`;
     }
     load();
-    const onMode = () => load();
-    T.on("mode", onMode);
+    T.on("mode", () => draw());
     return { destroy() { destroyed = true; if (chart) chart.remove(); }, reload: load };
   };
 })();
