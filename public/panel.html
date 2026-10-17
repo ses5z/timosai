@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel · TimosAI</title>
+  <meta name="description" content="TimosAI kullanıcı paneli: bakiye, pozisyonlar, davranış sözleşmesi, ajan durumu ve ATK çağrı günlüğü.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<main id="main" tabindex="-1">
+  <div class="page-head">
+    <div>
+      <h1>Kullanıcı paneli</h1>
+      <p>Ajan arka planda tarar, karar verir ve emirleri kendisi yönetir. Burada her adımı izler, ayarları değiştirirsin.</p>
+    </div>
+    <div id="detail-toggle"></div>
+  </div>
+  <div id="notices"></div>
+
+  <div class="grid-3">
+    <section class="card span-2" aria-labelledby="eq-h">
+      <div class="card-head">
+        <h2 id="eq-h">Değer</h2>
+        <span id="eq-mode" class="badge badge-dry">KURU</span>
+      </div>
+      <div class="kpi-row">
+        <div class="stat"><span class="kpi-small">Toplam değer (equity)</span><span class="kpi" id="eq-val">-</span></div>
+        <div class="stat"><span class="kpi-small">Bugünkü K/Z</span><b id="eq-day">-</b></div>
+        <div class="stat"><span class="kpi-small">Nakit</span><b id="eq-cash">-</b></div>
+        <div class="stat"><span class="kpi-small">Açık pozisyon</span><b id="eq-open">-</b></div>
+      </div>
+      <div id="eq-chart" style="margin-top:14px"></div>
+    </section>
+
+    <section class="card" aria-labelledby="ag-h">
+      <div class="card-head"><h2 id="ag-h">Ajan</h2><span id="ag-state" class="badge badge-ok"><span class="dot"></span> çalışıyor</span></div>
+      <div class="grid" style="gap:12px">
+        <label class="switch"><input type="checkbox" id="ag-auto" role="switch"> <span>Otonom mod</span></label>
+        <label class="switch"><input type="checkbox" id="ag-pause" role="switch"> <span>Duraklat</span></label>
+        <div class="kpi-small" id="ag-info">-</div>
+        <div class="kpi-small" id="ag-mentor">-</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sm" id="ag-scan" type="button">Şimdi tara</button>
+          <button class="btn btn-sm btn-coral" id="scenario-btn" type="button">Senaryoyu başlat</button>
+        </div>
+        <p class="faint" style="font-size:.82rem;margin:0">Emirleri yalnızca ajan verir. Sen otonom modu, duraklatmayı ve risk bütçesini ayarlarsın.</p>
+      </div>
+    </section>
+
+    <section class="card span-2" aria-labelledby="pos-h">
+      <div class="card-head"><h2 id="pos-h">Açık pozisyonlar</h2><span class="kpi-small" id="pos-sum"></span></div>
+      <div id="pos-list"></div>
+    </section>
+
+    <section class="card" aria-labelledby="ct-h">
+      <div class="card-head"><h2 id="ct-h">Davranış sözleşmesi</h2></div>
+      <div class="gauge" id="ct-gauge"></div>
+      <div class="kpi-row" style="margin:12px 0">
+        <div class="stat"><span class="kpi-small">Uyarı</span><b id="ct-warn">0</b></div>
+        <div class="stat"><span class="kpi-small">Ajanın engellediği emir</span><b id="ct-blocked">0</b></div>
+      </div>
+      <div id="ct-bars"></div>
+      <p class="faint" style="font-size:.82rem;margin:0">Sözleşme uyarır, kilitlemez. Sert limitler hiçbir yolla aşılamaz.</p>
+    </section>
+
+    <section class="card" aria-labelledby="rb-h">
+      <div class="card-head"><h2 id="rb-h">Risk bütçesi</h2></div>
+      <label for="risk-range" class="kpi-small">İşlem başına risk: <b id="risk-val" class="num">%1</b></label>
+      <input type="range" id="risk-range" min="0.25" max="2" step="0.25" value="1" style="width:100%;accent-color:var(--amber)">
+      <p class="kpi-small" id="risk-usdt">-</p>
+      <p class="faint" style="font-size:.82rem">Ajan boyutu bu bütçeye göre hesaplar; tek emir en fazla 5 USDT, toplam 15 USDT.</p>
+    </section>
+
+    <section class="card span-2" aria-labelledby="ev-h">
+      <div class="card-head"><h2 id="ev-h">Olay günlüğü</h2><span class="kpi-small">Canlı</span></div>
+      <ul class="log" id="ev-list" aria-live="polite"></ul>
+    </section>
+
+    <section class="card span-2" aria-labelledby="tr-h">
+      <div class="card-head"><h2 id="tr-h">İşlem geçmişi</h2></div>
+      <div class="table-wrap" id="tr-wrap"></div>
+    </section>
+
+    <section class="card" aria-labelledby="atk-h">
+      <div class="card-head"><h2 id="atk-h">ATK çağrıları</h2><span class="badge badge-muted" id="atk-total">0</span></div>
+      <div id="atk-tools"></div>
+      <div class="detail-only" style="margin-top:12px"><h3>Son çağrılar</h3><ul class="log" id="atk-recent"></ul></div>
+    </section>
+
+    <section class="card span-2 detail-only" aria-labelledby="lg-h">
+      <div class="card-head"><h2 id="lg-h">İz (sha256 zincirli kayıt)</h2><span class="badge" id="lg-valid">-</span></div>
+      <p class="kpi-small mono" id="lg-head" style="word-break:break-all">-</p>
+      <ul class="log" id="lg-list"></ul>
+    </section>
+  </div>
+</main>
+<script src="/js/common.js"></script>
+<script src="/js/panel.js"></script>
+</body>
+</html>

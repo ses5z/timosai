@@ -1,0 +1,24 @@
+{
+  "_aciklama": "Ajanın karar eşikleri. Kural kitabı gelince buradan güncellenir; şimdilik makul varsayılanlar.",
+  "weights": { "momentum": 0.22, "trend": 0.24, "volume": 0.14, "rsi": 0.14, "volatility": 0.1, "funding": 0.08, "sentiment": 0.08 },
+  "openMinOpportunity": 64,
+  "openMaxRisk": 55,
+  "watchMinOpportunity": 48,
+  "stopAtrMult": 1.6,
+  "minStopPct": 0.8,
+  "maxStopPct": 6,
+  "targetRR": 2,
+  "rsiOverbought": 74,
+  "rsiOversold": 28,
+  "highVolAtrPct": 0.9,
+  "fundingCrowdedAbs": 0.0003,
+  "maxSpreadPct": 0.25,
+  "management": {
+    "partialAtR": 1,
+    "partialFraction": 0.5,
+    "trailStartR": 1.5,
+    "trailAtrMult": 1,
+    "timeStopHours": 6,
+    "timeStopMinR": 0.3
+  }
+}

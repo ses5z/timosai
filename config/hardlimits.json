@@ -1,0 +1,17 @@
+{
+  "_aciklama": "Sert limitler. Bu dosya yalnızca SIKILAŞTIRABİLİR; koddaki tavanların üstüne çıkan değerler yok sayılır.",
+  "maxOrderNotionalUsdt": 5,
+  "maxTotalOpenUsdt": 15,
+  "maxOpenPositions": 3,
+  "maxOrdersPerHour": 6,
+  "dailyLossWarnUsdt": 5,
+  "minBalanceForLiveUsdt": 1,
+  "spotOnly": true,
+  "requireStop": true,
+  "allowedPairs": [
+    "BTC-USDT", "ETH-USDT", "SOL-USDT", "BNB-USDT", "AVAX-USDT", "ADA-USDT", "DOT-USDT",
+    "TRX-USDT", "TON-USDT", "NEAR-USDT", "APT-USDT", "SUI-USDT", "XRP-USDT", "LTC-USDT",
+    "BCH-USDT", "ARB-USDT", "OP-USDT", "POL-USDT", "LINK-USDT", "UNI-USDT", "AAVE-USDT",
+    "LDO-USDT", "FET-USDT", "RENDER-USDT", "WLD-USDT", "DOGE-USDT", "PEPE-USDT", "SHIB-USDT"
+  ]
+}

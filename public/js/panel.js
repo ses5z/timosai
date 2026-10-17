@@ -1,0 +1,106 @@
+(function () {
+  "use strict";
+  const T = window.TimosAI, $ = (s) => document.querySelector(s), F = T.fmt;
+  $("#detail-toggle").innerHTML = T.detailToggle();
+
+  async function loadPortfolio() {
+    const p = await T.api("/api/portfolio");
+    $("#eq-val").textContent = F.usd(p.equity, 2);
+    $("#eq-day").innerHTML = `<span class="${T.cls(p.dailyPnl)}">${F.signed(p.dailyPnl, 3)} USDT</span>`;
+    $("#eq-cash").textContent = F.usd(p.cash);
+    $("#eq-open").textContent = `${p.positions.length} · ${F.usd(p.openNotional)}`;
+    $("#eq-mode").textContent = p.mode;
+    $("#eq-mode").className = "badge " + (p.mode === "KURU" ? "badge-dry" : "badge-live");
+    T.lineChart($("#eq-chart"), p.equityHistory.map((x) => ({ v: x.equity, t: x.ts })), { label: "Değer çizgisi", fmt: (v) => F.num(v, 2), levels: [{ v: p.startEquity, label: "başlangıç", color: "var(--faint)" }], empty: "Değer çizgisi ilk taramalardan sonra oluşur." });
+    renderPositions(p.positions);
+    $("#risk-range").value = p.riskPct;
+    $("#risk-val").textContent = "%" + p.riskPct;
+    $("#risk-usdt").textContent = `Bu, işlem başına en fazla ≈ ${F.usd(p.riskBudgetUsdt, 3)} kayıp demek.`;
+    const rows = p.trades.map((t) => `<tr><td>${F.time(t.ts)}</td><td>${T.esc(t.instId.replace("-USDT", ""))}</td><td>${t.side === "buy" ? "AL" : "SAT"}</td><td class="num">${F.price(t.px)}</td><td class="num">${F.num(t.notionalUsdt, 2)}</td><td class="num ${T.cls(t.pnl)}">${t.pnl == null ? "-" : F.signed(t.pnl, 3)}</td><td><span class="badge ${t.mode === "KURU" ? "badge-dry" : "badge-live"}">${t.mode}</span></td><td class="detail-only">${T.esc(t.reason)}</td></tr>`).join("");
+    T.renderKeep($("#tr-wrap"), rows ? `<table><thead><tr><th>Saat</th><th>Coin</th><th>Yön</th><th class="num">Fiyat</th><th class="num">USDT</th><th class="num">K/Z</th><th>Mod</th><th class="detail-only">Gerekçe</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Henüz işlem yok. Ajan uygun sinyal görünce küçük bir emir açar.</div>`);
+  }
+
+  function renderPositions(list) {
+    $("#pos-sum").textContent = list.length ? `${list.length} pozisyon` : "";
+    if (!list.length) { $("#pos-list").innerHTML = `<div class="empty">Açık pozisyon yok.</div>`; return; }
+    $("#pos-list").innerHTML = list.map((p) => {
+      const range = p.targetPx - p.stopPx, prog = range > 0 ? Math.max(0, Math.min(100, ((p.lastPx - p.stopPx) / range) * 100)) : 50;
+      return `<article class="card" style="padding:14px;margin-bottom:10px;box-shadow:none">
+        <div class="card-head" style="margin-bottom:6px"><h3>${T.esc(p.instId.replace("-USDT", ""))} <span class="badge ${p.mode === "KURU" ? "badge-dry" : "badge-live"}">${p.mode}</span>${p.trailing ? ' <span class="badge badge-ok">iz süren stop</span>' : ""}${p.partialDone ? ' <span class="badge badge-muted">kısmi kâr alındı</span>' : ""}</h3>
+        <b class="num ${T.cls(p.pnlUsdt)}">${F.signed(p.pnlUsdt, 3)} USDT (${F.pct(p.pnlPct)})</b></div>
+        <div class="kpi-row kpi-small"><span>Giriş <b class="num">${F.price(p.entryPx)}</b></span><span>Son <b class="num">${F.price(p.lastPx)}</b></span><span>${T.term("stop", "Stop")} <b class="num">${F.price(p.stopPx)}</b></span><span>Hedef <b class="num">${F.price(p.targetPx)}</b></span><span>Büyüklük <b class="num">${F.num(p.costUsdt, 2)} USDT</b></span></div>
+        <div class="bar ${prog < 25 ? "bad" : prog < 50 ? "warn" : ""}" style="margin-top:10px" role="img" aria-label="Stop ile hedef arasında konum yüzde ${Math.round(prog)}"><span style="width:${prog}%"></span></div>
+        <p class="faint detail-only" style="font-size:.82rem;margin:8px 0 0">${T.esc(p.reason)}</p></article>`;
+    }).join("");
+  }
+
+  async function loadContract() {
+    const c = await T.api("/api/contract");
+    $("#ct-gauge").innerHTML = T.gauge(c.riskScore.score) + `<div><b>${T.term("risk", "Risk skoru")}</b><p class="kpi-small" style="margin:4px 0 0">Durum: <b class="${c.riskScore.level === "güvenli" ? "up" : c.riskScore.level === "riskli" ? "down" : ""}">${c.riskScore.level}</b></p></div>`;
+    $("#ct-warn").textContent = c.warningsTotal;
+    $("#ct-blocked").textContent = c.blockedByAgent;
+    $("#ct-bars").innerHTML = c.bars.map((b) => {
+      const pct = Math.min(100, (b.value / b.max) * 100);
+      return `<div class="bar-row"><header><span>${T.esc(b.label)}${b.warnOnly ? ' <span class="faint">(yalnızca uyarı)</span>' : ""}</span><b class="num">${F.num(b.value, b.unit ? 2 : 0)} / ${b.max} ${b.unit}</b></header><div class="bar ${pct >= 100 ? "bad" : pct >= 80 ? "warn" : ""}"><span style="width:${pct}%"></span></div></div>`;
+    }).join("");
+  }
+
+  async function loadEvents() {
+    const ev = await T.api("/api/events");
+    T.renderKeep($("#ev-list"), ev.map(evRow).join("") || `<li><span></span><span class="muted">Henüz olay yok.</span></li>`);
+  }
+  const evRow = (e) => `<li class="lvl-${T.esc(e.level)}"><time datetime="${new Date(e.ts).toISOString()}">${F.time(e.ts)}</time><span>${T.esc(e.text)}</span></li>`;
+
+  async function loadAtk() {
+    const a = await T.api("/api/atk");
+    $("#atk-total").textContent = `${a.total} çağrı`;
+    const tools = Object.entries(a.byTool);
+    $("#atk-tools").innerHTML = tools.length ? `<ul class="log" style="max-height:220px">${tools.map(([n, c]) => `<li><b class="num">${c}</b><span class="mono">${T.esc(n)}</span></li>`).join("")}</ul>` : `<div class="empty">${a.connected ? "Çağrı bekleniyor." : "ATK bağlı değil (örnek veri)."}</div>`;
+    T.renderKeep($("#atk-recent"), a.recent.map((r) => `<li class="${r.ok ? "lvl-bilgi" : "lvl-hata"}"><time>${F.time(r.ts)}</time><span><b class="mono">${T.esc(r.tool)}</b> <span class="faint">${T.esc(r.params)}</span><br>${T.esc(r.result)} <span class="faint">${r.ms} ms</span></span></li>`).join(""));
+  }
+
+  async function loadLedger() {
+    const l = await T.api("/api/ledger");
+    $("#lg-head").textContent = `Son özet: ${l.head} · ${l.count} kayıt · ${l.anchor.note}`;
+    $("#lg-valid").textContent = l.valid ? "zincir geçerli" : "zincir bozuk";
+    $("#lg-valid").className = "badge " + (l.valid ? "badge-ok" : "badge-bad");
+    T.renderKeep($("#lg-list"), l.entries.map((e) => `<li class="lvl-${e.kind === "order" ? "emir" : e.kind === "warning" ? "uyarı" : "karar"}"><time>#${e.seq}</time><span><b>${T.esc(e.kind)}</b> <span class="mono faint">${e.hash.slice(0, 12)}</span><br>${T.esc(JSON.stringify(e.data).slice(0, 220))}</span></li>`).join(""));
+  }
+
+  function renderStatus(s) {
+    const a = s.agent;
+    const st = $("#ag-state");
+    st.innerHTML = `<span class="dot"></span> ${T.esc(a.state)}`;
+    st.className = "badge " + (a.paused ? "badge-warn" : "badge-ok");
+    $("#ag-auto").checked = a.autonomous;
+    $("#ag-pause").checked = a.paused;
+    $("#ag-info").innerHTML = `${a.scanCount} tarama · son ${a.lastScanAt ? F.ago(a.lastScanAt) : "-"} · her ${a.scanIntervalSec} sn · ${s.liveData ? '<span class="up">canlı veri</span>' : '<span class="down">canlı veri yok</span>'} · ${T.term("kuru", s.tradingMode)}`;
+    $("#ag-mentor").textContent = `Mentor: ${s.mentor.ai ? "yapay zeka (" + s.mentor.active + ")" : "kural tabanlı"}`;
+    const n = [];
+    if (!s.liveData) n.push(`<div class="notice notice-warn">${T.icon("warn")}<span>Canlı veri yok: ATK'ya ulaşılamadı, örnek veri gösteriliyor.</span></div>`);
+    if (s.missingEnv.length) n.push(`<div class="notice notice-info">${T.icon("info")}<span>.env içinde boş: ${s.missingEnv.map(T.esc).join(", ")}. İlgili özellikler kapalı görünür.</span></div>`);
+    $("#notices").innerHTML = n.join("");
+  }
+
+  $("#ag-auto").addEventListener("change", (e) => T.api("/api/agent", { body: { autonomous: e.target.checked } }).then(() => T.refreshStatus()));
+  $("#ag-pause").addEventListener("change", (e) => T.api("/api/agent", { body: { paused: e.target.checked } }).then(() => T.refreshStatus()));
+  $("#ag-scan").addEventListener("click", async (e) => { e.target.disabled = true; try { await T.api("/api/agent/scan", { body: {} }); T.toast("Tarama tamamlandı."); } finally { e.target.disabled = false; refreshAll(); } });
+  $("#risk-range").addEventListener("change", async (e) => { try { await T.api("/api/settings/risk", { body: { riskPct: Number(e.target.value) } }); loadPortfolio(); } catch (err) { T.toast(err.message); } });
+  $("#scenario-btn").addEventListener("click", async (e) => {
+    e.target.disabled = true;
+    try { await T.api("/api/scenario/start", { body: {} }); T.toast("Senaryo başladı: adımları olay günlüğünden izle."); } catch (err) { T.toast(err.message); } finally { setTimeout(() => (e.target.disabled = false), 4000); }
+  });
+
+  const refreshAll = () => Promise.allSettled([loadPortfolio(), loadContract(), loadEvents(), loadAtk(), loadLedger()]);
+  refreshAll();
+  T.on("status", renderStatus);
+  if (T.status) renderStatus(T.status);
+  T.on("event", (e) => { const ul = $("#ev-list"); const st = ul.scrollTop; ul.insertAdjacentHTML("afterbegin", evRow(e)); if (st > 0) ul.scrollTop = st + ul.firstElementChild.offsetHeight; while (ul.children.length > 150) ul.lastElementChild.remove(); });
+  let t1 = 0;
+  const soon = () => { clearTimeout(t1); t1 = setTimeout(refreshAll, 400); };
+  T.on("positions", (p) => renderPositions(p));
+  T.on("scan", () => { soon(); T.refreshStatus(); });
+  T.on("warning", () => loadContract());
+  setInterval(() => { loadAtk(); loadPortfolio(); }, 10000);
+  window.addEventListener("resize", () => { clearTimeout(t1); t1 = setTimeout(loadPortfolio, 300); });
+})();
