@@ -105,7 +105,7 @@ test("Plan: geçersiz coin ve aralık dışı değerler süzülür", () => {
 });
 
 test("Plan referansı ve plana referanslı engel metni", () => {
-  assert.equal(planRef(defaultPlan(false, [])), "Plan: risk %1 · R:R ≥ 2 · trend çizgisi uyumlu ✓");
+  assert.equal(planRef(defaultPlan(false, [])), "Plan: risk %1 · R:R ≥ 2 · Follow Line uyumlu ✓");
   const t = planBlockText("ADA", [
     { label: "R:R", value: "0.56", limit: "en az 2", planText: "R:R 0.56 (planın min 2)" },
     { label: "Stop", value: "%9", limit: "en fazla %6", planText: "stop %9.0 (planın maks %6)" },

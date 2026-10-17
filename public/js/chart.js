@@ -1,7 +1,7 @@
 /* TimosAI grafik modülü: TradingView Lightweight Charts (Apache 2.0, public/vendor). Veri bizim (ATK mumları).
    Zaman aralığı: OKX'in 14 mum aralığı; favori satırı görünür, kalanlar "Diğer ▾" menüsünde (yıldızla favori).
    Seçim ?tf=4H ile URL'de ve sayfalar arası kalıcı. Sola kaydırınca eski mumlar yüklenir (önbellekli).
-   Zaman ekseni Europe/Istanbul. Trend çizgisi (TimosAI ATR) seçili aralıkta, yüklenen tüm mumlarla yeniden hesaplanır.
+   Zaman ekseni Europe/Istanbul. Follow Line seçili aralıkta, yüklenen tüm mumlarla yeniden hesaplanır.
    "Mentor işlemi": çok zaman dilimli kurulum kartı + grafikte seviyeler (grafik aralığından bağımsız). */
 (function () {
   "use strict";
@@ -11,7 +11,7 @@
   const decimals = (tick) => (tick > 0 ? Math.max(0, Math.min(12, Math.round(-Math.log10(tick)))) : null);
 
   const BARS = ["1m", "3m", "5m", "15m", "30m", "1H", "2H", "4H", "6H", "12H", "1D", "3D", "1W", "1M"];
-  const LABEL = { "1m": "1dk", "3m": "3dk", "5m": "5dk", "15m": "15dk", "30m": "30dk", "1H": "1s", "2H": "2s", "4H": "4s", "6H": "6s", "12H": "12s", "1D": "1g", "3D": "3g", "1W": "1h", "1M": "1a" };
+  const LABEL = { "1m": "1dk", "3m": "3dk", "5m": "5dk", "15m": "15dk", "30m": "30dk", "1H": "1s", "2H": "2s", "4H": "4s", "6H": "6s", "12H": "12s", "1D": "1g", "3D": "3g", "1W": "1hf", "1M": "1a" };
   const LONG = { "1m": "1 dakika", "3m": "3 dakika", "5m": "5 dakika", "15m": "15 dakika", "30m": "30 dakika", "1H": "1 saat", "2H": "2 saat", "4H": "4 saat", "6H": "6 saat", "12H": "12 saat", "1D": "1 gün", "3D": "3 gün", "1W": "1 hafta", "1M": "1 ay" };
   const DEF_FAV = { basic: ["15m", "1H", "4H", "1D", "1W"], pro: ["1m", "5m", "15m", "1H", "4H", "1D", "1W"] };
   const SEC = { "1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800, "1H": 3600, "2H": 7200, "4H": 14400, "6H": 21600, "12H": 43200, "1D": 86400, "3D": 259200, "1W": 604800, "1M": 2592000 };
@@ -64,21 +64,29 @@
     return SEC[bar] >= 86400 ? F.day.format(d) : F.time.format(d);
   };
 
-  /** TimosAI ATR trend (sunucudaki src/indicators/atrTrend.ts ile aynı formül). */
-  T.atrTrend = function (c, period = 14, mult = 2) {
+  /** Follow Line (Kıvanç Özbilgiç'in açık kaynak göstergesinin mantığı, bu projede yeniden yazıldı;
+      sunucudaki src/indicators/followLine.ts ile aynı hesap). */
+  T.followLine = function (c, cfg = {}) {
+    const k = Object.assign({ bbPeriod: 21, bbDev: 1, atrPeriod: 5, atrFilter: true }, cfg);
     const out = [];
-    let prev = 0, dir = 1, line = 0;
+    let atr = 0, line = NaN, dir = 1;
     for (let i = 0; i < c.length; i++) {
       const tr = i === 0 ? c[i].high - c[i].low : Math.max(c[i].high - c[i].low, Math.abs(c[i].high - c[i - 1].close), Math.abs(c[i].low - c[i - 1].close));
-      prev = i < period ? (prev * i + tr) / (i + 1) : (prev * (period - 1) + tr) / period;
-      const close = c[i].close, up = close - mult * prev, dn = close + mult * prev;
-      if (i === 0) line = up;
-      else if (dir === 1) { if (close < line) { dir = -1; line = dn; } else line = Math.max(line, up); }
-      else if (close > line) { dir = 1; line = up; } else line = Math.min(line, dn);
+      atr = i < k.atrPeriod ? (atr * i + tr) / (i + 1) : (atr * (k.atrPeriod - 1) + tr) / k.atrPeriod;
+      const from = Math.max(0, i - k.bbPeriod + 1), n = i - from + 1;
+      let sum = 0; for (let j = from; j <= i; j++) sum += c[j].close;
+      const mean = sum / n;
+      let v = 0; for (let j = from; j <= i; j++) v += (c[j].close - mean) ** 2;
+      const sd = Math.sqrt(v / n), upper = mean + k.bbDev * sd, lower = mean - k.bbDev * sd;
+      const off = k.atrFilter ? atr : 0, close = c[i].close;
+      if (Number.isNaN(line)) { dir = close >= mean ? 1 : -1; line = dir === 1 ? c[i].low - off : c[i].high + off; }
+      else if (n >= 2 && close > upper) { const cand = c[i].low - off; if (dir === 1) line = Math.max(line, cand); else { dir = 1; line = cand; } }
+      else if (n >= 2 && close < lower) { const cand = c[i].high + off; if (dir === -1) line = Math.min(line, cand); else { dir = -1; line = cand; } }
       out.push({ time: c[i].time, value: line, dir });
     }
     return out;
   };
+  T.atrTrend = T.followLine; // geriye dönük ad
 
   const oldCache = new Map(); // `${instId}:${bar}` → eski mumlar (sola kaydırma önbelleği)
   let activeChart = null;
@@ -105,10 +113,10 @@
     wrap.innerHTML = `<div class="chart-tools">
         <div class="tf tf-bars" role="group" aria-label="Zaman aralığı"></div>
         <div class="tf" role="group" aria-label="Grafik katmanları">
-          <button type="button" class="chip" data-layer="trend" aria-pressed="${showTrend}">Trend çizgisi</button>
+          <button type="button" class="chip" data-layer="trend" aria-pressed="${showTrend}">Follow Line · Kıvanç Özbilgiç</button>
           ${opts.setup === false ? "" : `<button type="button" class="chip" data-layer="setup" aria-pressed="false">Mentor işlemi</button>`}
         </div></div>
-      <p class="chart-legend" ${showTrend ? "" : "hidden"}><span class="lg-dot" style="background:#4f8cff"></span><span class="lg-dot" style="background:#f06a66"></span><span><b>Trend çizgisi · TimosAI ATR</b>: fiyat çizginin üstündeyse mavi (yükseliş), altındaysa kırmızı (düşüş); oklar yön dönüşleri.</span></p>
+      <p class="chart-legend" ${showTrend ? "" : "hidden"}><span class="lg-dot" style="background:#4f8cff"></span><span class="lg-dot" style="background:#f06a66"></span><span><b>Follow Line</b> · Kıvanç Özbilgiç (<a href="https://tr.tradingview.com/script/UXKo4RaJ/" target="_blank" rel="noopener">açık kaynak gösterge</a>, mantığı bu projede yeniden yazıldı): fiyat üst Bollinger bandını kırınca çizgi low − ATR seviyesine çekilir ve yükselişte yalnızca yukarı gider (mavi); alt bandı kırınca high + ATR seviyesine çekilir ve düşüşte yalnızca aşağı gider (kırmızı); oklar yön dönüşleri.</span></p>
       <div class="tv-box" style="height:${opts.height || 260}px"></div><p class="faint chart-note"></p>
       <div class="setup-card" hidden></div>`;
     const box = wrap.querySelector(".tv-box");
@@ -210,8 +218,7 @@
         main.setData(all.map(({ time, open, high, low, close }) => ({ time, open, high, low, close })));
         volSeries.setData(all.map((c) => ({ time: c.time, value: c.vol, color: c.close >= c.open ? "rgba(47,191,113,.35)" : "rgba(240,106,102,.35)" })));
       } else main.setData(all.map((c) => ({ time: c.time, value: c.close })));
-      const cfg = d.atrCfg || { period: 14, mult: 2 };
-      const at = T.atrTrend(all, cfg.period, cfg.mult);
+      const at = T.followLine(all, d.atrCfg || {});
       trendSeries.setData(showTrend ? at.map((p) => ({ time: p.time, value: p.value, color: p.dir === 1 ? "#4f8cff" : "#f06a66" })) : []);
       let markers = pro ? (d.markers || []).slice() : [];
       if (showTrend) markers = markers.concat(at.filter((p, i) => i > 0 && p.dir !== at[i - 1].dir).map((p) => ({ time: p.time, position: p.dir === 1 ? "belowBar" : "aboveBar", color: p.dir === 1 ? "#4f8cff" : "#f06a66", shape: p.dir === 1 ? "arrowUp" : "arrowDown", text: p.dir === 1 ? "yukarı" : "aşağı" })));

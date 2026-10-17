@@ -1,7 +1,7 @@
 // Mini backtest: son 30 gün, yalnızca kapanışlar, ileriye bakış yok. Her 4s kapanışında yalnızca o ana kadarki
 // mumlar kullanılır: yön (4s + günlüğe toplanmış 4s), stop (trend çizgisi ya da ATR×1,6), hedef 1 (1,5R), hedef 2.
 // Sonuç sonraki kapanışlarla çözülür. Geçmiş performans geleceği garanti etmez.
-import { atrTrend } from "../indicators/atrTrend.js";
+import { followLine } from "../indicators/followLine.js";
 import { atr, round, type Candle } from "../util/math.js";
 import { tfDirection } from "../mentor/setup.js";
 import type { TradingPlan } from "../plan/plan.js";
@@ -66,7 +66,7 @@ export function backtestCoin(instId: string, c4h: Candle[], plan: TradingPlan, f
     if (!side) { i++; continue; }
     const px = past[i].close;
     const sign = side === "LONG" ? 1 : -1;
-    const line = atrTrend(past, 14, 2).at(-1)!.line;
+    const line = followLine(past).at(-1)!.line;
     const a = atr(past, 14);
     const lineOk = sign * (px - line) > 0 && Math.abs(px - line) / px <= 0.06 && Math.abs(px - line) / px >= 0.003;
     const stop = lineOk ? line : px - sign * Math.max(1.6 * a, px * 0.005);

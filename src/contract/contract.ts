@@ -64,7 +64,7 @@ export function checkAgentEntry(
   if (ctx.plan) {
     const p = ctx.plan;
     if (c.opportunity < p.minOpportunity) out.push({ label: "Fırsat puanı plan eşiğinin altında", value: String(c.opportunity), limit: `en az ${p.minOpportunity}`, planText: `fırsat ${c.opportunity} (planın min ${p.minOpportunity})` });
-    if (p.followLine && c.atrTrend && c.atrTrend.dir !== 1) out.push({ label: "Trend çizgisiyle uyumsuz", value: "trend aşağı", limit: "plan: trend çizgisi uyumlu", planText: "trend çizgisi aşağı (plan: uyumlu olmalı)" });
+    if (p.followLine && c.atrTrend && c.atrTrend.dir !== 1) out.push({ label: "Follow Line ile uyumsuz", value: "Follow Line aşağı", limit: "plan: Follow Line uyumlu", planText: "Follow Line aşağı (plan: uyumlu olmalı)" });
     if (p.avoidCrowded && c.derivatives?.available && c.derivatives.crowded === "long") out.push({ label: "Kalabalık long tarafı", value: "long kalabalık", limit: "plan: kalabalıktan kaçın", planText: "long tarafı kalabalık (plan: kaçın)" });
   }
   const maxRisk = (ctx.equityUsdt * Math.min(ctx.riskPct, r.riskPerTradePct)) / 100;

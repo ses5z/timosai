@@ -73,9 +73,9 @@ export function sanitizePlan(input: Partial<TradingPlan>, base: TradingPlan, opt
   return { plan: p, notes };
 }
 
-/** Emir günlüğü için plana referans: "Plan: risk %1 · R:R ≥ 2 · trend çizgisi uyumlu ✓". */
+/** Emir günlüğü için plana referans: "Plan: risk %1 · R:R ≥ 2 · Follow Line uyumlu ✓". */
 export function planRef(p: TradingPlan, checks: { followLine?: boolean } = {}): string {
-  const fl = p.followLine ? ` · trend çizgisi uyumlu ${checks.followLine === false ? "✗" : "✓"}` : "";
+  const fl = p.followLine ? ` · Follow Line uyumlu ${checks.followLine === false ? "✗" : "✓"}` : "";
   return `Plan: risk %${p.riskPct} · R:R ≥ ${p.minRR}${fl}`;
 }
 

@@ -236,10 +236,10 @@ test("Güncelleme2 madde 2 (+G3): çekmece AI analizi, Trend çizgisi ve Mentor 
     const lv = drawer.getByRole("button", { name: "Mentor işlemi" });
     await expect(lv).toHaveAttribute("aria-pressed", "false");
     await expect(drawer.getByRole("button", { name: "Seviyeler" })).toHaveCount(0);
-    const tr = drawer.getByRole("button", { name: "Trend çizgisi" });
+    const tr = drawer.getByRole("button", { name: /Follow Line/ });
     await tr.click();
     await expect(drawer.locator(".chart-legend")).toBeVisible();
-    await expect(drawer.locator(".chart-legend")).toContainText("TimosAI ATR");
+    await expect(drawer.locator(".chart-legend")).toContainText("Kıvanç Özbilgiç");
     await expect(drawer).not.toContainText("Follow Line");
     await lv.click();
     await expect(lv).toHaveAttribute("aria-pressed", "true");

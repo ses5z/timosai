@@ -3,7 +3,7 @@ import type { Candidate, DecisionInput, DecisionKind, DecisionProvider, Security
 import { clamp, round, roundPrice } from "../util/math.js";
 import { isVolumeLow, scoreInput } from "./scoring.js";
 import type { Thresholds } from "./thresholds.js";
-import { atrTrend, loadAtrTrendConfig } from "../indicators/atrTrend.js";
+import { followLine, loadFollowLineConfig } from "../indicators/followLine.js";
 import { analyzeDerivatives, priceContext, DEFAULT_DERIV, type DerivConfig } from "../derivatives/rules.js";
 
 const PART_LABEL: Record<string, string> = {
@@ -55,7 +55,7 @@ export class RuleDecisionProvider implements DecisionProvider {
   constructor(
     private readonly th: Thresholds,
     private readonly derivCfg: DerivConfig = DEFAULT_DERIV,
-    private readonly trendCfg = loadAtrTrendConfig(),
+    private readonly trendCfg = loadFollowLineConfig(),
   ) {}
 
   decide(inp: DecisionInput): Candidate {
@@ -64,7 +64,7 @@ export class RuleDecisionProvider implements DecisionProvider {
     const price = inp.ticker.last;
     const security = sampleSecurity(inp.instId, inp.orderbook?.spreadPct ?? null, inp.orderbook?.depthUsdt ?? null);
 
-    const at = atrTrend(inp.candles, this.trendCfg.period, this.trendCfg.mult);
+    const at = followLine(inp.candles, this.trendCfg);
     const atLast = at.at(-1) ?? null;
     const deriv = inp.derivSnapshot ? analyzeDerivatives(inp.derivSnapshot, priceContext(inp.candles, s.volRatio), this.derivCfg) : null;
     if (deriv) s.risk = Math.min(100, s.risk + deriv.riskAdj);
@@ -92,7 +92,7 @@ export class RuleDecisionProvider implements DecisionProvider {
 
     if (decision === "aç" && atLast && atLast.dir === -1) {
       decision = "izle";
-      reason = "Skorlar olumlu ama ATR trend filtresi düşüş yönünde; long açılmaz, izlemede.";
+      reason = "Skorlar olumlu ama Follow Line düşüş yönünde; long açılmaz, izlemede.";
     }
     if (decision === "aç" && deriv?.manipulation === "yüksek") {
       decision = "izle";
@@ -106,7 +106,7 @@ export class RuleDecisionProvider implements DecisionProvider {
     why.push(`Oynaklık (ATR) fiyatın %${s.atrPct.toFixed(2)}'si.`);
     if (inp.funding !== null) why.push(`Funding ${(inp.funding * 100).toFixed(4)}%: ${Math.abs(inp.funding) > th.fundingCrowdedAbs ? "kalabalık pozisyon işareti" : "nötr"}.`);
     if (deriv?.available) why.push(`Vadeli: ${deriv.badge}; ${deriv.reasons[0]}`);
-    if (atLast) why.push(`ATR trend filtresi ${atLast.dir === 1 ? "yükseliş" : "düşüş"} yönünde (çizgi ${roundPrice(atLast.line)}).`);
+    if (atLast) why.push(`Follow Line ${atLast.dir === 1 ? "yükseliş" : "düşüş"} yönünde (çizgi ${roundPrice(atLast.line)}).`);
     if (inp.sentiment === null) why.push("Haber duygusu: veri yok (OKX haber modülü kimlik istiyor).");
     if (inp.sentiment !== null) why.push(`Haber duygusu ${inp.sentiment >= 0 ? "olumlu" : "olumsuz"} (${(inp.sentiment * 100).toFixed(0)}).`);
 

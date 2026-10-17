@@ -183,9 +183,9 @@ export function createApp(ctx: AppContext) {
       }
     }
     if (!candles.length) return json(res, { bar, okxBar: okxBar(bar), tickSz: 0, candles: [], atrTrend: [], trendFlips: [], markers: [], levels: null, position: null, live: ctx.market.isLive(), end: true });
-    const { atrTrend, loadAtrTrendConfig } = await import("./indicators/atrTrend.js");
-    const cfg = loadAtrTrendConfig();
-    const at = atrTrend(candles as any, cfg.period, cfg.mult);
+    const { followLine, loadFollowLineConfig } = await import("./indicators/followLine.js");
+    const cfg = loadFollowLineConfig();
+    const at = followLine(candles as any, cfg);
     const sec = (ms: number) => Math.floor(ms / 1000);
     const barMs = BAR_MS[bar];
     const cand = agent.candidates.get(id);

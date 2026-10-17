@@ -71,7 +71,7 @@ export function analyzeCandidate(ctx: AppContext, instId: string, override?: Can
     .join(" ");
   const text = [
     `Karar: ${headline} Fırsat ${c.opportunity}, risk ${c.risk}.`,
-    `Teknik: ${c.direction}; RSI ${c.rsi ?? "-"}; ATR fiyatın %${c.atrPct}'i${c.atrTrend ? `; ATR trend ${c.atrTrend.dir === 1 ? "yükseliş" : "düşüş"} yönünde` : ""}.`,
+    `Teknik: ${c.direction}; RSI ${c.rsi ?? "-"}; ATR fiyatın %${c.atrPct}'i${c.atrTrend ? `; Follow Line ${c.atrTrend.dir === 1 ? "yükseliş" : "düşüş"} yönünde` : ""}.`,
     c.derivatives?.available ? `Vadeli: ${c.derivatives.badge}. ${c.derivatives.reasons[0]}` : "",
     `Fiyat noktaları: giriş ${c.entry}, stop ${c.stop} (%${stopPct}), hedef ${c.target} (%${targetPct}), R:R ${c.rr}.`,
     size.notionalUsdt > 0 ? `Risk bütçene göre örnek boyut ${size.notionalUsdt.toFixed(2)} USDT; stop olursa kayıp ≈ ${size.riskUsdt} USDT.` : `Şu an anlamlı bir boyut çıkmıyor: ${size.explain}`,

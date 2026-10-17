@@ -1,7 +1,7 @@
 // Mentor işlemi: çok zaman dilimli kurulum taslağı. Yön ve seviyeleri KOD hesaplar; gerekçe metnini Gemini yazar.
 // Yatırım tavsiyesi değildir. Yön üst dilimlerden (varsayılan 4H + 1D), alt dilim yalnızca giriş zamanlaması.
 import type { AppContext } from "../context.js";
-import { atrTrend } from "../indicators/atrTrend.js";
+import { followLine } from "../indicators/followLine.js";
 import { atr, ema, roundPrice, round, type Candle } from "../util/math.js";
 import { okxBar, type Bar } from "../market/bars.js";
 import { horizonFrames, type TradingPlan } from "../plan/plan.js";
@@ -40,7 +40,7 @@ export interface Setup {
 /** Bir zaman dilimi trendi: trend çizgisi yönü ve EMA20 eğimi aynı yöndeyse up/down, değilse flat. */
 export function tfDirection(c: Candle[]): TfDir {
   if (c.length < 30) return "flat";
-  const at = atrTrend(c, 14, 2).at(-1)!;
+  const at = followLine(c).at(-1)!;
   const e = ema(c.map((x) => x.close), 20);
   const slope = e.at(-1)! - e[Math.max(0, e.length - 9)];
   if (at.dir === 1 && slope > 0) return "up";
@@ -69,7 +69,7 @@ export function buildSetup(instId: string, candles: Record<string, Candle[]>, pl
   if (ec.length < 20) return { ...base, noTradeReason: "Giriş zaman dilimi için yeterli mum yok (veri yok)." };
   const price = ec.at(-1)!.close;
   const at = atr(ec, 14);
-  const line = atrTrend(ec, 14, 2).at(-1)!.line;
+  const line = followLine(ec).at(-1)!.line;
   const sign = direction === "LONG" ? 1 : -1;
   const maxStop = (extra.maxStopPct ?? 6) / 100;
   let stop: number;
@@ -77,7 +77,7 @@ export function buildSetup(instId: string, candles: Record<string, Candle[]>, pl
   const lineOk = sign * (price - line) > 0 && Math.abs(price - line) / price <= maxStop && Math.abs(price - line) / price >= 0.003;
   if (lineOk) {
     stop = line;
-    stopType = `trend çizgisi · TimosAI ATR, ${TF_LABEL[hf.entry]}`;
+    stopType = `Follow Line, ${TF_LABEL[hf.entry]}`;
   } else {
     stop = price - sign * Math.max(1.6 * at, price * 0.005);
     stopType = `ATR × 1,6 · ${TF_LABEL[hf.entry]}`;

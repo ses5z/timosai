@@ -33,7 +33,7 @@
     }
     $("#plan-mode").textContent = d.live ? `CANLI · bakiye ${d.balance} USDT` : "PAPER";
     $("#plan-mode").className = `badge ${d.live ? "badge-bad" : "badge-muted"}`;
-    $("#plan-ref").textContent = `Plan: risk %${p.riskPct} · R:R ≥ ${p.minRR}${p.followLine ? " · trend çizgisi uyumlu" : ""}`;
+    $("#plan-ref").textContent = `Plan: risk %${p.riskPct} · R:R ≥ ${p.minRR}${p.followLine ? " · Follow Line uyumlu" : ""}`;
     $("#plan-fixed").innerHTML = d.fixedRules.map((r) => `<li>${T.esc(r)}</li>`).join("");
     renderCoins();
     (d.notes || []).forEach((n) => T.toast(n, 5000));

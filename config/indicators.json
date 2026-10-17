@@ -1,4 +1,5 @@
 {
-  "_aciklama": "TimosAI ATR trend filtresi (kendi göstergemiz). AlphaTrend'in lisansı doğrulanamadığı için port edilmedi; bkz. README.",
+  "_aciklama": "Follow Line: Kıvanç Özbilgiç'in TradingView'da açık kaynak yayımladığı göstergenin mantığı (https://tr.tradingview.com/script/UXKo4RaJ/), bu projede yeniden yazıldı. atrTrend: eski TimosAI ATR göstergesi (yalnızca test için).",
+  "followLine": { "bbPeriod": 21, "bbDev": 1, "atrPeriod": 5, "atrFilter": true },
   "atrTrend": { "period": 14, "mult": 2 }
 }

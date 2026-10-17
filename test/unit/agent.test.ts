@@ -209,3 +209,17 @@ test("Güncelleme2 madde 3: her taramada news_get_coin_sentiment ve news_get_lat
   assert.equal(calls.filter((c) => c === "news_get_coin_sentiment").length, 2);
   assert.equal(calls.filter((c) => c === "news_get_latest").length, 1);
 });
+
+test("Follow Line: üst bant kırılımında yukarı, alt bant kırılımında aşağı döner; yönünde yalnızca tek yöne hareket eder", async () => {
+  const { followLine } = await import("../../src/indicators/followLine.js");
+  const mk = (cl: number) => ({ ts: 0, open: cl, high: cl * 1.002, low: cl * 0.998, close: cl, vol: 1 });
+  const up = Array.from({ length: 40 }, (_, i) => mk(100 + i));
+  const down = Array.from({ length: 30 }, (_, i) => mk(139 - 3 * (i + 1)));
+  const out = followLine([...up, ...down]);
+  assert.equal(out[39].dir, 1);
+  for (let i = 25; i < 40; i++) assert.ok(out[i].line >= out[i - 1].line - 1e-9, `yükselişte çizgi düşmez i=${i}`);
+  assert.equal(out.at(-1)!.dir, -1);
+  for (let i = out.length - 10; i < out.length; i++) assert.ok(out[i].line <= out[i - 1].line + 1e-9, `düşüşte çizgi yükselmez i=${i}`);
+  const flat = followLine(Array.from({ length: 30 }, () => mk(100)));
+  assert.ok(new Set(flat.slice(5).map((p) => p.line.toFixed(6))).size === 1, "bantlar arasında çizgi sabit");
+});

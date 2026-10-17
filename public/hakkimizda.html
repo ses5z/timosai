@@ -10,7 +10,7 @@
 </head>
 <body>
 <main id="main" tabindex="-1">
-  <div class="page-head"><div><h1>Hakkımızda</h1><p>Yeni başlayan trader için sakin, sade ve güven veren bir otonom asistan.</p></div></div>
+  <div class="page-head"><div><h1>Hakkımızda</h1><p>Basic: yeni trader için sade. Pro: deneyimli trader için terminal. Planı sen yaparsın, ajan planına göre otonom uygular.</p></div></div>
   <div class="grid">
     <section class="card" aria-labelledby="v-h">
       <h2 id="v-h">Vizyon</h2>
@@ -22,8 +22,8 @@
         <li><b>Tara</b><p>Her 30 saniyede 28 likit spot çift: ATK'den fiyat, mum, RSI, order book.</p></li>
         <li><b>Vadeli + Temel</b><p>Funding, OI (ATK); genel ve üst trader oranı, taker hacmi (OKX public); arz (CoinGecko).</p></li>
         <li><b>Güvenlik</b><p>Makas ve derinlik; DEX tokenları için GoPlus taraması.</p></li>
-        <li><b>Karar</b><p>Skorlar + ATR trend filtresi + vadeli durum → aç / izle / ele, R:R ≥ 2.</p></li>
-        <li><b>Kapı</b><p>Davranış sözleşmesi ve sert limitler: tek emir ≤ 5 USDT, toplam ≤ 15, en fazla 3 pozisyon, stop zorunlu.</p></li>
+        <li><b>Karar</b><p>Skorlar + Follow Line trend filtresi + çok zaman dilimli yön + vadeli durum → aç / izle / ele, R:R ≥ 2.</p></li>
+        <li><b>Kapı</b><p>Planım: limitleri sen belirlersin (işlem başı risk, tek işlem ve toplam tutar, pozisyon sayısı, min R:R); ajan yalnızca plana uyan işlemi açar. Kodda sabit: stop zorunlu, canlıda tutar bakiyeyi aşamaz, çekim/transfer yasak.</p></li>
         <li><b>Emir</b><p>Yalnızca OKX TR spot, yalnızca ATK üzerinden; varsayılan paper trade.</p></li>
         <li><b>İz</b><p>Her karar, emir ve ATK çağrısı sha256 zincirli kayda yazılır.</p></li>
         <li><b>Zincir</b><p>Kayıt özeti ve kapanan işlem sonuçları Avalanche'taki DecisionLog sözleşmesine.</p></li>
@@ -33,9 +33,9 @@
       <section class="card" aria-labelledby="t-h">
         <h2 id="t-h">Ekip</h2>
         <div class="team">
-          <div class="member"><div class="avatar" data-ic="user"></div><b>Ekip üyesi 1</b><p class="kpi-small">Ürün ve strateji</p></div>
-          <div class="member"><div class="avatar" data-ic="chart"></div><b>Ekip üyesi 2</b><p class="kpi-small">Kural kitabı ve risk</p></div>
-          <div class="member"><div class="avatar" data-ic="compass"></div><b>Ekip üyesi 3</b><p class="kpi-small">Ajan ve altyapı</p></div>
+          <div class="member"><div class="avatar" data-ic="user"></div><b>Çağıl</b><p class="kpi-small">Ürün, trader stratejisi ve kural kitabı</p></div>
+          <div class="member"><div class="avatar" data-ic="chart"></div><b>Bora</b><p class="kpi-small">Sunum, README ve kalite kontrol</p></div>
+          <div class="member"><div class="avatar" data-ic="compass"></div><b>Ekip üyesi</b><p class="kpi-small">Ajan, backend ve altyapı</p></div>
         </div>
       </section>
       <section class="card" aria-labelledby="r-h">
@@ -69,7 +69,7 @@
         <tr><td>Cüzdan dağılımı, OnchainOS güvenlik</td><td>OKX OnchainOS</td><td><span class="badge badge-muted">Web3 anahtarı gerekli</span></td></tr>
         <tr><td>Kilit açılımı takvimi, önemli tarihler, proje güvenlik özeti</td><td>Elle (kaynak linkli)</td><td><span class="badge badge-warn">ÖRNEK VERİ</span></td></tr>
       </tbody></table></div>
-      <p class="kpi-small" style="margin-top:10px">Grafikler <a href="https://www.tradingview.com/lightweight-charts/" target="_blank" rel="noopener">TradingView Lightweight Charts</a> (Apache 2.0) ile çizilir; veri bizim (ATK mumları). Trend filtresi TimosAI'nin kendi ATR trend göstergesidir.</p>
+      <p class="kpi-small" style="margin-top:10px">Grafikler <a href="https://www.tradingview.com/lightweight-charts/" target="_blank" rel="noopener">TradingView Lightweight Charts</a> (Apache 2.0) ile çizilir; veri bizim (ATK mumları). Trend filtresi: <b>Follow Line</b>, Kıvanç Özbilgiç'in TradingView'da <a href="https://tr.tradingview.com/script/UXKo4RaJ/" target="_blank" rel="noopener">açık kaynak yayımladığı göstergenin</a> mantığı; Pine kodu kopyalanmadan bu projede yeniden yazıldı. Yazarın onayı anlamına gelmez.</p>
     </section>
     <div class="grid-2">
       <section class="card" aria-labelledby="l-h"><h2 id="l-h">Lisans</h2><p>MIT lisansı ile açık kaynak. Kod bu yarışma için bugün sıfırdan yazıldı.</p></section>

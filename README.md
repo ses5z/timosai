@@ -4,6 +4,14 @@ OKX Agent Trade Kit (ATK) ile çalışan, otonom, trader odaklı kripto ajanı. 
 
 > Gerçek piyasa verisi, sınırlı bakiye, yatırım tavsiyesi değildir.
 
+## Jüri için hızlı bakış
+- **Otonom döngü (30 sn):** Tara → Vadeli + Temel → Güvenlik → Karar → Plan/Kapı → Emir → İz → Avalanche. Kullanıcı planı ve limitleri belirler, ajan plana göre kendisi işlem açar ve her emirde plana referans verir.
+- **OKX entegrasyonu:** OKX Agent Trade Kit (`@okx_ai/okx-trade-mcp`, stdio MCP) üzerinden market araçları (ticker, mum, gösterge, order book, funding, OI, OI geçmişi, OI değişim filtresi, enstrümanlar) ve spot emir araçları; panelde canlı ATK çağrı sayacı ve araç listesi.
+- **Avalanche:** Fuji'de DecisionLog sözleşmesi; karar/emir kaydının sha256 özeti ve kapanan işlem sonuçları zincire yazılır. Sözleşme: [`0x4579…8d54`](https://testnet.snowtrace.io/address/0x45799138bec5ab18a89859d45c3c06f90da18d54) (Snowtrace, Fuji).
+- **Trader özellikleri:** çok zaman dilimli "Mentor işlemi" (15dk · 1s · 4s · 1g; LONG / SHORT / işlem yok), Follow Line trend filtresi, vadeli durum ve Long/Short tablosu (OKX + Binance), arz dedektörü, çok kaynaklı DEX güvenlik taraması, paper trading + backtest, Basic ve Pro (Terminal) arayüzleri, Telegram botu.
+- **Follow Line atfı:** Kıvanç Özbilgiç'in TradingView'da açık kaynak yayımladığı göstergenin mantığı (https://tr.tradingview.com/script/UXKo4RaJ/); Pine kodu kopyalanmadan `src/indicators/followLine.ts` içinde yeniden yazıldı. Yazarın onayı anlamına gelmez.
+- **Dürüstlük notu:** örnek veriler arayüzde "ÖRNEK VERİ", kaldıraçlı işlemler "SİMÜLASYON", paper işlemler "PAPER" etiketlidir. Haber/smart money OKX OAuth, cüzdan dağılımı OnchainOS anahtarı gerektirir; yoksa "veri yok" gösterilir.
+
 Ajan arka planda 28 likit spot çifti tarar. Her coin için spot verisini, vadeli durumunu ve temel yapısını birlikte skorlar. Kararı (aç / izle / ele), giriş/stop/hedefi ve R:R'yi kendisi üretir. Otonom modda küçük, stoplu spot emirleri **kendisi** verip yönetir. Her emir kodda sert limit kapısından geçer; her karar sha256 zincirli bir kayda, kaydın özeti Avalanche'a yazılır. Kullanıcı kartları kaydırarak keşfeder, mentorla risk matematiğini konuşur. Hızlı komutlar varsayılan olarak kapalıdır.
 
 ## Kurulum
