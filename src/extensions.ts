@@ -5,6 +5,9 @@ import { MentorService } from "./mentor/mentorService.js";
 import { Scenario } from "./scenario.js";
 import { TelegramBot, candidateChart } from "./telegram/bot.js";
 import { AlertEngine } from "./alerts/alertEngine.js";
+import { AvalancheProofAnchor, loadDeployment, makeViemWriter } from "./proof/avalancheAnchor.js";
+import { NoopProofAnchor } from "./proof/proofAnchor.js";
+import { log } from "./util/log.js";
 
 export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typeof fetch } = {}): Promise<void> {
   ctx.extras.routes = ctx.extras.routes ?? [];
@@ -24,8 +27,34 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
     const first = w.items[0] ? ` (${w.items[0].label}: ${w.items[0].value})` : "";
     void bot.notify({ kind: "warning", text: `Uyarı: ${w.title}. ${w.text}${first}` });
   });
+  // Avalanche ProofAnchor: anahtar + dağıtım varsa periyodik özet ve kapanan işlem sonuçları zincire.
+  const dep = loadDeployment(ctx.env.avaxNetwork);
+  let anchorTimer: NodeJS.Timeout | null = null;
+  if (ctx.env.avaxPrivateKey && dep && !opts.fetchImpl) {
+    try {
+      const anchor = new AvalancheProofAnchor(dep, await makeViemWriter(ctx.env.avaxPrivateKey, ctx.env.avaxNetwork === "mainnet" ? ctx.env.avaxMainnetRpc : ctx.env.avaxFujiRpc, dep));
+      ctx.proof = anchor;
+      ctx.agent.onDevelopment((d) => {
+        if (d.kind === "pozisyon_kapandı" && d.critical && d.symbol.endsWith("-USDT")) {
+          const m = d.text.match(/Sonuç ([+-]?\d+(?:\.\d+)?) USDT/);
+          if (m) void anchor.outcome(d.symbol, Number(m[1]), ctx.ledger.headHash());
+        }
+      });
+      anchorTimer = setInterval(() => void anchor.anchor(ctx.ledger.headHash(), ctx.ledger.list(["decision", "order", "warning", "plan"], 100000).length), ctx.env.anchorIntervalMin * 60_000);
+      setTimeout(() => void anchor.anchor(ctx.ledger.headHash(), ctx.ledger.list(["decision", "order", "warning", "plan"], 100000).length), 90_000);
+      log.info(`Avalanche ${dep.network}: DecisionLog ${dep.address}`);
+    } catch (e) {
+      ctx.proof = new NoopProofAnchor(`Avalanche yazıcısı başlatılamadı: ${(e as Error).message.slice(0, 120)}`);
+    }
+  } else if (ctx.env.avaxPrivateKey && !dep) {
+    ctx.proof = new NoopProofAnchor("Anahtar var ama sözleşme dağıtılmamış: npm run deploy:fuji");
+  }
+
   ctx.extras.startBackground = () => void bot.start();
-  ctx.extras.stopBackground = () => bot.stop();
+  ctx.extras.stopBackground = () => {
+    bot.stop();
+    if (anchorTimer) clearInterval(anchorTimer);
+  };
 
   const alerts = new AlertEngine(ctx);
   ctx.extras.alerts = alerts;

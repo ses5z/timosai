@@ -206,7 +206,7 @@ export function createApp(ctx: AppContext) {
   app.get("/api/events", (_req, res) => json(res, store.events.slice(-120).reverse()));
   app.get("/api/atk", (_req, res) => json(res, { ...ledger.atkStats(), connected: ctx.atk?.available() ?? false, tools: ctx.atk?.toolNames() ?? [] }));
   app.get("/api/ledger", async (_req, res) =>
-    json(res, { head: ledger.headHash(), count: ledger.count(), valid: ledger.verify(), entries: ledger.list(["decision", "order", "warning", "plan", "position"], 60), anchor: await ctx.proof.anchor(ledger.headHash(), ledger.count()) }),
+    json(res, { head: ledger.headHash(), count: ledger.count(), valid: ledger.verify(), entries: ledger.list(["decision", "order", "warning", "plan", "position"], 60), anchor: ctx.proof.status() }),
   );
 
   // ---------- Ajan ayarları (kullanıcı yalnızca ayar yapar, emir veremez) ----------

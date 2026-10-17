@@ -125,4 +125,5 @@ export interface Notifier {
 export interface ProofAnchor {
   readonly name: string;
   anchor(headHash: string, count: number): Promise<{ anchored: boolean; ref?: string; note: string }>;
+  status(): Record<string, unknown>;
 }

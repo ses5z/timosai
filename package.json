@@ -14,17 +14,22 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/unit/*.test.ts",
     "test:e2e": "playwright test",
-    "atk:probe": "tsx scripts/atk-probe.ts"
+    "atk:probe": "tsx scripts/atk-probe.ts",
+    "avax:compile": "tsx avalanche/scripts/compile.ts",
+    "deploy:fuji": "tsx avalanche/scripts/compile.ts && tsx avalanche/scripts/deploy.ts fuji",
+    "deploy:mainnet": "tsx avalanche/scripts/compile.ts && tsx avalanche/scripts/deploy.ts mainnet"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@okx_ai/okx-trade-mcp": "^1.4.8",
-    "express": "^4.22.3"
+    "express": "^4.22.3",
+    "viem": "^2.57.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
     "@types/express": "^4.17.25",
     "@types/node": "^26.6.5",
+    "solc": "^0.8.30",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }

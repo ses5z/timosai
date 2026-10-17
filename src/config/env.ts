@@ -9,6 +9,7 @@ export const SECRET_KEYS = [
   "OKX_API_SECRET",
   "OKX_API_PASSPHRASE",
   "ANTHROPIC_API_KEY",
+  "AVAX_DEPLOYER_PRIVATE_KEY",
 ] as const;
 
 export interface AppEnv {
@@ -28,6 +29,12 @@ export interface AppEnv {
   anthropicKey: string;
   telegramToken: string;
   telegramAllowedUserId: string;
+  quickCommands: boolean;
+  avaxPrivateKey: string;
+  avaxFujiRpc: string;
+  avaxMainnetRpc: string;
+  avaxNetwork: "fuji" | "mainnet";
+  anchorIntervalMin: number;
   envFileFound: boolean;
 }
 
@@ -84,13 +91,19 @@ export function loadEnv(opts: { file?: string; source?: Record<string, string | 
     anthropicKey: get("ANTHROPIC_API_KEY"),
     telegramToken: get("TELEGRAM_BOT_TOKEN"),
     telegramAllowedUserId: get("TELEGRAM_ALLOWED_USER_ID"),
+    quickCommands: bool(get("QUICK_COMMANDS"), false),
+    avaxPrivateKey: get("AVAX_DEPLOYER_PRIVATE_KEY"),
+    avaxFujiRpc: get("AVAX_FUJI_RPC") || "https://api.avax-test.network/ext/bc/C/rpc",
+    avaxMainnetRpc: get("AVAX_MAINNET_RPC") || "https://api.avax.network/ext/bc/C/rpc",
+    avaxNetwork: get("AVAX_NETWORK") === "mainnet" ? "mainnet" : "fuji",
+    anchorIntervalMin: Math.max(1, num(get("ANCHOR_INTERVAL_MIN"), 10)),
     envFileFound,
   };
 }
 
 /** Bütün sır değerleri (maskelemek için). */
 export function secretValues(env: AppEnv): string[] {
-  return [env.geminiKey, env.anthropicKey, env.telegramToken, env.okx.apiKey, env.okx.secret, env.okx.passphrase].filter(
+  return [env.geminiKey, env.anthropicKey, env.telegramToken, env.okx.apiKey, env.okx.secret, env.okx.passphrase, env.avaxPrivateKey, env.avaxPrivateKey.replace(/^0x/, "")].filter(
     (v) => typeof v === "string" && v.length >= 4,
   );
 }
@@ -104,6 +117,7 @@ export function missingEnvLines(env: AppEnv): string[] {
   if (!env.okx.apiKey) m.push("OKX_API_KEY");
   if (!env.okx.secret) m.push("OKX_API_SECRET");
   if (!env.okx.passphrase) m.push("OKX_API_PASSPHRASE");
+  if (!env.avaxPrivateKey) m.push("AVAX_DEPLOYER_PRIVATE_KEY");
   return m;
 }
 

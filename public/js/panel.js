@@ -65,6 +65,15 @@
   async function loadLedger() {
     const l = await T.api("/api/ledger");
     $("#lg-head").textContent = `Son özet: ${l.head} · ${l.count} kayıt · ${l.anchor.note}`;
+    const a = l.anchor;
+    $("#av-state").textContent = a.enabled ? (a.network === "mainnet" ? "C-Chain" : "Fuji") : "kapalı";
+    $("#av-state").className = "badge " + (a.enabled ? "badge-ok" : "badge-muted");
+    $("#av-body").innerHTML = a.enabled
+      ? `<p>DecisionLog sözleşmesi: <a href="${T.esc(a.contractUrl)}" target="_blank" rel="noopener" class="mono">${T.esc(a.contract.slice(0, 10))}…${T.esc(a.contract.slice(-6))}</a></p>
+         <p>${a.last ? `Son ${a.last.kind === "anchor" ? "özet" : "sonuç"} işlemi: <a href="${T.esc(a.last.url)}" target="_blank" rel="noopener" class="mono">${T.esc(a.last.txHash.slice(0, 12))}…</a> · ${F.time(a.last.at)}` : T.esc(a.note)}</p>
+         <p>Toplam zincir kaydı: <b class="num">${a.total}</b>${a.lastError ? ` · <span class="down">${T.esc(a.lastError)}</span>` : ""}</p>
+         <p class="faint">Karar/emir izinin sha256 özeti periyodik olarak, kapanan işlemlerin sonucu her kapanışta değiştirilemez şekilde zincire yazılır.</p>`
+      : `<p>${T.esc(a.note)}</p><p class="faint">Kurulum: .env'de AVAX_DEPLOYER_PRIVATE_KEY (yeni cüzdan), faucet.avax.network'ten test AVAX, sonra npm run deploy:fuji.</p>`;
     $("#lg-valid").textContent = l.valid ? "zincir geçerli" : "zincir bozuk";
     $("#lg-valid").className = "badge " + (l.valid ? "badge-ok" : "badge-bad");
     T.renderKeep($("#lg-list"), l.entries.map((e) => `<li class="lvl-${e.kind === "order" ? "emir" : e.kind === "warning" ? "uyarı" : "karar"}"><time>#${e.seq}</time><span><b>${T.esc(e.kind)}</b> <span class="mono faint">${e.hash.slice(0, 12)}</span><br>${T.esc(JSON.stringify(e.data).slice(0, 220))}</span></li>`).join(""));
