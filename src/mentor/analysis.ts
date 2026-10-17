@@ -30,8 +30,8 @@ const DECISION_TEXT = {
   ele: "ajan şimdilik eledi; koşullar zayıf",
 } as const;
 
-export function analyzeCandidate(ctx: AppContext, instId: string): Analysis | null {
-  const c = ctx.agent.candidates.get(instId);
+export function analyzeCandidate(ctx: AppContext, instId: string, override?: Candidate | null): Analysis | null {
+  const c = override ?? ctx.agent.candidates.get(instId);
   if (!c) return null;
   const t = ctx.agent.trading;
   const size = sizePosition({ equityUsdt: t.equity(), riskPct: ctx.store.settings.riskPct, entry: c.entry, stop: c.stop, openNotionalUsdt: t.openNotional(), limits: ctx.limits });

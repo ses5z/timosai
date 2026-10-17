@@ -18,6 +18,10 @@ const PAGES: Record<string, string> = {
   "/panel": "panel.html",
 };
 
+export function validPair(s: unknown): s is string {
+  return typeof s === "string" && /^[A-Z0-9]{1,15}-(USDT|USDC|BTC|ETH|SOL|TRY)$/.test(s);
+}
+
 export function validInstId(s: unknown): s is string {
   return typeof s === "string" && /^[A-Z0-9]{2,12}-USDT$/.test(s);
 }
@@ -153,8 +157,8 @@ export function createApp(ctx: AppContext) {
   const candleCache = new Map<string, { at: number; v: any[] }>();
   app.get("/api/candles/:instId", async (req, res) => {
     const id = req.params.instId;
-    const bar = ["15m", "1H", "4H"].includes(String(req.query.bar)) ? String(req.query.bar) : "15m";
-    if (!validInstId(id)) return res.status(400).json({ error: "geçersiz sembol" });
+    const bar = ["15m", "1H", "4H", "1D"].includes(String(req.query.bar)) ? String(req.query.bar) : "15m";
+    if (!validPair(id)) return res.status(400).json({ error: "geçersiz sembol" });
     let candles: any[] | undefined = bar === "15m" ? agent.lastCandles.get(id) : undefined;
     const key = `${id}:${bar}`;
     if (!candles) {
@@ -173,7 +177,7 @@ export function createApp(ctx: AppContext) {
     const cfg = loadAtrTrendConfig();
     const at = atrTrend(candles as any, cfg.period, cfg.mult);
     const sec = (ms: number) => Math.floor(ms / 1000);
-    const barMs = bar === "15m" ? 900_000 : bar === "1H" ? 3_600_000 : 14_400_000;
+    const barMs = bar === "15m" ? 900_000 : bar === "1H" ? 3_600_000 : bar === "4H" ? 14_400_000 : 86_400_000;
     const cand = agent.candidates.get(id);
     const markers = agent.trading
       .listTrades(200)

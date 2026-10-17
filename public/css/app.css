@@ -453,3 +453,17 @@ tr:last-child td { border-bottom: 0; }
 @media (min-width: 900px) { .dr-top { grid-template-columns: minmax(0, 1.5fr) minmax(240px, 1fr); align-items: start; } }
 .ai-card { background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
 .ai-card h3 { margin: 0 0 8px; }
+.market-tabs { margin-bottom: 14px; }
+.section-title { font-size: 1.15rem; margin: 22px 0 10px; }
+.cex-search { margin-bottom: 18px; }
+.combo { position: relative; }
+.combo input { width: 100%; min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--ink-850); color: var(--text); padding: 0 14px; font: inherit; }
+.combo-list { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); list-style: none; margin: 0; padding: 4px; background: var(--ink-800); border: 1px solid var(--ink-500); border-radius: 12px; max-height: 320px; overflow: auto; box-shadow: var(--shadow); }
+.combo-list li { padding: 9px 10px; border-radius: 8px; cursor: pointer; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.combo-list li[aria-selected="true"], .combo-list li:hover { background: var(--surface-2); }
+.pair-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.pair-tabs .chip[aria-selected="true"] { background: var(--amber); color: var(--ink-950); border-color: var(--amber); }
+.cex-grid { display: grid; gap: 14px; grid-template-columns: 1fr; margin-top: 10px; }
+@media (min-width: 980px) { .cex-grid { grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); align-items: start; } }
+.cex-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+tr.sel td { background: rgba(242, 169, 59, 0.08); }

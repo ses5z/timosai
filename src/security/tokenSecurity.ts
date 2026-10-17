@@ -13,6 +13,13 @@ export const CHAINS: Record<string, { id: string; name: string }> = {
   arbitrum: { id: "42161", name: "Arbitrum" },
   base: { id: "8453", name: "Base" },
   optimism: { id: "10", name: "Optimism" },
+  "1": { id: "1", name: "Ethereum" },
+  "56": { id: "56", name: "BNB Chain" },
+  "43114": { id: "43114", name: "Avalanche C-Chain" },
+  "137": { id: "137", name: "Polygon" },
+  "42161": { id: "42161", name: "Arbitrum" },
+  "8453": { id: "8453", name: "Base" },
+  "10": { id: "10", name: "Optimism" },
 };
 
 export type Verdict = "PASS" | "WARN" | "BLOCK";

@@ -24,18 +24,44 @@
     </div>
   </div>
   <div id="notices"></div>
-  <section class="card scan-box" aria-labelledby="scan-h">
-    <h2 id="scan-h" style="font-size:1.1rem">Token tarama (DEX)</h2>
-    <form id="scan-form" class="scan-form" autocomplete="off">
-      <label for="scan-chain" class="visually-hidden">Zincir</label>
-      <select id="scan-chain"><option value="avax">Avalanche</option><option value="eth">Ethereum</option><option value="bsc">BNB Chain</option><option value="base">Base</option><option value="arbitrum">Arbitrum</option><option value="polygon">Polygon</option><option value="optimism">Optimism</option></select>
-      <label for="scan-addr" class="visually-hidden">Kontrat adresi</label>
-      <input id="scan-addr" placeholder="0x… kontrat adresi" spellcheck="false" maxlength="42">
-      <button class="btn btn-primary" type="submit">Tara</button>
-    </form>
-    <p class="kpi-small" id="scan-demo" style="margin:6px 0 0"></p>
-    <div id="scan-result" aria-live="polite"></div>
+  <div class="tabs market-tabs" role="tablist" aria-label="Piyasa">
+    <button role="tab" id="mt-cex" aria-selected="true" aria-controls="panel-cex">CEX</button>
+    <button role="tab" id="mt-dex" aria-selected="false" aria-controls="panel-dex">DEX</button>
+  </div>
+
+  <section id="panel-dex" role="tabpanel" aria-labelledby="mt-dex" hidden>
+    <section class="card scan-box" aria-labelledby="scan-h">
+      <h2 id="scan-h" style="font-size:1.1rem">DEX token (kontrat adresiyle)</h2>
+      <form id="scan-form" class="scan-form" autocomplete="off">
+        <label for="scan-chain" class="visually-hidden">Zincir</label>
+        <select id="scan-chain"></select>
+        <label for="scan-addr" class="visually-hidden">Kontrat adresi</label>
+        <input id="scan-addr" placeholder="Kontrat adresi (CA)" spellcheck="false" maxlength="64" aria-describedby="scan-hint">
+        <button class="btn btn-primary" type="submit">Tara</button>
+      </form>
+      <p class="kpi-small" id="scan-hint" style="margin:6px 0 0">EVM: 0x + 40 hex · Solana: base58</p>
+      <form id="dex-name-form" class="scan-form" style="margin-top:10px" autocomplete="off">
+        <label for="dex-name" class="visually-hidden">Token adı</label>
+        <input id="dex-name" placeholder="İsteğe bağlı: token adıyla ara (OnchainOS)" maxlength="40">
+        <button class="btn" type="submit">Ada göre ara</button>
+      </form>
+      <div id="dex-name-result" aria-live="polite"></div>
+      <p class="kpi-small" id="scan-demo" style="margin:8px 0 0"></p>
+      <div id="scan-result" aria-live="polite"></div>
+    </section>
   </section>
+
+  <section id="panel-cex" role="tabpanel" aria-labelledby="mt-cex">
+    <section class="card cex-search" aria-labelledby="cex-h">
+      <h2 id="cex-h" style="font-size:1.1rem">Coin ara (CEX)</h2>
+      <div class="combo">
+        <label for="cex-q" class="visually-hidden">Coin adı ya da sembol</label>
+        <input id="cex-q" role="combobox" aria-expanded="false" aria-controls="cex-list" aria-autocomplete="list" placeholder="Sembol ya da ad (ör. av, AVAX)  ·  / tuşu odaklar" autocomplete="off" maxlength="20">
+        <ul id="cex-list" role="listbox" class="combo-list" hidden></ul>
+      </div>
+      <div id="cex-view" aria-live="polite"></div>
+    </section>
+    <h2 class="section-title">Ajanın adayları</h2>
 
   <section id="view-cards" role="tabpanel" aria-labelledby="tab-cards">
     <div class="discover">
@@ -68,10 +94,12 @@
       </section>
     </div>
   </section>
+  </section>
 </main>
 <script src="/vendor/lightweight-charts.standalone.production.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/chart.js"></script>
 <script src="/js/kesfet.js"></script>
+<script src="/js/discover.js"></script>
 </body>
 </html>

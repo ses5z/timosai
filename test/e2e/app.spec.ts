@@ -186,14 +186,14 @@ test("Basic/Pro: iki modda tüm sayfalar düzgün; Basic'te Pro alanları görü
 
 test("token tarama kutusu: honeypot BLOCK, geçersiz adres hata verir", async ({ page }) => {
   await waitForScan(page);
-  await page.goto("/kesfet");
-  await page.selectOption("#scan-chain", "bsc");
+  await page.goto("/kesfet?tab=dex");
+  await page.selectOption("#scan-chain", "56");
   await page.fill("#scan-addr", "0x000000000000000000000000000000000000dEaD");
   await page.getByRole("button", { name: "Tara", exact: true }).click();
   await expect(page.locator("#scan-result")).toContainText("BLOCK");
   await page.fill("#scan-addr", "0x123");
   await page.getByRole("button", { name: "Tara", exact: true }).click();
-  await expect(page.locator("#scan-result")).toContainText("Geçersiz");
+  await expect(page.locator("#scan-result")).toContainText("40 hex");
 });
 
 test("ısı haritası çekmecesi: vadeli durum ve hold raporu, Lightweight Charts grafiği", async ({ page }) => {
@@ -247,4 +247,35 @@ test("Güncelleme2 madde 4: paper istatistik kartı, sıfırlama düğmesi ve PA
     await card.scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${SHOTS}/g2-madde4-panel-${width}.png` });
   }
+});
+
+test("Güncelleme2 madde 5: CEX araması (öneri, klavye, / odak), parite sekmeleri ve URL; DEX adres doğrulaması", async ({ page }) => {
+  await waitForScan(page);
+  for (const width of [360, 1440]) {
+    await page.setViewportSize({ width, height: width === 360 ? 780 : 900 });
+    await page.goto("/kesfet");
+    await page.keyboard.press("/");
+    await expect(page.locator("#cex-q")).toBeFocused();
+    await page.keyboard.type("so");
+    await expect(page.locator("#cex-list li").first()).toContainText("SOL");
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".pair-tabs")).toContainText("SOL-USDT");
+    await page.locator('.pair-tabs [data-pair="SOL-USDC"]').click();
+    await expect(page).toHaveURL(/tab=cex&s=SOL-USDC/);
+    await expect(page.locator("#cex-view")).toContainText("işlem izin listesinde değil");
+    await expect(page.locator("#cex-view .ai-card")).toContainText("AI analizi");
+    await expect(page.locator("#cex-view")).toContainText("USDT karşılığı");
+    await page.screenshot({ path: `${SHOTS}/g2-madde5-cex-${width}.png`, fullPage: true });
+  }
+  await page.goto("/kesfet?tab=cex&s=SOL-USDT");
+  await expect(page.locator("#cex-view")).toContainText("işlem izin listesinde");
+  await page.goto("/kesfet?tab=dex");
+  await page.selectOption("#scan-chain", "solana");
+  await page.fill("#scan-addr", "0x123");
+  await page.getByRole("button", { name: "Tara", exact: true }).click();
+  await expect(page.locator("#scan-result")).toContainText("base58");
+  await page.fill("#dex-name", "PEPE");
+  await page.getByRole("button", { name: "Ada göre ara" }).click();
+  await expect(page.locator("#dex-name-result")).toContainText("Aynı isimli sahte tokenlar olabilir");
+  await page.screenshot({ path: `${SHOTS}/g2-madde5-dex-1440.png` });
 });

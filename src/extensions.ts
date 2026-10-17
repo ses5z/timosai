@@ -9,6 +9,11 @@ import { AvalancheProofAnchor, loadDeployment, makeViemWriter } from "./proof/av
 import { NoopProofAnchor } from "./proof/proofAnchor.js";
 import { QuickTrader } from "./trading/quick.js";
 import { PaperFutures } from "./trading/paperFutures.js";
+import { CexService, PAIR_RE } from "./discover/cex.js";
+import { DEX_CHAINS, onchainOsStatus, resolveChain, validateAddress } from "./discover/dex.js";
+import { analyzeCandidate } from "./mentor/analysis.js";
+import { holdReportFor } from "./fundamentals/view.js";
+import { derivAnalysisFor } from "./derivatives/view.js";
 import { log } from "./util/log.js";
 
 export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typeof fetch } = {}): Promise<void> {
@@ -43,6 +48,8 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
       break;
     }
   });
+  const cex = new CexService(ctx);
+  ctx.extras.cex = cex;
   const quick = new QuickTrader(ctx);
   ctx.extras.quick = quick;
   const bot = new TelegramBot(ctx, mentor, { token: ctx.env.telegramToken, allowedUserId: ctx.env.telegramAllowedUserId, fetchImpl: opts.fetchImpl });
@@ -120,6 +127,49 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
       if (typeof b.stopValue === "number" && b.stopValue > 0 && b.stopValue <= 10) q.stopValue = b.stopValue;
       res.json(q);
     });
+    // ---------- Keşfet CEX ----------
+    app.get("/api/cex/search", async (req, res) => res.json({ results: await cex.search(String(req.query.q ?? "").slice(0, 20)) }));
+    app.get("/api/cex/pairs/:base", async (req, res) => {
+      const base = String(req.params.base).toUpperCase();
+      if (!/^[A-Z0-9]{1,15}$/.test(base)) return res.status(400).json({ error: "geçersiz sembol" });
+      res.json({ base, pairs: await cex.pairs(base) });
+    });
+    app.get("/api/cex/view/:instId", async (req, res) => {
+      const id = String(req.params.instId).toUpperCase();
+      if (!PAIR_RE.test(id)) return res.status(400).json({ error: "geçersiz parite" });
+      const base = id.split("-")[0];
+      const pairs = await cex.pairs(base);
+      const pair = pairs.find((p) => p.instId === id);
+      if (!pair) return res.status(404).json({ error: "Bu parite borsada yok." });
+      const cand = await cex.analyze(id);
+      const an = cand ? analyzeCandidate(ctx, id, cand) : null;
+      const usdtId = `${base}-USDT`;
+      const deriv = await derivAnalysisFor(ctx, usdtId).catch(() => null);
+      const hold = await holdReportFor(ctx, id, cand).catch(() => null);
+      res.json({
+        pair,
+        pairs,
+        candidate: cand,
+        analysis: an ? { short: an.short, text: an.text, levels: an.levels, decision: an.decision } : null,
+        derivatives: deriv && deriv.available ? deriv : null,
+        hold,
+        watchlisted: ctx.watchlist.some((w) => w.instId === usdtId),
+        followed: ctx.store.follows.includes(usdtId),
+        tradeNote: pair.tradable ? "Ajanın işlem izin listesinde (sert limitler geçerli)." : "Analiz için; işlem izin listesinde değil.",
+      });
+    });
+
+    // ---------- Keşfet DEX ----------
+    app.get("/api/dex/chains", (_req, res) => res.json({ chains: Object.entries(DEX_CHAINS).map(([id, c]) => ({ id, name: c.name, kind: c.kind, honeypotIs: Boolean(c.honeypot) })) }));
+    app.get("/api/dex/validate", (req, res) => {
+      const chain = resolveChain(String(req.query.chain ?? ""));
+      if (!chain) return res.status(400).json({ ok: false, error: "Desteklenmeyen zincir." });
+      res.json({ chain, ...validateAddress(chain, String(req.query.ca ?? "").trim()) });
+    });
+    app.get("/api/dex/search", (req, res) => {
+      res.json({ query: String(req.query.q ?? ""), results: [], onchainos: onchainOsStatus(), warning: "Aynı isimli sahte tokenlar olabilir; kontrat adresini doğrula." });
+    });
+
     app.get("/api/paper", (_req, res) => {
       const t = ctx.agent.trading;
       res.json({ mode: t.mode, config: ctx.paper, stats: t.stats(ctx.agent.equityHistory), futures: futures.view(), futuresStats: futures.stats(), quickCommands: quick.enabled() });

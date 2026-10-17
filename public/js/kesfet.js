@@ -226,25 +226,6 @@
   $("#btn-pass").addEventListener("click", () => decide("pass"));
   $("#btn-undo").addEventListener("click", undo);
 
-  // ---- Token tarama ----
-  const vcls = { PASS: "badge-ok", WARN: "badge-warn", BLOCK: "badge-bad" };
-  $("#scan-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const box = $("#scan-result");
-    box.innerHTML = `<p class="muted">Taranıyor…</p>`;
-    try {
-      const r = await T.api("/api/scan", { body: { chain: $("#scan-chain").value, address: $("#scan-addr").value.trim() } });
-      box.innerHTML = `<div class="view-box" style="margin-top:10px"><p style="margin:0 0 6px"><span class="badge ${vcls[r.verdict]}" style="font-size:.95rem">${r.verdict}</span> <b>${T.esc(r.token ? r.token.name + " (" + r.token.symbol + ")" : "Bilinmeyen token")}</b> · ${T.esc(r.chainName)}</p>
-        <ul class="cautions">${r.reasons.map((x) => `<li>${T.esc(x)}</li>`).join("")}</ul>
-        <div class="pro-only kpi-small">${r.sources.map((s) => `<p style="margin:6px 0 0"><b>${T.esc(s.source)}</b>: ${s.available ? Object.entries(s.raw).map(([k, v]) => `${T.esc(k)}=${T.esc(v ?? "-")}`).join(" · ") : T.esc(s.note || "kapalı")}</p>`).join("")}</div></div>`;
-    } catch (err) { box.innerHTML = `<p class="down">${T.esc(err.message)}</p>`; }
-  });
-  T.api("/api/demo-tokens").then((d) => {
-    const items = d.tokens.concat(d.honeypot ? [{ label: "Honeypot örneği", ...d.honeypot }] : []);
-    $("#scan-demo").innerHTML = items.length ? "Demo: " + items.map((t, i) => `<button type="button" class="chip" data-demo="${i}">${T.esc(t.label)}</button>`).join(" ") : "";
-    $("#scan-demo").addEventListener("click", (e) => { const b = e.target.closest("[data-demo]"); if (!b) return; const t = items[Number(b.dataset.demo)]; $("#scan-chain").value = t.chain; $("#scan-addr").value = t.address; $("#scan-form").requestSubmit(); });
-  }).catch(() => {});
-
   // ---- Canlı ----
   T.on("prices", (p) => {
     const el = deck.querySelector(".swipe-card:not(.behind)");

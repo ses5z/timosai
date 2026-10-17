@@ -1,9 +1,9 @@
 import type { AppContext } from "../context.js";
 import { buildHoldReport, loadUnlocks, type HoldReport } from "./holdReport.js";
 
-export async function holdReportFor(ctx: AppContext, instId: string): Promise<HoldReport> {
+export async function holdReportFor(ctx: AppContext, instId: string, override?: import("../ports.js").Candidate | null): Promise<HoldReport> {
   const base = instId.split("-")[0];
-  const c = ctx.agent.candidates.get(instId);
+  const c = override ?? ctx.agent.candidates.get(instId) ?? ctx.agent.candidates.get(`${base}-USDT`);
   const s = await ctx.fundamentals.supply(base);
   return buildHoldReport(base, s, loadUnlocks(), { volumeScore: c ? c.parts.volume : null, risk: c?.risk ?? 50, lowVolumeScore: ctx.thresholds.lowVolumeScore });
 }

@@ -62,23 +62,23 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [x] DONE 4.14 Test + ekran görüntüsü + commit
 
 ## Madde 5 – Keşfet CEX / DEX
-- [ ] 5.1 Keşfet üstünde iki sekme: CEX ve DEX; kart kuyruğu CEX altında
-- [ ] 5.2 CEX arama kutusu, yazdıkça öneri (sembol + ad)
-- [ ] 5.3 Öneri listesi klavyeyle gezilebilir; "/" aramaya odaklar
-- [ ] 5.4 Kaynak OKX spot enstrüman listesi (ATK), 1 saat önbellek, sabit liste yok
-- [ ] 5.5 Pariteler USDT + USDC, BTC, ETH, SOL, TRY (yalnızca borsada olanlar)
-- [ ] 5.6 Coin seçilince parite sekmeleri
-- [ ] 5.7 Sonuç satırı: sembol, parite, son fiyat, 24 sa değişim, 24 sa hacim (kote + USDT karşılığı)
-- [ ] 5.8 Seçilince görünüm: büyük grafik (15m/1H/4H/1D, Follow Line düğmesi), AI analizi, vadeli (yalnızca SWAP varsa), arz dedektörü, Takibe al, Ajana öncelik ver, Mentora sor
-- [ ] 5.9 Düşük hacimli paritede "likidite düşük" uyarısı
-- [ ] 5.10 İzin listesi değişmez; diğer paritelerde "analiz için; işlem izin listesinde değil"
-- [ ] 5.11 DEX: zincir seçici + CA kutusu; EVM 0x+40 hex, Solana base58 doğrulama
-- [ ] 5.12 DEX ad araması (OnchainOS token arama) + uyarı "Aynı isimli sahte tokenlar olabilir; kontrat adresini doğrula."
-- [ ] 5.13 DEX seçilince: token bilgisi (OnchainOS: fiyat, piyasa değeri, likidite, holder, dağılım), varsa grafik, güvenlik tablosu
-- [ ] 5.14 URL: /kesfet?tab=cex&s=AVAX-USDC ve /kesfet?tab=dex&chain=43114&ca=0x...
-- [ ] 5.15 Telegram /coin AVAX, /coin AVAX BTC
-- [ ] 5.16 Telegram /tara <zincir> <CA>
-- [ ] 5.17 Test + ekran görüntüsü + commit
+- [x] DONE 5.1 Keşfet üstünde iki sekme: CEX ve DEX; kart kuyruğu CEX altında
+- [x] DONE 5.2 CEX arama kutusu, yazdıkça öneri (sembol + ad)
+- [x] DONE 5.3 Öneri listesi klavyeyle gezilebilir; "/" aramaya odaklar
+- [x] DONE 5.4 Kaynak OKX spot enstrüman listesi (ATK), 1 saat önbellek, sabit liste yok
+- [x] DONE 5.5 (OKX'te AVAX-BTC yok; yalnızca borsada olanlar listeleniyor: AVAX-USDT/USDC/TRY, canlı doğrulandı) Pariteler USDT + USDC, BTC, ETH, SOL, TRY (yalnızca borsada olanlar)
+- [x] DONE 5.6 Coin seçilince parite sekmeleri
+- [x] DONE 5.7 Sonuç satırı: sembol, parite, son fiyat, 24 sa değişim, 24 sa hacim (kote + USDT karşılığı)
+- [x] DONE 5.8 Seçilince görünüm: büyük grafik (15m/1H/4H/1D, Follow Line düğmesi), AI analizi, vadeli (yalnızca SWAP varsa), arz dedektörü, Takibe al, Ajana öncelik ver, Mentora sor
+- [x] DONE 5.9 Düşük hacimli paritede "likidite düşük" uyarısı
+- [x] DONE 5.10 İzin listesi değişmez; diğer paritelerde "analiz için; işlem izin listesinde değil"
+- [x] DONE 5.11 DEX: zincir seçici + CA kutusu; EVM 0x+40 hex, Solana base58 doğrulama
+- [~] PARTIAL 5.12 (uyarı metni gösteriliyor; OnchainOS token araması Web3 anahtarı/x402 istediği için BLOCKED, kontrat adresiyle arama çalışıyor) DEX ad araması (OnchainOS token arama) + uyarı "Aynı isimli sahte tokenlar olabilir; kontrat adresini doğrula."
+- [~] PARTIAL 5.13 (güvenlik tablosu madde 6'da GoPlus + Honeypot.is ile; OnchainOS token bilgisi (fiyat/MC/likidite/holder dağılımı) anahtar gerektirdiği için BLOCKED; DEX grafiği yok) DEX seçilince: token bilgisi (OnchainOS: fiyat, piyasa değeri, likidite, holder, dağılım), varsa grafik, güvenlik tablosu
+- [x] DONE 5.14 URL: /kesfet?tab=cex&s=AVAX-USDC ve /kesfet?tab=dex&chain=43114&ca=0x...
+- [x] DONE 5.15 Telegram /coin AVAX, /coin AVAX BTC
+- [x] DONE 5.16 Telegram /tara <zincir> <CA>
+- [x] DONE 5.17 Test + ekran görüntüsü + commit
 
 ## Madde 6 – Güvenlik taraması tablosu
 - [ ] 6.1 DEX sekmesinde token seçilince açılır; Pro'da Terminal içinde panel
