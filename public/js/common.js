@@ -99,7 +99,7 @@
     oi: "Open interest (OI): vadeli piyasada açık duran toplam pozisyon büyüklüğü. Fiyatla birlikte sert artışı kaldıraçlı hareket işaretidir.",
     ls: "Long/short (L/S) oranı: long pozisyondaki hesapların short olanlara oranı. 1'in çok üstü long kalabalığı demektir. Üst trader oranı en büyük hesapların oranıdır.",
     fdv: "FDV: tüm arz dolaşımda olsaydı piyasa değeri. FDV/piyasa değeri oranı yüksekse ileride arz açılımı baskısı olabilir.",
-    kuru: "KURU ÇALIŞMA: emirler borsaya gitmez; canlı fiyatla kâğıt üzerinde simüle edilir.",
+    paper: "Paper trade: Gerçek piyasa verisi, sanal bakiye; emir borsaya gitmez.",
   };
   T.term = (key, label) => `<span class="term">${T.esc(label)}<button type="button" class="term-btn" data-term="${key}" aria-label="${T.esc(label)} nedir?" aria-expanded="false">?</button></span>`;
   document.addEventListener("click", (e) => {
@@ -154,7 +154,7 @@
       <ul class="nav-links">${links}</ul>
       <div class="nav-right">
         ${modeToggle()}
-        <span id="mode-badge" class="badge badge-dry" title="Emirler borsaya gitmez">KURU ÇALIŞMA</span>
+        <span id="mode-badge" class="badge badge-dry" title="Gerçek piyasa verisi, sanal bakiye; emir borsaya gitmez.">Paper trade</span>
         <button class="menu-btn" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="Menüyü aç">${T.icon("menu")}</button>
       </div>
     </nav>
@@ -171,7 +171,7 @@
   });
   const footer = document.createElement("footer");
   footer.className = "site-footer";
-  footer.innerHTML = `<div class="row"><span id="footer-dry" class="badge badge-dry">KURU ÇALIŞMA</span><span>Gerçek piyasa verisi, sınırlı bakiye, yatırım tavsiyesi değildir.</span></div><div class="row" style="margin-top:6px"><span id="footer-data" class="faint"></span></div>`;
+  footer.innerHTML = `<div class="row"><span id="footer-dry" class="badge badge-dry" title="Gerçek piyasa verisi, sanal bakiye; emir borsaya gitmez.">Paper trade</span><span>Gerçek piyasa verisi, sınırlı bakiye, yatırım tavsiyesi değildir.</span></div><div class="row" style="margin-top:6px"><span id="footer-data" class="faint"></span></div>`;
   document.body.append(footer);
   const toastWrap = document.createElement("div");
   toastWrap.className = "toast-wrap";
@@ -200,9 +200,9 @@
     try {
       const s = await T.api("/api/status");
       T.status = s;
-      const dry = s.tradingMode === "KURU";
+      const dry = s.tradingMode === "PAPER";
       const b = document.getElementById("mode-badge");
-      b.textContent = dry ? "KURU ÇALIŞMA" : "GERÇEK İŞLEM";
+      b.textContent = dry ? "Paper trade" : "CANLI İŞLEM";
       b.className = "badge " + (dry ? "badge-dry" : "badge-live");
       const fb = document.getElementById("footer-dry");
       fb.hidden = !dry;

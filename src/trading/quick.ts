@@ -118,7 +118,7 @@ export class QuickTrader {
     if (!px) return { ok: false, text: `${instId} için fiyat yok.` };
     const s: SimPosition = { id: crypto.randomUUID().slice(0, 8), instId, side, leverage: levC, marginUsdt: margin, entryPx: px, liqPx: roundPrice(liquidationPrice(side, px, levC)), openedAt: Date.now() };
     this.sims.push(s);
-    const msg = `SİMÜLASYON: ${instId.split("-")[0]} ${side} ${levC}x, teminat ${margin} USDT, giriş ${roundPrice(px)} (${src}), likidasyon ≈ ${s.liqPx}. OKX TR'de kaldıraç yoktur; bu bir kâğıt işlemdir.`;
+    const msg = `SİMÜLASYON: ${instId.split("-")[0]} ${side} ${levC}x, teminat ${margin} USDT, giriş ${roundPrice(px)} (${src}), likidasyon ≈ ${s.liqPx}. OKX TR'de kaldıraç yoktur; bu bir paper işlemdir.`;
     ctx.ledger.append("order", { durum: "SİMÜLASYON", instId, yon: side, kaldirac: levC, teminat: margin, giris: px, likidasyon: s.liqPx, via });
     ctx.store.addEvent("emir", msg, instId);
     return { ok: true, text: msg };

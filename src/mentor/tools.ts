@@ -17,7 +17,7 @@ export interface ToolDef {
 }
 
 export const TOOL_DEFS: ToolDef[] = [
-  { name: "durum", description: "Ajanın, işlem modunun (KURU/GERÇEK), risk skorunun ve verinin canlı olup olmadığının özeti.", parameters: { type: "object", properties: {} } },
+  { name: "durum", description: "Ajanın, işlem modunun (PAPER/CANLI), risk skorunun ve verinin canlı olup olmadığının özeti.", parameters: { type: "object", properties: {} } },
   { name: "adaylar", description: "Ajanın sıraladığı aday coinler (karar, fırsat, risk, gerekçe).", parameters: { type: "object", properties: { adet: { type: "number", description: "kaç aday (varsayılan 5)" } } } },
   { name: "aday_analizi", description: "Bir coin için teknik tablo, giriş/stop/hedef, R:R, risk bütçesine göre örnek boyut ve dikkat edilecekler.", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. SOL veya SOL-USDT" } }, required: ["sembol"] } },
   { name: "vadeli_durum", description: "Bir coinin vadeli piyasa durumu: funding, open interest, genel hesap ve üst trader L/S oranları, kalabalık taraf, manipülasyon şüphesi ve gerekçeler. Vadeli veri yalnızca analiz girdisidir.", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. BTC" } }, required: ["sembol"] } },
@@ -27,7 +27,7 @@ export const TOOL_DEFS: ToolDef[] = [
   { name: "listeye_ekle", description: "Bir coini takip listesine ekler (işlem açmaz).", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. SOL" } }, required: ["sembol"] } },
   { name: "listeden_cikar", description: "Bir coini takip listesinden çıkarır.", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. SOL" } }, required: ["sembol"] } },
   { name: "plan_olustur", description: "Takip listesinden (veya verilen sembollerden) limitler içinde dağılım tablosu hesaplar. Emir değildir.", parameters: { type: "object", properties: { semboller: { type: "array", items: { type: "string" }, description: "isteğe bağlı semboller" } } } },
-  { name: "portfoy", description: "Değer, nakit, açık pozisyonlar ve günlük K/Z.", parameters: { type: "object", properties: {} } },
+  { name: "portfoy", description: "Değer, nakit, açık pozisyonlar ve günlük PnL.", parameters: { type: "object", properties: {} } },
   { name: "butce_ayarla", description: "İşlem başına risk yüzdesini ayarlar (0.25-2). Onay gerekir.", parameters: { type: "object", properties: { risk_yuzde: { type: "number", description: "ör. 1" } }, required: ["risk_yuzde"] }, needsConfirm: true },
   { name: "bildirim_ayarla", description: "Telegram bildirimlerini ayarlar. Onay gerekir.", parameters: { type: "object", properties: { gelismeler: { type: "boolean", description: "takip edilen coin gelişmeleri" }, sessiz_dakika: { type: "number", description: "şu kadar dakika sessiz" } } }, needsConfirm: true },
   { name: "ajan_modu", description: "Otonom modu açar/kapatır veya ajanı duraklatır/devam ettirir. Onay gerekir.", parameters: { type: "object", properties: { otonom: { type: "boolean", description: "otonom mod" }, duraklat: { type: "boolean", description: "duraklat" } } }, needsConfirm: true },

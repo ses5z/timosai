@@ -32,7 +32,7 @@ test("tüm sayfalar 200, konsol hatası yok, 360 ve 1440 px'te yatay kaydırma y
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow, `${p} @${width}px yatay taşma`).toBeLessThanOrEqual(1);
       await expect(page.locator(".site-footer")).toContainText("yatırım tavsiyesi değildir");
-      await expect(page.locator("#mode-badge")).toHaveText("KURU ÇALIŞMA");
+      await expect(page.locator("#mode-badge")).toHaveText("Paper trade");
       await page.screenshot({ path: `${SHOTS}/${width}${p === "/" ? "-karsilama" : p.replace("/", "-")}.png`, fullPage: true });
       expect(errors, `${p} konsol hataları`).toEqual([]);
     }

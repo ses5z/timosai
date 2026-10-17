@@ -197,7 +197,7 @@
   }
   function posHtml(p) {
     if (!p) return `<h3>Pozisyon</h3><p class="kpi-small">Bu coinde açık pozisyon yok.</p>`;
-    return `<h3>Pozisyon <span class="badge ${p.mode === "KURU" ? "badge-dry" : "badge-live"}">${p.mode}</span></h3><div class="view-box"><b class="num ${T.cls(p.pnlUsdt)}">${F.signed(p.pnlUsdt, 3)} USDT (${F.pct(p.pnlPct)})</b><p class="kpi-small" style="margin:6px 0 0">Giriş ${F.price(p.entryPx)} · stop ${F.price(p.stopPx)} · hedef ${F.price(p.targetPx)} · ${F.num(p.costUsdt, 2)} USDT${p.trailing ? " · iz süren stop" : ""}</p></div>`;
+    return `<h3>Pozisyon <span class="badge ${p.mode === "PAPER" ? "badge-dry" : "badge-live"}">${p.mode}</span></h3><div class="view-box"><b class="num ${T.cls(p.pnlUsdt)}">${F.signed(p.pnlUsdt, 3)} USDT (${F.pct(p.pnlPct)})</b><p class="kpi-small" style="margin:6px 0 0">Giriş ${F.price(p.entryPx)} · stop ${F.price(p.stopPx)} · hedef ${F.price(p.targetPx)} · ${F.num(p.costUsdt, 2)} USDT${p.trailing ? " · iz süren stop" : ""}</p></div>`;
   }
   function closeDrawer() {
     $("#drawer-root").innerHTML = "";

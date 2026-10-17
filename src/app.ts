@@ -44,7 +44,7 @@ export function createApp(ctx: AppContext) {
     const mentor = ctx.extras.mentor?.status?.() ?? { active: "kural tabanlı", provider: "rule", ai: false };
     json(res, {
       agent: agent.status(),
-      dry: agent.trading.mode === "KURU",
+      dry: agent.trading.mode === "PAPER",
       tradingMode: agent.trading.mode,
       atkMode: ctx.env.atkMode,
       atkConnected: ctx.atk?.available() ?? false,

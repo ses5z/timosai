@@ -424,7 +424,7 @@ export class Agent {
       this.techFailures = 0;
       const slip = Math.abs(pos.entryPx - c.price) / c.price;
       if (slip > 0.015) this.tripBreaker(`aşırı slipaj: ${(slip * 100).toFixed(2)}% (${c.base})`);
-      const msg = `${t.mode === "KURU" ? "KURU" : "GERÇEK"} emir: ${c.base} ${pos.costUsdt.toFixed(2)} USDT @ ${roundPrice(pos.entryPx)}, stop ${pos.stopPx}, hedef ${pos.targetPx}. ${c.reason}`;
+      const msg = `${t.mode === "PAPER" ? "PAPER" : "CANLI"} emir: ${c.base} ${pos.costUsdt.toFixed(2)} USDT @ ${roundPrice(pos.entryPx)}, stop ${pos.stopPx}, hedef ${pos.targetPx}. ${c.reason}`;
       this.d.store.addEvent("emir", msg, c.instId);
       this.d.store.bus.publish("positions", this.positionsView());
       this.dev({ symbol: c.instId, kind: "pozisyon_açıldı", text: msg, critical: false });
@@ -576,7 +576,7 @@ export class Agent {
         day,
         "Günlük zarar eşiği aşıldı",
         "Bugünkü zarar uyarı eşiğini geçti. Hiçbir şey durdurulmadı; ajan sözleşme ve sert limitler içinde çalışmaya devam ediyor. Her işlemde stop zorunlu.",
-        [{ label: "Günlük K/Z", value: `${pnl.toFixed(2)} USDT`, limit: `uyarı eşiği -${L.dailyLossWarnUsdt} USDT` }],
+        [{ label: "Günlük PnL", value: `${pnl.toFixed(2)} USDT`, limit: `uyarı eşiği -${L.dailyLossWarnUsdt} USDT` }],
         rs.score,
       );
       this.dev({ symbol: "PORTFÖY", kind: "günlük_zarar", text: `Günlük zarar ${pnl.toFixed(2)} USDT; uyarı eşiği aşıldı. Ajan çalışmaya devam ediyor.`, critical: true });

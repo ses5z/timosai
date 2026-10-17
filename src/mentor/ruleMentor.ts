@@ -155,7 +155,7 @@ export class RuleMentor {
       const d = r.data as any;
       const pos = d.pozisyonlar.length ? d.pozisyonlar.map((p: any) => `${p.sembol} ${p.kz >= 0 ? "+" : ""}${p.kz} USDT`).join(", ") : "açık pozisyon yok";
       if (!detail) return { text: `Değer ${d.deger} USDT, bugün ${d.gunlukKZ >= 0 ? "+" : ""}${d.gunlukKZ} USDT. ${d.pozisyonlar.length ? `Açık: ${pos}.` : "Açık pozisyon yok."}` };
-      return { text: [`${d.mod === "KURU" ? "Kuru çalışma" : "Gerçek işlem"} modu. Değer ${d.deger} USDT, nakit ${d.nakit} USDT, bugünkü K/Z ${d.gunlukKZ >= 0 ? "+" : ""}${d.gunlukKZ} USDT.`, ...d.pozisyonlar.map((p: any) => `- ${p.sembol}: K/Z ${p.kz >= 0 ? "+" : ""}${p.kz} USDT, giriş ${p.giris}, stop ${p.stop}, hedef ${p.hedef}.`)].join("\n") };
+      return { text: [`${d.mod === "PAPER" ? "Paper trade" : "Canlı işlem"} modu. Değer ${d.deger} USDT, nakit ${d.nakit} USDT, bugünkü PnL ${d.gunlukKZ >= 0 ? "+" : ""}${d.gunlukKZ} USDT.`, ...d.pozisyonlar.map((p: any) => `- ${p.sembol}: PnL ${p.kz >= 0 ? "+" : ""}${p.kz} USDT, giriş ${p.giris}, stop ${p.stop}, hedef ${p.hedef}.`)].join("\n") };
     }
     if (/(listem|takip\s*listem|takip\s*ettiklerim)/.test(t)) {
       const r = await this.tools.call("listem", {});
@@ -178,8 +178,8 @@ export class RuleMentor {
     if (/(durum|ajan|nas[ıi]l\s*gidiyor|ne\s*yap[ıi]yor|risk)/.test(t)) {
       const r = await this.tools.call("durum", {});
       const d = r.data as any;
-      if (!detail) return { text: `Ajan ${d.ajan}, ${d.mod === "KURU" ? "kuru çalışma" : "gerçek işlem"}; ${d.acikPozisyon} açık pozisyon, risk skoru ${d.riskSkoru} (${d.riskDurumu}).` };
-      return { text: `Ajan ${d.ajan}, otonom mod ${d.otonom ? "açık" : "kapalı"}, ${d.mod === "KURU" ? "kuru çalışma" : "gerçek işlem"} modunda.\n${d.taramaSayisi} tarama yaptı, ${d.acikPozisyon} açık pozisyon, takipte ${d.takipSayisi} coin.\nRisk skoru ${d.riskSkoru} (${d.riskDurumu}). ${d.canliVeri ? "Veri canlı (OKX ATK)." : "Canlı veri yok, örnek veri kullanılıyor."}` };
+      if (!detail) return { text: `Ajan ${d.ajan}, ${d.mod === "PAPER" ? "paper trade" : "canlı işlem"}; ${d.acikPozisyon} açık pozisyon, risk skoru ${d.riskSkoru} (${d.riskDurumu}).` };
+      return { text: `Ajan ${d.ajan}, otonom mod ${d.otonom ? "açık" : "kapalı"}, ${d.mod === "PAPER" ? "paper trade" : "canlı işlem"} modunda.\n${d.taramaSayisi} tarama yaptı, ${d.acikPozisyon} açık pozisyon, takipte ${d.takipSayisi} coin.\nRisk skoru ${d.riskSkoru} (${d.riskDurumu}). ${d.canliVeri ? "Veri canlı (OKX ATK)." : "Canlı veri yok, örnek veri kullanılıyor."}` };
     }
     if (/(aday|f[ıi]rsat|[öo]neri|ke[şs]fet|ne\s*var)/.test(t)) {
       const r = await this.tools.call("adaylar", { adet: detail ? 6 : 3 });

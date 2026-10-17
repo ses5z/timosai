@@ -16,14 +16,14 @@ npm start              # http://localhost:3000
 
 - Node 20+ gerekir (TypeScript `tsx` ile doğrudan çalışır, derleme adımı yok).
 - `.env` yoksa uygulama çökmez; ilgili özellik "kapalı" görünür ve panel, boş satırları yalnızca adlarıyla gösterir.
-- Varsayılan `LIVE=false`: **KURU ÇALIŞMA**. Emir ATK'ya gitmez, canlı fiyatla kâğıt üzerinde simüle edilir.
+- Varsayılan `LIVE=false`: **Paper trade**. Emir ATK'ya gitmez, canlı fiyatla paper olarak simüle edilir.
 
 | Değişken | Açıklama |
 |---|---|
 | `ATK_MODE` | `live` (varsayılan) veya `mock` (örnek veri) |
 | `OKX_SITE` | `tr` (varsayılan) |
 | `LIVE` | `true` ve bakiye ≥ 1 USDT ise gerçek emir. İlk gerçek emri kullanıcı bilinçli açar. |
-| `AUTONOMOUS`, `SCAN_INTERVAL_SEC`, `PAPER_BALANCE_USDT` | Otonom mod, tarama aralığı (30 sn), kuru bakiye (30 USDT) |
+| `AUTONOMOUS`, `SCAN_INTERVAL_SEC`, `PAPER_BALANCE_USDT` | Otonom mod, tarama aralığı (30 sn), paper bakiye |
 | `QUICK_COMMANDS` | `false` (varsayılan): kullanıcı emir yolu yok. `true`: `/al /sat /kapat` ve kaldıraçlı simülasyon |
 | `OKX_API_KEY / OKX_API_SECRET / OKX_API_PASSPHRASE` | Yalnızca hesap ve emir için; piyasa verisi anahtarsız |
 | `MENTOR_PROVIDER`, `MENTOR_MODEL`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY` | Mentor (varsayılan `gemini-3.8-flash`) |
@@ -36,7 +36,7 @@ Sırlar ekrana, günlüğe, SSE'ye ve API yanıtlarına düşmez (maskeleme katm
 
 | Kontrol | Sonuç |
 |---|---|
-| ATK yolu | **(a) çalıştı**: `@okx_ai/okx-trade-mcp` 1.4.8 stdio sunucusu, `@modelcontextprotocol/sdk` istemcisiyle kendi sunucumuzun alt süreci. `--site tr`, kimlik ortam değişkenlerinden, kuru modda `--read-only`. (b) uzak OAuth ve (c) CLI'ye gerek kalmadı. |
+| ATK yolu | **(a) çalıştı**: `@okx_ai/okx-trade-mcp` 1.4.8 stdio sunucusu, `@modelcontextprotocol/sdk` istemcisiyle kendi sunucumuzun alt süreci. `--site tr`, kimlik ortam değişkenlerinden, paper modda `--read-only`. (b) uzak OAuth ve (c) CLI'ye gerek kalmadı. |
 | Araç listesi (`--modules market,news,smartmoney`) | 40 araç: `market_*` 20, `news_*` 9, `smartmoney_*` 10, `system_get_capabilities` |
 | SWAP verisi (TR) | `market_get_funding_rate`, `market_get_open_interest`, `market_get_oi_history`, `market_filter_oi_change` TR sitesinde anahtarsız çalışıyor; global siteye gerek yok |
 | OKX global Trading Statistics | Dört uç nokta `code:"0"` + `data` döndü (genel hesap L/S, üst trader hesap L/S, üst trader pozisyon L/S, taker hacmi). Binance yedeği kodda var, gerek kalmadı |
@@ -58,7 +58,7 @@ Sırlar ekrana, günlüğe, SSE'ye ve API yanıtlarına düşmez (maskeleme katm
 | Haber, smart money | ATK `news` / `smartmoney` | OAuth gerekli; yoksa veri yok |
 | Cüzdan dağılımı, OnchainOS güvenlik | OKX OnchainOS | Web3 anahtarı gerekli; yoksa veri yok |
 | Kilit açılımı (`config/unlocks.json`), önemli tarihler (`config/events.json`), proje güvenlik özeti | Elle, kaynak linkli | **ÖRNEK VERİ** |
-| Kaldıraçlı komutlar | Kâğıt işlem | **SİMÜLASYON** |
+| Kaldıraçlı komutlar | Paper işlem | **SİMÜLASYON** |
 
 ATK çağrı sayacına yalnızca ATK çağrıları sayılır. Public istekler ayrı sayılır.
 
@@ -80,7 +80,7 @@ Portlar ve uygulamaları (`src/ports.ts`; her biri için gerçek ve `Mock*`, `AT
 | `NewsFeed` | ATK `news_get_latest` (bildirim motoru içinde) | yok → "veri yok" |
 | `FundamentalsData` | `CoinGeckoFundamentals` | `MockFundamentals` |
 | `TokenSecurity` | `GoPlusSecurity`, `OnchainOsSecurity` | `MockTokenSecurity` |
-| `TradingClient` | `AtkTradingClient` (`LIVE=true`) | `MockTradingClient` (KURU). Kapı ikisinde de aynı |
+| `TradingClient` | `AtkTradingClient` (`LIVE=true`) | `MockTradingClient` (PAPER). Kapı ikisinde de aynı |
 | `DecisionProvider` | `RuleDecisionProvider` (`config/thresholds.json`) | — |
 | `Notifier` | `TelegramBot` (grafik PNG + metin) | `MockNotifier` / önizleme |
 | `SignalLedger` | sha256 zincirli kayıt | — |
@@ -129,7 +129,7 @@ Portlar ve uygulamaları (`src/ports.ts`; her biri için gerçek ve `Mock*`, `AT
   - BTC sert düşüşte tek "genel piyasa" mesajı.
 - **B. Hızlı komutlar** (`QUICK_COMMANDS=true` iken): `/al SOL 5`, `/sat SOL`, `/kapat SOL`. Komutun kendisi onaydır. Tutar 5 USDT'ye kırpılır ve bu söylenir. Zorunlu stop panelden ATR × k ya da % olarak ayarlanır. Günlükte `HIZLI` etiketi. `/l SOL 5x 20`, `/s ETH 3x 10` yalnızca **SİMÜLASYON**: SWAP fiyatı ATK'den, likidasyon fiyatı hesaplanır, gerçek emre dönüşmez. Bayrak kapalıyken `/api/quick` uç noktası yoktur (404).
 - **A. Hold raporu**: CoinGecko arzı (dolaşım/toplam/maks, FDV/piyasa değeri), kilit açılımı (ÖRNEK VERİ). Ana zincir coinlerinde cüzdan dağılımı uygulanmaz. Karar üç seçenekten biridir: "kısa vade trade edilebilir", "hold profiline uygun" ya da "ikisi de riskli". Mentor `hold_raporu`, Telegram `/hold`.
-- **S. Scam modülü katman 1** (DEX tokenları; OKX listeli coinlere uygulanmaz). Kaynak GoPlus `token_security`: honeypot, vergiler, satış engeli, mint, gizli sahip, bakiye değiştirme, transfer durdurma, kara liste, slipaj değiştirme, LP kilidi. Kural: honeypot → BLOCK; vergi > %10, mint, sahip yetkileri, kilitsiz LP → WARN; aksi PASS. Katman 2 (simülasyon) arayüzde hazır, kararda simülasyon kazanır. Erişim: Keşfet'te arama kutusu, Telegram `/tara`, mentor `token_tara`. Kararlar `SignalLedger`'a yazılır.
+- **S. Scam modülü katman 1** (DEX tokenları; OKX listeli coinlere uygulanmaz). Kaynak GoPlus `token_security`: honeypot, vergiler, satış engeli, mint, gizli sahip, bakiye değiştirme, transfer durdurma, kara liste, slipaj değiştirme, LP kilidi. Kural: honeypot → BLOCK; vergi > %10, mint, sahip yetkileri, kilitsiz LP → WARN; aksi PASS. Layer 2 (simülasyon) arayüzde hazır, kararda simülasyon kazanır. Erişim: Keşfet'te arama kutusu, Telegram `/tara`, mentor `token_tara`. Kararlar `SignalLedger`'a yazılır.
 - **Trend filtresi**: TimosAI'nin kendi ATR trend göstergesi (`src/indicators/atrTrend.ts`, `config/indicators.json`). Düşüş yönündeyken ajan long açmaz ve kararı "izle" yapar. Pozisyon yönetiminde iz süren stop seçeneği vardır (`trailMode: "atrTrend"`). Birim testi elle hesaplanmış fixture'la (`test/fixtures/atrtrend.json`).
 
 ## Avalanche (ProofAnchor)
@@ -176,7 +176,7 @@ Aday kartı ve takip bildirimleri grafik PNG'si ile gider (`node:zlib` ile bağ�
 Panel → **Senaryoyu başlat**:
 1. Canlı tarama.
 2. Vadeli durum kartı.
-3. Ajan kararı ve KURU spot emir.
+3. Ajan kararı ve PAPER spot emir.
 4. Sözleşmeye aykırı karar engellenir ve uyarı penceresi açılır.
 5. Hızlı komut (bayrak kapalıysa "kapalı" der).
 6. Takip edilen coin bildirimi Telegram'a düşer.
@@ -197,12 +197,12 @@ npm run test:e2e    # Playwright (bilgisayardaki Microsoft Edge ile; PW_CHANNEL=
 
 - "Saatte 6 emir" yeni girişlere uygulanır; stop/hedef/kısmi kâr çıkışları risk azalttığı için engellenmez.
 - Gerçek modda girişte borsaya bağlı stop/hedef konur. Breakeven, iz süren stop ve kısmi kâr ajan tarafından yönetilir; sonrasında kalan miktar için OCO yeniden kurulur.
-- Günlük K/Z = bugünkü (UTC) gerçekleşen + açık pozisyonların gerçekleşmemiş K/Z'si. Kuru bakiye 30 USDT, komisyon %0,1.
+- Günlük PnL = bugünkü (UTC) gerçekleşen + açık pozisyonların gerçekleşmemiş PnL'si. Paper bakiye config'ten, komisyon %0,1.
 - AlphaTrend (Kıvanç Özbilgiç) port edilmedi. TradingView sayfası açık kaynak olduğunu belirtiyor, ancak lisans başlığı ve kaynak kod sayfadan doğrulanamadı; doğrulama için gereken TradingView değerleri de alınamadı. Belgedeki kural gereği yerine kendi ATR trend filtremiz yazıldı.
 - `ava-labs/8004-boilerplate` yerine en basit uygun yol seçildi: kendi `DecisionLog` sözleşmemiz (kimlik olayı + özet + sonuç sicili). Mainnet'te resmi ERC-8004 registry adresleri mentorlardan alınınca entegre edilebilir.
 - Scam demosu için yalnızca GoPlus ile doğrulanmış temiz bir adres eklendi. Doğrulanmış gerçek bir honeypot adresi bulunamadı; uydurulmadı. `config/demo-tokens.json` → `honeypot` alanına eklenip `npm run scam:verify` ile doğrulanmalı.
 - Gemini varsayılan modeli resmi model sayfasına göre en güncel kararlı, ücretsiz katmanlı flash: `gemini-3.8-flash`.
-- Durum bellektedir; sunucu yeniden başlarsa kuru pozisyonlar, takip listesi ve sohbet sıfırlanır.
+- Durum bellektedir; sunucu yeniden başlarsa paper pozisyonlar, takip listesi ve sohbet sıfırlanır.
 - Git'te `user.name` tanımlı olmadığı için commit'ler depo içinde `yy04` adıyla atıldı.
 
 ## Yol haritası / bilinen eksikler

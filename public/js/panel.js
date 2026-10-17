@@ -9,15 +9,15 @@
     $("#eq-cash").textContent = F.usd(p.cash);
     $("#eq-open").textContent = `${p.positions.length} · ${F.usd(p.openNotional)}`;
     $("#eq-mode").textContent = p.mode;
-    $("#eq-mode").className = "badge " + (p.mode === "KURU" ? "badge-dry" : "badge-live");
+    $("#eq-mode").className = "badge " + (p.mode === "PAPER" ? "badge-dry" : "badge-live");
     T.lineChart($("#eq-chart"), p.equityHistory.map((x) => ({ v: x.equity, t: x.ts })), { label: "Değer çizgisi", fmt: (v) => F.num(v, 2), levels: [{ v: p.startEquity, label: "başlangıç", color: "var(--faint)" }], empty: "Değer çizgisi ilk taramalardan sonra oluşur." });
     renderPositions(p.positions);
     $("#risk-range").value = p.riskPct;
     $("#risk-val").textContent = "%" + p.riskPct;
     $("#risk-usdt").textContent = `Bu, işlem başına en fazla ≈ ${F.usd(p.riskBudgetUsdt, 3)} kayıp demek.`;
     const TAG = { ajan: "OTONOM", senaryo: "SENARYO", "hızlı": "HIZLI" };
-    const rows = p.trades.map((t) => `<tr><td>${F.time(t.ts)}</td><td>${T.esc(t.instId.replace("-USDT", ""))}</td><td>${t.side === "buy" ? "AL" : "SAT"}</td><td class="num">${F.price(t.px)}</td><td class="num">${F.num(t.notionalUsdt, 2)}</td><td class="num ${T.cls(t.pnl)}">${t.pnl == null ? "-" : F.signed(t.pnl, 3)}</td><td><span class="badge ${t.mode === "KURU" ? "badge-dry" : "badge-live"}">${t.mode}</span> <span class="badge badge-muted">${TAG[t.origin] || T.esc(t.origin)}</span></td><td class="pro-only">${T.esc(t.reason)}</td></tr>`).join("");
-    T.renderKeep($("#tr-wrap"), rows ? `<table><thead><tr><th>Saat</th><th>Coin</th><th>Yön</th><th class="num">Fiyat</th><th class="num">USDT</th><th class="num">K/Z</th><th>Mod</th><th class="pro-only">Gerekçe</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Henüz işlem yok. Ajan uygun sinyal görünce küçük bir emir açar.</div>`);
+    const rows = p.trades.map((t) => `<tr><td>${F.time(t.ts)}</td><td>${T.esc(t.instId.replace("-USDT", ""))}</td><td>${t.side === "buy" ? "AL" : "SAT"}</td><td class="num">${F.price(t.px)}</td><td class="num">${F.num(t.notionalUsdt, 2)}</td><td class="num ${T.cls(t.pnl)}">${t.pnl == null ? "-" : F.signed(t.pnl, 3)}</td><td><span class="badge ${t.mode === "PAPER" ? "badge-dry" : "badge-live"}">${t.mode}</span> <span class="badge badge-muted">${TAG[t.origin] || T.esc(t.origin)}</span></td><td class="pro-only">${T.esc(t.reason)}</td></tr>`).join("");
+    T.renderKeep($("#tr-wrap"), rows ? `<table><thead><tr><th>Saat</th><th>Coin</th><th>Yön</th><th class="num">Fiyat</th><th class="num">USDT</th><th class="num">PnL</th><th>Mod</th><th class="pro-only">Gerekçe</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Henüz işlem yok. Ajan uygun sinyal görünce küçük bir emir açar.</div>`);
   }
 
   function renderPositions(list) {
@@ -26,7 +26,7 @@
     $("#pos-list").innerHTML = list.map((p) => {
       const range = p.targetPx - p.stopPx, prog = range > 0 ? Math.max(0, Math.min(100, ((p.lastPx - p.stopPx) / range) * 100)) : 50;
       return `<article class="card" style="padding:14px;margin-bottom:10px;box-shadow:none">
-        <div class="card-head" style="margin-bottom:6px"><h3>${T.esc(p.instId.replace("-USDT", ""))} <span class="badge ${p.mode === "KURU" ? "badge-dry" : "badge-live"}">${p.mode}</span>${p.trailing ? ' <span class="badge badge-ok">iz süren stop</span>' : ""}${p.partialDone ? ' <span class="badge badge-muted">kısmi kâr alındı</span>' : ""}</h3>
+        <div class="card-head" style="margin-bottom:6px"><h3>${T.esc(p.instId.replace("-USDT", ""))} <span class="badge ${p.mode === "PAPER" ? "badge-dry" : "badge-live"}">${p.mode}</span>${p.trailing ? ' <span class="badge badge-ok">iz süren stop</span>' : ""}${p.partialDone ? ' <span class="badge badge-muted">kısmi kâr alındı</span>' : ""}</h3>
         <b class="num ${T.cls(p.pnlUsdt)}">${F.signed(p.pnlUsdt, 3)} USDT (${F.pct(p.pnlPct)})</b></div>
         <div class="kpi-row kpi-small"><span>Giriş <b class="num">${F.price(p.entryPx)}</b></span><span>Son <b class="num">${F.price(p.lastPx)}</b></span><span>${T.term("stop", "Stop")} <b class="num">${F.price(p.stopPx)}</b></span><span>Hedef <b class="num">${F.price(p.targetPx)}</b></span><span>Büyüklük <b class="num">${F.num(p.costUsdt, 2)} USDT</b></span></div>
         <div class="bar ${prog < 25 ? "bad" : prog < 50 ? "warn" : ""}" style="margin-top:10px" role="img" aria-label="Stop ile hedef arasında konum yüzde ${Math.round(prog)}"><span style="width:${prog}%"></span></div>
@@ -90,7 +90,7 @@
     const rb = document.getElementById("resume-btn");
     if (rb) rb.addEventListener("click", async () => { await T.api("/api/agent/resume", { body: {} }); T.refreshStatus(); T.toast("Ajan devam ediyor."); });
     $("#ag-pause").checked = a.paused;
-    $("#ag-info").innerHTML = `${a.scanCount} tarama · son ${a.lastScanAt ? F.ago(a.lastScanAt) : "-"} · her ${a.scanIntervalSec} sn · ${s.liveData ? '<span class="up">canlı veri</span>' : '<span class="down">canlı veri yok</span>'} · ${T.term("kuru", s.tradingMode)}`;
+    $("#ag-info").innerHTML = `${a.scanCount} tarama · son ${a.lastScanAt ? F.ago(a.lastScanAt) : "-"} · her ${a.scanIntervalSec} sn · ${s.liveData ? '<span class="up">canlı veri</span>' : '<span class="down">canlı veri yok</span>'} · ${T.term("paper", s.tradingMode)}`;
     $("#ag-mentor").textContent = `Mentor: ${s.mentor.ai ? "yapay zeka (" + s.mentor.active + ")" : "kural tabanlı"}`;
     const n = [];
     if (!s.liveData) n.push(`<div class="notice notice-warn">${T.icon("warn")}<span>${s.atkMode === "mock" ? "Örnek veri modu (ATK_MODE=mock): canlı veri kapalı." : "Canlı veri yok: ATK'ya ulaşılamadı, örnek veri gösteriliyor."}</span></div>`);

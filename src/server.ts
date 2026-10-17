@@ -11,7 +11,7 @@ await installExtensions(ctx);
 const app = createApp(ctx);
 
 const server = app.listen(env.port, async () => {
-  log.info(`TimosAI http://localhost:${env.port} (ATK=${env.atkMode}, ${env.live ? "LIVE istendi" : "KURU ÇALIŞMA"})`);
+  log.info(`TimosAI http://localhost:${env.port} (ATK=${env.atkMode}, ${env.live ? "LIVE istendi" : "Paper trade"})`);
   if (!env.envFileFound) log.warn(".env bulunamadı; anahtar isteyen özellikler kapalı görünecek.");
   else if (ctx.missingEnv.length) log.info(`.env içinde boş satırlar: ${ctx.missingEnv.join(", ")}`);
   await maybeEnableLiveTrading(ctx);

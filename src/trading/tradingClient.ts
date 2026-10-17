@@ -1,4 +1,4 @@
-// TradingClient: SERT LİMİT KAPISI burada. Kuru (Mock) ve gerçek (Atk) uygulamalar aynı kapıdan geçer.
+// TradingClient: SERT LİMİT KAPISI burada. Paper (Mock) ve canlı (Atk) uygulamalar aynı kapıdan geçer.
 // Kullanıcı emir yolu yoktur; bu sınıfı yalnızca ajan (ve deterministik senaryo) çağırır.
 import crypto from "node:crypto";
 import type { AtkCaller } from "../atk/mcpClient.js";
@@ -6,7 +6,7 @@ import type { SignalLedger } from "../ledger/signalLedger.js";
 import { round, roundPrice } from "../util/math.js";
 import { assertToolAllowed, type HardLimits } from "./hardLimits.js";
 
-export type ExecMode = "KURU" | "GERÇEK";
+export type ExecMode = "PAPER" | "CANLI";
 
 export interface EntryRequest {
   instId: string;
@@ -174,7 +174,7 @@ export abstract class TradingClient {
   dailyRealized(): number {
     return this.realizedByDay.get(new Date().toISOString().slice(0, 10)) ?? 0;
   }
-  /** Günlük K/Z = bugünkü gerçekleşen + açık pozisyonların gerçekleşmemiş K/Z'si. */
+  /** Günlük PnL = bugünkü gerçekleşen + açık pozisyonların gerçekleşmemiş PnL'si. */
   dailyPnl(): number {
     return this.dailyRealized() + this.unrealizedPnl();
   }
@@ -197,9 +197,9 @@ export abstract class TradingClient {
   protected async onStopMoved(_pos: Position): Promise<void> {}
 }
 
-/** MockTradingClient: KURU ÇALIŞMA. Emir ATK'ya gitmez; canlı fiyatla simüle edilir. */
+/** MockTradingClient: Paper trade. Emir ATK'ya gitmez; canlı fiyatla simüle edilir. */
 export class MockTradingClient extends TradingClient {
-  readonly mode = "KURU" as const;
+  readonly mode = "PAPER" as const;
   private cash: number;
 
   constructor(limits: HardLimits, ledger: SignalLedger, startEquity: number) {
@@ -227,7 +227,7 @@ export class MockTradingClient extends TradingClient {
       openedAt: Date.now(),
       partialDone: false,
       trailing: false,
-      mode: "KURU",
+      mode: "PAPER",
       reason: req.reason,
       realizedPnl: 0,
       lastPx: px,
@@ -242,9 +242,9 @@ export class MockTradingClient extends TradingClient {
   }
 }
 
-/** AtkTradingClient: GERÇEK emir. Yalnızca LIVE=true ve bakiye ≥ asgari iken kullanılır. */
+/** AtkTradingClient: CANLI emir. Yalnızca LIVE=true ve bakiye ≥ asgari iken kullanılır. */
 export class AtkTradingClient extends TradingClient {
-  readonly mode = "GERÇEK" as const;
+  readonly mode = "CANLI" as const;
   private balance = 0;
   private balanceAt = 0;
   private lot = new Map<string, { lotSz: number; minSz: number }>();
@@ -338,7 +338,7 @@ export class AtkTradingClient extends TradingClient {
       openedAt: Date.now(),
       partialDone: false,
       trailing: false,
-      mode: "GERÇEK",
+      mode: "CANLI",
       reason: req.reason,
       realizedPnl: 0,
       lastPx: avgPx,

@@ -1,5 +1,5 @@
 // Deterministik demo: ajan tarar → karar → ajan emir verir → sözleşmeye aykırı karar engellenir (uyarı penceresi) → bildirim.
-// Her zaman KURU çalışır: ana istemci gerçekse ayrı bir kâğıt ajan kullanılır.
+// Her zaman PAPER çalışır: ana istemci gerçekse ayrı bir paper ajan kullanılır.
 import { Agent } from "./agent/agent.js";
 import { RuleDecisionProvider } from "./agent/decisionProvider.js";
 import type { AppContext } from "./context.js";
@@ -30,7 +30,7 @@ export class Scenario {
 
   private agent(): Agent {
     const main = this.ctx.agent;
-    if (main.trading.mode === "KURU") return main;
+    if (main.trading.mode === "PAPER") return main;
     const sandbox = new Agent({ ...main.d, trading: new MockTradingClient(this.ctx.limits, this.ctx.ledger, this.ctx.env.paperBalanceUsdt), decision: new RuleDecisionProvider(this.ctx.thresholds) });
     sandbox.candidates = new Map(main.candidates);
     sandbox.prices = new Map(main.prices);
@@ -54,7 +54,7 @@ export class Scenario {
     const total = 8;
     try {
       const agent = this.agent();
-      const sandboxNote = agent === this.ctx.agent ? "" : " (gerçek mod açık olduğu için ayrı kâğıt hesapta)";
+      const sandboxNote = agent === this.ctx.agent ? "" : " (gerçek mod açık olduğu için ayrı paper hesapta)";
       this.emit({ step: 1, total, title: "Canlı tarama", text: `ATK'den fiyat, mum, RSI, order book, funding ve OI; OKX vadeli istatistikleri${sandboxNote}.` });
       await agent.scanOnce();
       await this.wait();

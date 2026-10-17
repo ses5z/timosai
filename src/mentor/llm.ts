@@ -1,4 +1,4 @@
-// Yapay zeka mentorları: GeminiMentor (varsayılan) ve ClaudeMentor. Harici SDK yok, yalnızca fetch.
+// AI mentorları: GeminiMentor (varsayılan) ve ClaudeMentor. Harici SDK yok, yalnızca fetch.
 // Araç döngüsü en fazla 4 tur; araç sonuçları <durum_verisi> bloğunda veri olarak verilir.
 import type { MentorTools } from "./tools.js";
 import { activeToolDefs } from "./tools.js";

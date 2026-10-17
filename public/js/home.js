@@ -40,7 +40,7 @@
     } catch {}
   }
   function strip(s) {
-    $("#live-strip").innerHTML = `<span>Ajan: ${T.esc(s.agent.state)}</span><span>${s.agent.scanCount} tarama</span><span>${s.liveData ? "Canlı OKX verisi" : "Örnek veri"}</span><span>${s.tradingMode === "KURU" ? "Kuru çalışma" : "Gerçek işlem"}</span>`;
+    $("#live-strip").innerHTML = `<span>Ajan: ${T.esc(s.agent.state)}</span><span>${s.agent.scanCount} tarama</span><span>${s.liveData ? "Canlı OKX verisi" : "Örnek veri"}</span><span>${s.tradingMode === "PAPER" ? "Paper trade" : "Canlı işlem"}</span>`;
   }
   T.on("status", strip);
   texture();

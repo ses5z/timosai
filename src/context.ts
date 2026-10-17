@@ -50,7 +50,7 @@ export function loadWatchlist(file = path.resolve(process.cwd(), "config/watchli
     const j = JSON.parse(fs.readFileSync(file, "utf8"));
     return (j.pairs as WatchPair[]).filter((p) => p.instId.endsWith("-USDT"));
   } catch {
-    return [{ instId: "BTC-USDT", category: "Katman 1" }, { instId: "ETH-USDT", category: "Katman 1" }, { instId: "SOL-USDT", category: "Katman 1" }];
+    return [{ instId: "BTC-USDT", category: "Layer 1" }, { instId: "ETH-USDT", category: "Layer 1" }, { instId: "SOL-USDT", category: "Layer 1" }];
   }
 }
 
@@ -78,7 +78,7 @@ export function createContext(env: AppEnv, opts: ContextOptions = {}): AppContex
     atk = new AtkMcpClient(
       {
         site: env.okxSite,
-        // Kuru modda ATK sunucusu salt okuma bayrağıyla açılır: emir aracı hiç yüklenmez.
+        // Paper modda ATK sunucusu salt okuma bayrağıyla açılır: emir aracı hiç yüklenmez.
         readOnly: !env.live,
         credentials: hasOkxKeys(env) ? env.okx : undefined,
       },
@@ -116,28 +116,28 @@ export function createContext(env: AppEnv, opts: ContextOptions = {}): AppContex
   return { env, store, ledger, warnings, limits, thresholds, contract, watchlist, market, mock, derivatives, derivConfig, fundamentals: env.atkMode === "live" ? new CoinGeckoFundamentals() : new MockFundamentals(), scanner: new ScamScanner(env.atkMode === "live" ? [new GoPlusSecurity(), new OnchainOsSecurity()] : [new MockTokenSecurity()]), atk, agent, proof: new NoopProofAnchor(), missingEnv: missingEnvLines(env), extras: {} };
 }
 
-/** LIVE=true ise ve koşullar uygunsa gerçek işlem istemcisine geçer; değilse KURU kalır. */
+/** LIVE=true ise ve koşullar uygunsa canlı işlem istemcisine geçer; değilse PAPER kalır. */
 export async function maybeEnableLiveTrading(ctx: AppContext): Promise<void> {
   const { env } = ctx;
   if (!env.live) {
-    ctx.store.addEvent("bilgi", "KURU ÇALIŞMA: emirler ATK'ya gitmez, canlı fiyatla simüle edilir.");
+    ctx.store.addEvent("bilgi", "Paper trade: emirler ATK'ya gitmez, canlı fiyatla simüle edilir.");
     return;
   }
   if (!ctx.atk || !hasOkxKeys(env)) {
-    ctx.store.addEvent("uyarı", "LIVE=true ama OKX API anahtarları eksik; KURU ÇALIŞMA sürüyor.");
+    ctx.store.addEvent("uyarı", "LIVE=true ama OKX API anahtarları eksik; Paper trade sürüyor.");
     return;
   }
   const live = new AtkTradingClient(ctx.limits, ctx.ledger, ctx.atk, 0);
   try {
     const bal = await live.refreshBalance(true);
     if (bal < ctx.limits.minBalanceForLiveUsdt) {
-      ctx.store.addEvent("uyarı", `Bakiye ${bal.toFixed(2)} USDT; gerçek emir için en az ${ctx.limits.minBalanceForLiveUsdt} USDT gerekli. KURU ÇALIŞMA sürüyor.`);
+      ctx.store.addEvent("uyarı", `Bakiye ${bal.toFixed(2)} USDT; gerçek emir için en az ${ctx.limits.minBalanceForLiveUsdt} USDT gerekli. Paper trade sürüyor.`);
       return;
     }
     ctx.agent.setTrading(live);
-    ctx.store.addEvent("uyarı", `GERÇEK İŞLEM AÇIK: bakiye ${bal.toFixed(2)} USDT. Sert limitler: tek emir ≤ ${ctx.limits.maxOrderNotionalUsdt} USDT.`);
-    log.warn("GERÇEK İŞLEM modu etkin.");
+    ctx.store.addEvent("uyarı", `CANLI İŞLEM AÇIK: bakiye ${bal.toFixed(2)} USDT. Sert limitler: tek emir ≤ ${ctx.limits.maxOrderNotionalUsdt} USDT.`);
+    log.warn("CANLI İŞLEM modu etkin.");
   } catch (e) {
-    ctx.store.addEvent("uyarı", `Bakiye okunamadı (${(e as Error).message}); KURU ÇALIŞMA sürüyor.`);
+    ctx.store.addEvent("uyarı", `Bakiye okunamadı (${(e as Error).message}); Paper trade sürüyor.`);
   }
 }

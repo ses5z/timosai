@@ -64,12 +64,12 @@ test("AtkTradingClient izin dışı aracı ATK'ya iletmez", async () => {
   assert.deepEqual(calls, []);
 });
 
-test("kuru modda emir ATK'ya gitmez, günlüğe KURU yazılır", async () => {
+test("paper modda emir ATK'ya gitmez, günlüğe PAPER yazılır", async () => {
   const { t, ledger } = mkTrading();
   await t.openPosition(req());
-  assert.equal(t.mode, "KURU");
+  assert.equal(t.mode, "PAPER");
   const orders = ledger.list(["order"]);
-  assert.equal(orders[0].data.durum, "KURU");
+  assert.equal(orders[0].data.durum, "PAPER");
   assert.equal(ledger.atkStats().total, 0);
 });
 

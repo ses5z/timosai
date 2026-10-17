@@ -5,7 +5,7 @@ import { Scenario } from "../../src/scenario.js";
 import { GeminiMentor } from "../../src/mentor/llm.js";
 import { MentorTools } from "../../src/mentor/tools.js";
 
-test("senaryo: tarar, KURU emir verir, riskli kararı engeller ve uyarı açar", async () => {
+test("senaryo: tarar, PAPER emir verir, riskli kararı engeller ve uyarı açar", async () => {
   const ctx = mkCtx({ AUTONOMOUS: "false" });
   const warnings: string[] = [];
   ctx.warnings.onWarning((w) => warnings.push(w.text));
@@ -13,7 +13,7 @@ test("senaryo: tarar, KURU emir verir, riskli kararı engeller ve uyarı açar",
   assert.equal(steps.length, 8);
   assert.equal(steps.at(-1)!.done, true);
   assert.equal(ctx.agent.trading.listPositions().length, 1);
-  assert.equal(ctx.agent.trading.mode, "KURU");
+  assert.equal(ctx.agent.trading.mode, "PAPER");
   assert.ok(warnings.some((w) => w.startsWith("Ajan şu emri sözleşmeye aykırı buldu ve vermedi")));
   assert.equal(ctx.store.follows.length, 1);
   // ikinci çalıştırmada da uyarı çıkar (senaryoya özel anahtar)

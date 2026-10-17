@@ -96,7 +96,7 @@ test("ajan: örnek veriyle tarar, kuyruk üretir, sözleşmeye aykırı kararı 
   assert.equal(ctx.agent.trading.listPositions().length, 0);
 });
 
-test("ajan: uygun kararda KURU emir verir ve stop'ta kapatır; zarardan sonra çalışmaya devam eder", async () => {
+test("ajan: uygun kararda PAPER emir verir ve stop'ta kapatır; zarardan sonra çalışmaya devam eder", async () => {
   const ctx = mkCtx({ AUTONOMOUS: "false" });
   await ctx.agent.scanOnce();
   const base = ctx.agent.queue()[0];

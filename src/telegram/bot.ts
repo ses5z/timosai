@@ -363,7 +363,7 @@ export class TelegramBot implements Notifier {
       case "/durum": {
         const s = a.status();
         const rs = a.riskScore();
-        return void (await this.send(`Ajan ${s.state}, otonom ${s.autonomous ? "açık" : "kapalı"}, ${s.mode === "KURU" ? "KURU ÇALIŞMA" : "GERÇEK İŞLEM"}.\n${s.scanCount} tarama, ${a.trading.listPositions().length} açık pozisyon.\nRisk skoru ${rs.score} (${rs.level}). ${s.liveData ? "Veri canlı." : "Canlı veri yok."}`));
+        return void (await this.send(`Ajan ${s.state}, otonom ${s.autonomous ? "açık" : "kapalı"}, ${s.mode === "PAPER" ? "Paper trade" : "CANLI İŞLEM"}.\n${s.scanCount} tarama, ${a.trading.listPositions().length} açık pozisyon.\nRisk skoru ${rs.score} (${rs.level}). ${s.liveData ? "Veri canlı." : "Canlı veri yok."}`));
       }
       case "/portfoy": {
         const t = a.trading;
