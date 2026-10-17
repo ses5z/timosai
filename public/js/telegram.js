@@ -6,7 +6,7 @@
     { dir: "in", text: "/kesfet", ts: Date.now() - 60000, sent: true, sample: true },
     { dir: "out", text: "SOL · Katman 1\n105,08 (+1,2% 24 sa)\n▃▄▄▅▄▆▆▇▆▇██▇██▇\nFırsat 68 · Risk 31 · ajan: aç", buttons: ["💔 Geç", "❤️ Takibe al"], ts: Date.now() - 58000, sent: false, sample: true },
   ];
-  const msg = (m) => `<div class="tg-msg ${m.dir}">${T.esc(m.text)}${m.buttons && m.buttons.length ? `<div class="tg-btns">${m.buttons.map((b) => `<span>${T.esc(b)}</span>`).join("")}</div>` : ""}<small>${T.fmt.time(m.ts)}${m.sample ? " · örnek" : m.dir === "out" && !m.sent ? " · gönderilmedi" : ""}</small></div>`;
+  const msg = (m) => `<div class="tg-msg ${m.dir}">${m.photo ? `<img src="${T.esc(m.photo)}" alt="Grafik" class="tg-photo" loading="lazy">` : ""}${T.esc(m.text)}${m.buttons && m.buttons.length ? `<div class="tg-btns">${m.buttons.map((b) => `<span>${T.esc(b)}</span>`).join("")}</div>` : ""}<small>${T.fmt.time(m.ts)}${m.sample ? " · örnek" : m.dir === "out" && !m.sent ? " · gönderilmedi" : ""}</small></div>`;
   let items = [];
   function render() {
     const list = items.length ? items : SAMPLE;

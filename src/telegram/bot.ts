@@ -8,6 +8,8 @@ import { normSymbol } from "../mentor/tools.js";
 import { NotifyPolicy } from "./notifyPolicy.js";
 import { log, mask } from "../util/log.js";
 import { sparkline } from "../util/math.js";
+import type { Candidate } from "../ports.js";
+import { renderLineChartPng } from "./chartPng.js";
 
 const HEART = "❤️";
 const BROKEN = "💔";
@@ -15,6 +17,7 @@ const BROKEN = "💔";
 export interface PreviewMsg {
   dir: "in" | "out";
   text: string;
+  photo?: string; // önizleme için grafik adresi
   buttons?: string[];
   ts: number;
   sent: boolean;
@@ -36,6 +39,33 @@ export function splitMessage(text: string, max = 4096): string[] {
 }
 
 type Btn = { text: string; data: string };
+
+export const CAPTION_MAX = 1024;
+
+export function clampCaption(text: string, max = CAPTION_MAX): string {
+  return text.length <= max ? text : text.slice(0, max - 1).trimEnd() + "…";
+}
+
+/** Aday kartı başlığı: sembol, fiyat, 24 sa, fırsat/risk, tek cümle gerekçe. */
+export function candidateCaption(c: Candidate, lead?: string): string {
+  const lines = [
+    ...(lead ? [lead, ""] : []),
+    `${c.base} · ${c.category}`,
+    `Fiyat ${c.price} (${c.change24hPct >= 0 ? "+" : ""}${c.change24hPct}% 24 sa)`,
+    `Fırsat ${c.opportunity} · Risk ${c.risk} · ajan: ${c.decision}`,
+    `Giriş ${c.entry} · Stop ${c.stop} · Hedef ${c.target}`,
+    c.reason,
+  ];
+  return clampCaption(lines.join("\n"));
+}
+
+export function candidateChart(c: Candidate, width = 800, height = 450): Buffer {
+  return renderLineChartPng(c.spark.slice(-60), [
+    { v: c.entry, kind: "entry" },
+    { v: c.stop, kind: "stop" },
+    { v: c.target, kind: "target" },
+  ], width, height);
+}
 
 export class TelegramBot implements Notifier {
   readonly name = "telegram";
@@ -70,11 +100,13 @@ export class TelegramBot implements Notifier {
   }
 
   /** Telegram Bot API çağrısı; 429'da retry_after kadar bekleyip bir kez yeniden dener. */
-  async api(method: string, body: Record<string, unknown> = {}, attempt = 0): Promise<any> {
+  async api(method: string, body: Record<string, unknown> | FormData = {}, attempt = 0): Promise<any> {
+    const multipart = body instanceof FormData;
     const res = await this.f(`https://api.telegram.org/bot${this.opts.token}/${method}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
+      // multipart'ta sınır (boundary) başlığını fetch kendisi koyar
+      headers: multipart ? undefined : { "content-type": "application/json" },
+      body: multipart ? body : JSON.stringify(body),
       signal: AbortSignal.timeout(((this.opts.pollTimeoutSec ?? 25) + 10) * 1000),
     });
     const data: any = await res.json().catch(() => ({}));
@@ -123,6 +155,48 @@ export class TelegramBot implements Notifier {
     }
   }
 
+  /**
+   * Grafik fotoğrafı + başlık + satır içi düğmeler tek mesajda (sendPhoto, multipart).
+   * Başarısız olursa nedeni (maskeli) loglanır ve aynı içerik sparkline'lı metin olarak gider.
+   */
+  async sendPhoto(png: Buffer, caption: string, buttons: Btn[][] | undefined, fallbackText: string, previewUrl?: string): Promise<boolean> {
+    const cap = clampCaption(caption);
+    const flat = buttons?.flat().map((b) => b.text);
+    if (!this.enabled() || !this.opts.allowedUserId) {
+      this.pushPreview({ dir: "out", text: cap, photo: previewUrl, buttons: flat, sent: false });
+      return false;
+    }
+    try {
+      const form = new FormData();
+      form.append("chat_id", String(this.opts.allowedUserId));
+      form.append("caption", cap);
+      if (buttons?.length) form.append("reply_markup", JSON.stringify({ inline_keyboard: buttons.map((row) => row.map((b) => ({ text: b.text, callback_data: b.data }))) }));
+      form.append("photo", new Blob([new Uint8Array(png)], { type: "image/png" }), "grafik.png");
+      await this.api("sendPhoto", form);
+      this.sent++;
+      this.pushPreview({ dir: "out", text: cap, photo: previewUrl, buttons: flat, sent: true });
+      return true;
+    } catch (e) {
+      this.lastError = (e as Error).message;
+      log.warn(`Telegram sendPhoto başarısız, metne düşülüyor: ${this.lastError}`);
+      return this.send(fallbackText, buttons);
+    }
+  }
+
+  /** Aday için grafikli mesaj; grafik üretilemezse metin. */
+  async sendCandidatePhoto(c: Candidate, buttons: Btn[][] | undefined, lead?: string): Promise<boolean> {
+    const caption = candidateCaption(c, lead);
+    const fallback = clampCaption(`${caption}\n${sparkline(c.spark, 16)}`, 4096);
+    let png: Buffer;
+    try {
+      png = candidateChart(c);
+    } catch (e) {
+      log.warn(`Grafik üretilemedi (${c.instId}), metin gönderiliyor: ${(e as Error).message}`);
+      return this.send(fallback, buttons);
+    }
+    return this.sendPhoto(png, caption, buttons, fallback, `/api/telegram/chart/${c.instId}.png`);
+  }
+
   /** Notifier portu: politika izin verirse gönderir. */
   async notify(msg: NotifyMessage): Promise<boolean> {
     const d = this.policy.decide(msg, {
@@ -132,6 +206,9 @@ export class TelegramBot implements Notifier {
     });
     if (!d.send) return false;
     const buttons = msg.buttons?.length ? [msg.buttons.slice(0, 2)] : undefined;
+    // Takip edilen coin gelişmelerinde mini grafik eklenir.
+    const c = msg.symbol ? this.ctx.agent.candidates.get(msg.symbol) : undefined;
+    if (c && msg.kind !== "chat" && msg.kind !== "warning" && this.ctx.store.follows.includes(c.instId)) return this.sendCandidatePhoto(c, buttons, msg.text);
     return this.send(msg.text, buttons);
   }
 
@@ -283,14 +360,7 @@ export class TelegramBot implements Notifier {
     const st = this.ctx.store;
     const c = this.ctx.agent.queue().find((x) => !st.passed.has(x.instId) && !st.follows.includes(x.instId) && x.decision !== "ele") ?? this.ctx.agent.queue().find((x) => !st.passed.has(x.instId) && !st.follows.includes(x.instId));
     if (!c) return void (await this.send("Şimdilik bakılacak yeni aday kalmadı."));
-    const text = [
-      `${c.base} · ${c.category}`,
-      `${c.price} (${c.change24hPct >= 0 ? "+" : ""}${c.change24hPct}% 24 sa)`,
-      sparkline(c.spark, 16),
-      `Fırsat ${c.opportunity} · Risk ${c.risk} · ajan: ${c.decision}`,
-      c.reason,
-    ].join("\n");
-    await this.send(text, [[{ text: `${BROKEN} Geç`, data: `pass:${c.instId}` }, { text: `${HEART} Takibe al`, data: `like:${c.instId}` }]]);
+    await this.sendCandidatePhoto(c, [[{ text: `${BROKEN} Geç`, data: `pass:${c.instId}` }, { text: `${HEART} Takibe al`, data: `like:${c.instId}` }]]);
   }
 
   async handleCallback(data: string): Promise<void> {

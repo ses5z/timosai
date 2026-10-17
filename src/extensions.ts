@@ -3,7 +3,7 @@ import type express from "express";
 import type { AppContext } from "./context.js";
 import { MentorService } from "./mentor/mentorService.js";
 import { Scenario } from "./scenario.js";
-import { TelegramBot } from "./telegram/bot.js";
+import { TelegramBot, candidateChart } from "./telegram/bot.js";
 
 export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typeof fetch } = {}): Promise<void> {
   ctx.extras.routes = ctx.extras.routes ?? [];
@@ -34,6 +34,13 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
       if (scenario.running) return res.status(409).json({ error: "Senaryo zaten çalışıyor." });
       void scenario.start();
       res.json({ ok: true });
+    });
+    app.get("/api/telegram/chart/:file", (req, res) => {
+      const id = req.params.file.replace(/\.png$/, "");
+      const c = ctx.agent.candidates.get(id);
+      if (!c) return res.status(404).json({ error: "bulunamadı" });
+      res.type("image/png").setHeader("Cache-Control", "no-store");
+      res.send(candidateChart(c, 640, 360));
     });
     app.get("/api/telegram", (_req, res) => res.json({ status: bot.status(), preview: bot.preview.slice(-20), settings: ctx.store.settings.notifications }));
     app.get("/api/scenario", (_req, res) => res.json({ running: scenario.running, steps: scenario.history() }));

@@ -83,7 +83,7 @@ export class RuleDecisionProvider implements DecisionProvider {
       price,
       change24hPct: round(inp.ticker.change24hPct, 2),
       volUsdt24h: Math.round(inp.ticker.volUsdt24h),
-      spark: inp.candles.slice(-48).map((x) => x.close),
+      spark: inp.candles.slice(-60).map((x) => x.close),
       atr: s.atr,
       atrPct: round(s.atrPct, 2),
       rsi: s.rsi === null ? null : round(s.rsi, 1),
