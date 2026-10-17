@@ -301,3 +301,20 @@ test("Güncelleme2 madde 6: güvenlik tablosu (kaynak sütunları, özet filtrel
   }
   await expect(page).toHaveURL(/tab=dex&chain=56&ca=0x/);
 });
+
+test("Güncelleme2 madde 7: arz dedektörü Keşfet CEX görünümünde ve ısı haritası çekmecesinde", async ({ page }) => {
+  await waitForScan(page);
+  for (const width of [360, 1440]) {
+    await page.setViewportSize({ width, height: width === 360 ? 780 : 900 });
+    await page.goto("/kesfet?tab=cex&s=AVAX-USDT");
+    const sup = page.locator("#cex-supply");
+    await expect(sup).toContainText("Arz baskısı");
+    await expect(sup).toContainText("tahmini (MC/fiyat)");
+    await expect(sup).toContainText("30 / 90 gün açılım");
+    await expect(sup.locator(".supply-chart canvas").first()).toBeVisible();
+    await sup.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${SHOTS}/g2-madde7-arz-${width}.png` });
+  }
+  await page.goto("/isi-haritasi?s=ARB-USDT");
+  await expect(page.getByRole("dialog").locator("#dr-supply")).toContainText("Arz baskısı");
+});

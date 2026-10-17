@@ -89,7 +89,7 @@ export interface HoldReport {
 
 /** Kurallar (saf fonksiyon). */
 /** market.volumeScore: skor motorundaki hacim ölçüsü (volumeScore); eşik lowVolumeScore — ikisi de aynı fonksiyon/eşik. */
-export function buildHoldReport(base: string, s: Supply | null, unlocks: UnlockItem[], market: { volumeScore: number | null; risk: number; lowVolumeScore?: number }, now = Date.now()): HoldReport {
+export function buildHoldReport(base: string, s: Supply | null, unlocks: UnlockItem[], market: { volumeScore: number | null; risk: number; lowVolumeScore?: number }, now = Date.now(), pressure?: { level: "düşük" | "orta" | "yüksek"; reasons: string[] }): HoldReport {
   const reasons: string[] = [];
   const supplyCap = s?.max ?? s?.total ?? null;
   const circRatio = s?.circulating && supplyCap ? s.circulating / supplyCap : null;
@@ -109,6 +109,14 @@ export function buildHoldReport(base: string, s: Supply | null, unlocks: UnlockI
     reasons.push(`Dolaşımdaki arz yalnızca %${(circRatio * 100).toFixed(0)}: düşük dolaşım manipülasyona açık.`);
     holdRisk += 1;
   }
+  // Arz dedektörünün baskı skoru hold kararına girer.
+  if (pressure?.level === "yüksek") {
+    holdRisk += 2;
+    reasons.unshift(`Arz baskısı yüksek: ${pressure.reasons[0] ?? ""}`);
+  } else if (pressure?.level === "orta") {
+    holdRisk += 1;
+    reasons.push(`Arz baskısı orta: ${pressure.reasons[0] ?? ""}`);
+  } else if (pressure?.level === "düşük") reasons.push("Arz baskısı düşük.");
   if (unlock90 > 0 && unlock90 <= 10) reasons.push(`90 gün içinde dolaşımın %${unlock90.toFixed(1)}'i kadar kilit açılımı var (ÖRNEK VERİ).`);
   if (fdvMc !== null && fdvMc <= 1.3) reasons.push(`FDV/piyasa değeri ${fdvMc.toFixed(2)}: arzın çoğu dolaşımda.`);
   if (s?.max && s.circulating && s.max > 0) reasons.push(`Maksimum arz sabit (${(s.circulating / s.max * 100).toFixed(0)}% dolaşımda).`);

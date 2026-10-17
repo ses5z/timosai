@@ -161,6 +161,7 @@
       <section data-pos>${posHtml(p)}</section>
       <section><h3>Vadeli durum</h3><div id="dr-deriv">${T.derivCard(c.derivatives)}</div></section>
       <section><h3>Hold raporu</h3><div id="dr-hold"><p class="kpi-small">Yükleniyor…</p></div></section>
+      <section><h3>Arz dedektörü</h3><div id="dr-supply"></div></section>
       <section><h3>Skor bileşenleri</h3><p class="kpi-small">${T.term("opportunity", "Fırsat")} ${c.opportunity} · ${T.term("risk", "Risk")} ${c.risk}<span class="pro-only"> · ${T.term("rsi", "RSI")} ${c.rsi ?? "-"} · ${T.term("atr", "ATR")} %${c.atrPct} · ${T.term("funding", "Funding")} ${c.funding == null ? "-" : (c.funding * 100).toFixed(4) + "%"}</span></p>${parts}</section>
       <section class="pro-only"><h3>Neden?</h3><ul class="cautions">${c.whyBullets.map((b) => `<li>${T.esc(b)}</li>`).join("")}</ul><p class="kpi-small">Güvenlik özeti <span class="badge badge-warn">${T.esc(c.security.label)}</span>: ${T.esc(c.security.level)} · makas (gerçek) ${c.security.spreadPct == null ? "ölçülmedi" : "%" + c.security.spreadPct}</p></section>
       <section style="display:flex;gap:8px;flex-wrap:wrap">
@@ -187,6 +188,7 @@
       T.toast(`${c.base} ajanın tarama sırasında öne alındı.`);
     });
     if (first) body.querySelector("[data-x]").focus();
+    if (T.supplyCard) T.supplyCard(body.querySelector("#dr-supply"), c.base);
     T.api("/api/hold/" + encodeURIComponent(c.instId)).then((h) => {
       const el = body.querySelector("#dr-hold"); if (!el) return;
       const m = h.metrics, n = (v, d = 2) => (v == null ? "-" : Number(v).toFixed(d));

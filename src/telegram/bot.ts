@@ -305,6 +305,7 @@ export class TelegramBot implements Notifier {
             "/vadeli SOL - vadeli durum (funding, OI, L/S)",
             "/coin AVAX [BTC] - CEX özeti (parite seçilebilir)",
             "/hold ARB - hold raporu (arz, FDV, kilit açılımı)",
+            "/arz AVAX - arz dedektörü (arz değişimi, açılım, baskı)",
             "/tara avax 0x... - DEX token güvenlik taraması (PASS/WARN/BLOCK)",
             "/durum - ajan durumu",
             "/portfoy - değer ve pozisyonlar",
@@ -341,6 +342,21 @@ export class TelegramBot implements Notifier {
         const an = c ? analyzeCandidate(this.ctx, p.instId, c) : null;
         const vol = p.volUsdt === null ? "-" : `${(p.volUsdt / 1e6).toFixed(2)} Mn USDT`;
         return void (await this.send([`${p.instId} · ${p.name || base}`, `Son ${p.last} (${p.change24hPct >= 0 ? "+" : ""}${(p.change24hPct ?? 0).toFixed(2)}% 24 sa) · hacim ${vol}${p.lowLiquidity ? " · likidite düşük" : ""}`, an ? an.short : "Analiz için yeterli mum yok.", p.tradable ? "İşlem izin listesinde." : "Analiz için; işlem izin listesinde değil.", `Pariteler: ${pairs.map((x) => x.quote).join(" · ")}`].join("\n")));
+      }
+      case "/arz": {
+        const base = (args[0] ?? "").toUpperCase().replace(/-.*$/, "");
+        if (!/^[A-Z0-9]{1,15}$/.test(base)) return void (await this.send("Kullanım: /arz AVAX"));
+        const r = await this.ctx.supply.report(base);
+        if (!r.available) return void (await this.send(`${base}: arz verisi yok. ${r.note ?? ""}`));
+        const st = r.structure, ch = r.change;
+        const f = (v: number | null | undefined, d = 2) => (v === null || v === undefined ? "-" : `${v >= 0 ? "+" : ""}${v.toFixed(d)}%`);
+        return void (await this.send([
+          `${base} arz dedektörü · baskı: ${r.pressure.level}`,
+          st ? `Dolaşım ${st.circulatingPct === null ? "-" : st.circulatingPct.toFixed(1) + "%"} · FDV/MC ${st.fdvToMc === null ? "-" : st.fdvToMc.toFixed(2)} · ${st.capped ? "Sınırlı arz" : "Sınırsız arz"}` : "Arz yapısı: veri yok",
+          ch ? `Arz değişimi (tahmini, MC/fiyat): 1G ${f(ch.d1)} · 1A ${f(ch.m1)} · 1Y ${f(ch.y1)}${ch.deflationary ? " · deflasyonist (yakım)" : ""}` : "Arz değişimi: veri yok",
+          r.unlocks.next ? `Sonraki açılım: ${r.unlocks.next.date}, dolaşımın %${r.unlocks.next.pctOfCirculating} (ÖRNEK VERİ) · 30 g %${r.unlocks.total30dPct.toFixed(1)} · 90 g %${r.unlocks.total90dPct.toFixed(1)}` : "Kilit açılımı: kayıt yok (ÖRNEK VERİ listesi)",
+          ...r.pressure.reasons.map((x) => `- ${x}`),
+        ].join("\n")));
       }
       case "/hold": {
         const id = normSymbol(args[0] ?? "");

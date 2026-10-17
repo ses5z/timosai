@@ -73,7 +73,8 @@
           <h3 id="cai-h">AI analizi</h3>
           ${c ? `<p style="margin:0 0 6px"><span class="pill pill-${T.esc(c.decision)}">ajan: ${T.esc(c.decision)}</span> <b>${T.esc(c.direction)}</b></p><p style="margin:0 0 8px">${T.esc(v.analysis ? v.analysis.short : c.reason)}</p>` : `<p class="muted">Analiz için yeterli mum verisi yok.</p>`}
           ${v.derivatives ? `<h3>Vadeli durum</h3>${T.derivCard(v.derivatives)}` : `<p class="kpi-small">Vadeli durum: bu coinin SWAP verisi yok.</p>`}
-          <h3>Arz</h3><div id="cex-supply">${v.hold ? `<span class="badge ${v.hold.verdict === "hold profiline uygun" ? "badge-ok" : v.hold.verdict === "kısa vade trade edilebilir" ? "badge-warn" : "badge-bad"}">${T.esc(v.hold.verdict)}</span> <span class="kpi-small">${T.esc(v.hold.reasons[0] || "")}</span>` : "veri yok"}</div>
+          <h3>Hold</h3><div>${v.hold ? `<span class="badge ${v.hold.verdict === "hold profiline uygun" ? "badge-ok" : v.hold.verdict === "kısa vade trade edilebilir" ? "badge-warn" : "badge-bad"}">${T.esc(v.hold.verdict)}</span> <span class="kpi-small">${T.esc(v.hold.reasons[0] || "")}</span>` : "veri yok"}</div>
+          <h3>Arz dedektörü</h3><div id="cex-supply"></div>
           <div class="cex-actions">
             <button class="btn btn-sm heart-btn" type="button" id="cex-follow" ${v.watchlisted ? "" : "disabled"} aria-pressed="${v.followed}">${T.icon("heart")} ${v.followed ? "Takipte" : "Takibe al"}</button>
             <button class="btn btn-sm" type="button" id="cex-prio" ${v.watchlisted ? "" : "disabled"}>${T.icon("arrowUp")} Ajana öncelik ver</button>
@@ -83,6 +84,7 @@
         </aside>
       </div>`;
     box.querySelectorAll("[data-pair]").forEach((b) => b.addEventListener("click", () => openPair(b.dataset.pair)));
+    if (T.supplyCard) T.supplyCard(box.querySelector("#cex-supply"), p.base);
     if (chartRef) chartRef.destroy();
     chartRef = T.tvChart(box.querySelector("#cex-chart"), instId, { height: 340, frames: ["15m", "1H", "4H", "1D"], timeframes: true, candles: true, levels: v.analysis ? v.analysis.levels : null, showLevels: false });
     const usdt = `${p.base}-USDT`;

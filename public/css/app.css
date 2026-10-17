@@ -490,3 +490,6 @@ tr.sel td { background: rgba(242, 169, 59, 0.08); }
 @media (min-width: 640px) { #dex-name-form { grid-template-columns: 1fr auto; } }
 .sec-table thead th { text-transform: none; letter-spacing: 0; font-size: 0.82rem; }
 .sec-table tbody th { position: static; text-transform: none; letter-spacing: 0; font-size: 0.88rem; color: var(--text); background: transparent; font-weight: 600; }
+.supply-grid { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 8px 0; }
+.supply-grid b { text-align: right; }
+.supply-chart { width: 100%; border-radius: 10px; overflow: hidden; background: rgba(10, 15, 26, 0.35); }

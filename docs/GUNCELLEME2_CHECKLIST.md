@@ -100,18 +100,18 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [x] DONE 6.17 Test + ekran görüntüsü + commit
 
 ## Madde 7 – Arz dedektörü
-- [ ] 7.1 Görünür: Keşfet CEX görünümü, Isı haritası çekmecesi, Pro Terminal, Telegram /arz
-- [ ] 7.2 Arz yapısı: max/total/circulating, dolaşım %, FDV/MC, Sınırlı/Sınırsız arz rozeti
-- [ ] 7.3 Arz değişimi 1G/1A/1Y (market_chart, MC/fiyat), yıllık enflasyon, "tahmini (MC/fiyat)" etiketi
-- [ ] 7.4 Arz azalıyorsa "deflasyonist (yakım)"
-- [ ] 7.5 Günlük > %1 sıçrama olay olarak işaretli (+ tanım değişikliği notu)
-- [ ] 7.6 Kilit açılımı: önce DefiLlama; yoksa config/unlocks.json (ÖRNEK VERİ)
-- [ ] 7.7 Sonraki açılım tarihi, miktar, dolaşıma oranı, 30/90 gün toplam
-- [ ] 7.8 Arz baskısı skoru düşük/orta/yüksek + gerekçe; hold raporu kullanır
-- [ ] 7.9 1 yıllık arz eğrisi grafiği + açılım tarihleri işaretli
-- [ ] 7.10 Önbellek 1 saat; rate limit → "veri yok"
-- [ ] 7.11 Takipteki coinde 7 gün içinde açılım → bildirim
-- [ ] 7.12 Test + ekran görüntüsü + commit
+- [~] PARTIAL 7.1 (Keşfet CEX, ısı haritası çekmecesi, Telegram /arz DONE; Pro Terminal madde 9'da) Görünür: Keşfet CEX görünümü, Isı haritası çekmecesi, Pro Terminal, Telegram /arz
+- [x] DONE 7.2 Arz yapısı: max/total/circulating, dolaşım %, FDV/MC, Sınırlı/Sınırsız arz rozeti
+- [x] DONE 7.3 Arz değişimi 1G/1A/1Y (market_chart, MC/fiyat), yıllık enflasyon, "tahmini (MC/fiyat)" etiketi
+- [x] DONE 7.4 Arz azalıyorsa "deflasyonist (yakım)"
+- [x] DONE 7.5 Günlük > %1 sıçrama olay olarak işaretli (+ tanım değişikliği notu)
+- [~] PARTIAL 7.6 (DefiLlama emisyon API'si ücretli: HTTP 402 → config/unlocks.json ÖRNEK VERİ kullanılıyor) Kilit açılımı: önce DefiLlama; yoksa config/unlocks.json (ÖRNEK VERİ)
+- [x] DONE 7.7 Sonraki açılım tarihi, miktar, dolaşıma oranı, 30/90 gün toplam
+- [x] DONE 7.8 Arz baskısı skoru düşük/orta/yüksek + gerekçe; hold raporu kullanır
+- [x] DONE 7.9 1 yıllık arz eğrisi grafiği + açılım tarihleri işaretli
+- [x] DONE 7.10 Önbellek 1 saat; rate limit → "veri yok"
+- [x] DONE 7.11 Takipteki coinde 7 gün içinde açılım → bildirim
+- [x] DONE 7.12 Test + ekran görüntüsü + commit
 
 ## Madde 8 – Long/Short tablosu
 - [ ] 8.1 OKX top trader L/S (hesap + pozisyon)

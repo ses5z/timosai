@@ -5,7 +5,8 @@ export async function holdReportFor(ctx: AppContext, instId: string, override?: 
   const base = instId.split("-")[0];
   const c = override ?? ctx.agent.candidates.get(instId) ?? ctx.agent.candidates.get(`${base}-USDT`);
   const s = await ctx.fundamentals.supply(base);
-  return buildHoldReport(base, s, loadUnlocks(), { volumeScore: c ? c.parts.volume : null, risk: c?.risk ?? 50, lowVolumeScore: ctx.thresholds.lowVolumeScore });
+  const sr = await ctx.supply.report(base).catch(() => null);
+  return buildHoldReport(base, s, loadUnlocks(), { volumeScore: c ? c.parts.volume : null, risk: c?.risk ?? 50, lowVolumeScore: ctx.thresholds.lowVolumeScore }, Date.now(), sr && sr.available ? sr.pressure : undefined);
 }
 
 export function holdText(r: HoldReport): string {

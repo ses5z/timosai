@@ -204,6 +204,12 @@ export function createApp(ctx: AppContext) {
     });
   });
 
+  app.get("/api/supply/:base", async (req, res) => {
+    const base = String(req.params.base).toUpperCase().replace(/-.*$/, "");
+    if (!/^[A-Z0-9]{1,15}$/.test(base)) return res.status(400).json({ error: "geçersiz sembol" });
+    json(res, await ctx.supply.report(base));
+  });
+
   app.get("/api/hold/:instId", async (req, res) => {
     const id = req.params.instId;
     if (!validInstId(id)) return res.status(400).json({ error: "geçersiz sembol" });

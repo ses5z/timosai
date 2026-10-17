@@ -5,6 +5,15 @@ import path from "node:path";
 import type { AppContext } from "../context.js";
 import type { Candidate } from "../ports.js";
 import { log } from "../util/log.js";
+import { loadUnlocks } from "../fundamentals/holdReport.js";
+
+function loadUnlocksSafe() {
+  try {
+    return loadUnlocks();
+  } catch {
+    return [];
+  }
+}
 
 export interface AlertConfig {
   volSpikeMult1h: number;
@@ -149,6 +158,10 @@ export class AlertEngine {
           this.prevSentiment.set(c.instId, c.sentiment);
         }
         for (const n of coinNews) if (posRe.test(n.title) && !critRe.test(n.title)) push({ symbol: c.instId, rule: `haber_olumlu:${n.title.slice(0, 40)}`, critical: false, text: `${c.base} haberi: "${n.title.slice(0, 160)}".` });
+        for (const u of loadUnlocksSafe()) {
+          const dt = Date.parse(u.date) - t;
+          if (u.coin.toUpperCase() === c.base && dt > 0 && dt <= 7 * 86_400_000) push({ symbol: c.instId, rule: `acilim:${u.date}`, critical: false, text: `${c.base}: ${Math.ceil(dt / 86_400_000)} gün içinde kilit açılımı, dolaşımın %${u.pctOfCirculating}'i (ÖRNEK VERİ, kaynak: ${u.source}).` });
+        }
         for (const e of this.events) {
           const dt = Date.parse(e.date) - t;
           if (e.coin.toUpperCase() === c.base && dt > 0 && dt <= this.cfg.eventHoursAhead * 3_600_000) push({ symbol: c.instId, rule: `etkinlik:${e.title}`, critical: false, text: `${c.base}: ${Math.round(dt / 3_600_000)} saat sonra "${e.title}"${e.sample ? " (ÖRNEK VERİ)" : ""}.` });

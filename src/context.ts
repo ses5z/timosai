@@ -18,6 +18,7 @@ import { LiveDerivativesData, MockDerivativesData, type DerivativesData } from "
 import { loadDerivConfig, type DerivConfig } from "./derivatives/rules.js";
 import { CoinGeckoFundamentals, MockFundamentals, type FundamentalsData } from "./fundamentals/holdReport.js";
 import { InstrumentCatalog, mockInstruments } from "./market/instruments.js";
+import { SupplyService } from "./fundamentals/supply.js";
 import { GoPlusSecurity, MockTokenSecurity, OnchainOsSecurity, ScamScanner } from "./security/tokenSecurity.js";
 import { Store } from "./state/store.js";
 import { loadHardLimits, type HardLimits } from "./trading/hardLimits.js";
@@ -41,6 +42,7 @@ export interface AppContext {
   scanner: ScamScanner;
   instruments: InstrumentCatalog;
   paper: PaperConfig;
+  supply: SupplyService;
   quote: QuoteFn;
   newPaperClient(): MockTradingClient;
   atk: AtkCaller | null;
@@ -93,6 +95,7 @@ export function createContext(env: AppEnv, opts: ContextOptions = {}): AppContex
   const market: MarketData = opts.market ?? (atk ? new ResilientMarketData(new AtkMarketData(atk), mock) : mock);
 
   const derivConfig = loadDerivConfig();
+  const fundamentals: FundamentalsData = env.atkMode === "live" ? new CoinGeckoFundamentals() : new MockFundamentals();
   const derivatives: DerivativesData = opts.derivatives ?? (atk ? new LiveDerivativesData(atk) : new MockDerivativesData());
   const paper = loadPaperConfig();
   const startBal = env.paperBalanceUsdt || paper.startBalanceUsdt;
@@ -126,7 +129,7 @@ export function createContext(env: AppEnv, opts: ContextOptions = {}): AppContex
     store.bus.publish("warning", w);
   });
 
-  return { env, store, ledger, warnings, limits, thresholds, contract, watchlist, market, mock, derivatives, derivConfig, paper, quote, newPaperClient, instruments: new InstrumentCatalog(env.atkMode === "live" ? atk : null, mockInstruments(watchlist.map((w) => w.instId.split("-")[0]))), fundamentals: env.atkMode === "live" ? new CoinGeckoFundamentals() : new MockFundamentals(), scanner: new ScamScanner(env.atkMode === "live" ? [new GoPlusSecurity(), new OnchainOsSecurity()] : [new MockTokenSecurity()]), atk, agent, proof: new NoopProofAnchor(), missingEnv: missingEnvLines(env), extras: {} };
+  return { env, store, ledger, warnings, limits, thresholds, contract, watchlist, market, mock, derivatives, derivConfig, paper, quote, newPaperClient, supply: new SupplyService((b) => fundamentals.supply(b), env.atkMode === "live" ? fetch : null, env.atkMode !== "live"), instruments: new InstrumentCatalog(env.atkMode === "live" ? atk : null, mockInstruments(watchlist.map((w) => w.instId.split("-")[0]))), fundamentals, scanner: new ScamScanner(env.atkMode === "live" ? [new GoPlusSecurity(), new OnchainOsSecurity()] : [new MockTokenSecurity()]), atk, agent, proof: new NoopProofAnchor(), missingEnv: missingEnvLines(env), extras: {} };
 }
 
 /** LIVE=true ise ve koşullar uygunsa canlı işlem istemcisine geçer; değilse PAPER kalır. */

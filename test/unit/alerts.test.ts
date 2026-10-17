@@ -56,3 +56,14 @@ test("kritikler saatlik sınıra takılmaz", () => {
   assert.equal(p.decide({ kind: "development", symbol: "B-USDT", text: "2" }, { follows: ["A-USDT", "B-USDT"], held: [], settings: s }).send, false);
   for (let i = 0; i < 5; i++) assert.equal(p.decide({ kind: "critical", symbol: "A-USDT", text: `kritik ${i}` }, { follows: [], held: ["A-USDT"], settings: s }).send, true);
 });
+
+test("Güncelleme2 madde 7: takipteki coinde 7 gün içinde kilit açılımı varsa bildirim (ÖRNEK VERİ)", async () => {
+  const ctx = mkCtx({ AUTONOMOUS: "false" });
+  await ctx.agent.scanOnce();
+  const eng = new AlertEngine(ctx, { cfg: DEFAULT_ALERTS, events: [], now: () => Date.parse("2026-10-20T00:00:00Z") });
+  const wld = ctx.agent.candidates.get("WLD-USDT")!;
+  assert.equal(eng.evaluate([wld]).some((a) => a.rule.startsWith("acilim")), false); // takipte değil
+  ctx.store.follow("WLD-USDT");
+  const out = eng.evaluate([wld]);
+  assert.ok(out.some((a) => a.rule.startsWith("acilim") && /kilit açılımı/.test(a.text)));
+});
