@@ -139,6 +139,7 @@ const rationaleCache = new Map<string, { at: number; key: string; lines: string[
 /** Kod hesaplar, Gemini gerekçeyi yazar (yoksa kod gerekçesi kalır). Yön ve seviyeleri LLM değiştiremez. */
 export async function computeSetupWithRationale(ctx: AppContext, instId: string): Promise<Setup> {
   const s = await computeSetup(ctx, instId);
+  ctx.extras.setupTracker?.record(s);
   const mentor = ctx.extras.mentor;
   if (!s.showLevels || !mentor?.rationale) return s;
   const key = `${s.direction}:${s.badgeText}:${s.stop}`;

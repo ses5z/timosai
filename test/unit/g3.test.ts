@@ -172,3 +172,51 @@ test("Toast/modal: yalnızca devre kesici ve canlı günlük zarar kritik; limit
   assert.equal(w.raise("gunluk_zarar", "a", "t", "x", [], 1, { critical: true })!.critical, true);
   assert.equal(limitFillText({ open: 13.2, maxOpen: 15, count: 3, maxCount: 3 }), "Limit doluluğu: açık tutar 13/15 · pozisyon 3/3. Yeni işlem açılmayacak, mevcutlar yönetiliyor.");
 });
+
+test("Mini backtest: ileriye bakış yok, yalnızca son 30 gün, özet alanları ve not", async () => {
+  const { backtestCoin, summarize, BT_NOTE } = await import("../../src/backtest/backtest.js");
+  const H4 = 4 * 3_600_000;
+  const mk = (n: number, f: (i: number) => number) => Array.from({ length: n }, (_, i) => { const m = f(i); return { ts: i * H4, open: m, high: m * 1.004, low: m * 0.996, close: m, vol: 1 }; });
+  const plan = { ...defaultPlan(false, []), direction: "longshort" as const };
+  const c = mk(300, (i) => 100 + i * 0.4 + Math.sin(i / 2) * 0.8);
+  const from = c[120].ts;
+  const t1 = backtestCoin("X-USDT", c, plan, from);
+  assert.ok(t1.length > 0);
+  assert.ok(t1.every((t) => t.openTs >= from && t.closeTs > t.openTs));
+  // gelecekteki mumları değiştirmek, ilk işlemin giriş/stop değerini değiştirmez (ileriye bakış yok)
+  const first = t1[0];
+  const idx = c.findIndex((x) => x.ts === first.openTs);
+  const c2 = c.map((x, i) => (i > idx ? { ...x, close: x.close * 0.5, low: x.low * 0.5, high: x.high * 0.5, open: x.open * 0.5 } : x));
+  const t2 = backtestCoin("X-USDT", c2, plan, from);
+  assert.equal(t2[0].entry, first.entry);
+  assert.equal(t2[0].stop, first.stop);
+  assert.equal(t2[0].outcome, "stop");
+  const s = summarize(t1, ["X-USDT"], from, c.at(-1)!.ts);
+  assert.equal(s.note, BT_NOTE);
+  assert.equal(BT_NOTE, "Geçmiş performans geleceği garanti etmez.");
+  assert.equal(s.trades, t1.length);
+  assert.ok(s.long.trades + s.short.trades === s.trades);
+  assert.ok(s.maxDrawdownR >= 0);
+});
+
+test("Kurulum sonuç takibi: hedef 1 → hedef 2, stop, süre doldu ve 7 gün özeti", async () => {
+  const { SetupTracker } = await import("../../src/mentor/outcomes.js");
+  const tr = new SetupTracker();
+  const base = buildSetup("SOL-USDT", { "15m": up, "1H": up, "4H": up, "1D": up }, defaultPlan(false, []), { agentDecision: "izle" });
+  const t = tr.record(base, 0)!;
+  assert.ok(t);
+  assert.equal(tr.record(base, 1), null, "aynı coin+yön açıkken tekrar kaydedilmez");
+  tr.update(new Map([["SOL-USDT", base.target1! + 0.01]]), 10);
+  assert.equal(t.hitT1, true);
+  tr.update(new Map([["SOL-USDT", base.target2! + 0.01]]), 20);
+  assert.equal(t.outcome, "hedef 2");
+  const s2 = buildSetup("ETH-USDT", { "15m": up, "1H": up, "4H": up, "1D": up }, defaultPlan(false, []), { agentDecision: "izle" });
+  const u = tr.record(s2, 0)!;
+  tr.update(new Map([["ETH-USDT", s2.stop! - 0.01]]), 30);
+  assert.equal(u.outcome, "stop");
+  assert.equal(u.r, -1);
+  const st = tr.stats(7, 1000);
+  assert.equal(st.setups, 2);
+  assert.equal(st.hitPct, 50);
+  assert.match(st.text, /^Son 7 gün: 2 kurulum · %50 hedefe ulaştı · ort\. [+-]/);
+});

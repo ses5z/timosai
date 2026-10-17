@@ -17,6 +17,7 @@ import { analyzeCandidate } from "./mentor/analysis.js";
 import { holdReportFor } from "./fundamentals/view.js";
 import { derivAnalysisFor } from "./derivatives/view.js";
 import { log } from "./util/log.js";
+import { SetupTracker } from "./mentor/outcomes.js";
 
 export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typeof fetch } = {}): Promise<void> {
   ctx.extras.routes = ctx.extras.routes ?? [];
@@ -27,7 +28,14 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
 
   const futures = new PaperFutures(ctx);
   ctx.extras.futures = futures;
-  const futTimer = setInterval(() => futures.tick(), 10_000);
+  // G3 madde 6: Mentor işlemi kurulumlarının sonucu fiyat güncellemeleriyle izlenir.
+  const tracker = new SetupTracker();
+  ctx.extras.setupTracker = tracker;
+  const futTimer = setInterval(() => {
+    futures.tick();
+    const px = new Map([...ctx.agent.prices].map(([k, v]) => [k, v.last]));
+    for (const t of tracker.update(px)) ctx.store.addEvent("bilgi", `Kurulum sonucu: ${t.instId.split("-")[0]} ${t.direction} → ${t.outcome}${t.r !== null ? ` (${t.r >= 0 ? "+" : ""}${t.r}R)` : ""}.`, t.instId);
+  }, 10_000);
   futTimer.unref?.();
   // Ajanın vadeli kararları (yalnızca paper): kalabalık long + düşüş trendinde kısa SİMÜLASYON; short squeeze + yükselişte uzun.
   ctx.agent.onScan(async (cands) => {

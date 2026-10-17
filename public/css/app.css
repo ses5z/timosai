@@ -623,3 +623,7 @@ body { --bg: var(--ink-900); --surface: var(--ink-800); --surface-2: var(--ink-7
 .plan-switches { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
 .plan-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
 .plan-fixed { font-size: .78rem; margin: 10px 0 0; padding-left: 18px; }
+.plan-perf { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.bt-kpis { margin-top: 10px; flex-wrap: wrap; }
+.bt-meta { font-size: .8rem; margin: 8px 0 0; }
+.bt-note { font-size: .84rem; margin: 6px 0 0; }

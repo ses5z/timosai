@@ -245,6 +245,7 @@
       try { setup = await T.api(`/api/setup/${encodeURIComponent(instId)}`); } catch (e) { card.innerHTML = `<p class="faint">Kurulum hesaplanamadı: ${T.esc(e.message)}</p>`; return; }
       card.innerHTML = T.setupCardHtml(setup);
       T.bindSetupCard(card, setup);
+      T.api("/api/setups/stats").then((st) => card.insertAdjacentHTML("beforeend", `<p class="faint setup-stats">${T.esc(st.text)}</p>`)).catch(() => undefined);
       drawSetupLines();
     }
 

@@ -508,3 +508,16 @@ test("G3 madde 4: Basic emir defteri, Pro filtreli ayrıntılı günlük", async
   expect(kinds.filter((k) => k !== "uyarı")).toEqual([]);
   await page.locator("#ev-list").screenshot({ path: `${SHOTS}/g3-madde4-pro-gunluk-1440.png` });
 });
+
+test("G3 madde 6: 7 gün kurulum özeti ve 'Bu planı son 30 günde test et'", async ({ page }) => {
+  await waitForScan(page);
+  for (const width of [360, 1440]) {
+    await page.setViewportSize({ width, height: width === 360 ? 780 : 900 });
+    await page.goto("/panel");
+    await expect(page.locator("#setup-stats")).toContainText(/Son 7 gün: \d+ kurulum · %\d+ hedefe ulaştı · ort\./);
+    await page.locator("#bt-run").click();
+    await expect(page.locator("#bt-out")).toContainText("Geçmiş performans geleceği garanti etmez.");
+    await expect(page.locator("#bt-out")).toContainText("ileriye bakış yok");
+    await page.locator(".plan-perf").screenshot({ path: `${SHOTS}/g3-madde6-backtest-${width}.png` });
+  }
+});

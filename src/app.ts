@@ -10,6 +10,7 @@ import { applyPlan, CODE_ALLOWED_PAIRS } from "./trading/hardLimits.js";
 import { planRef, sanitizePlan } from "./plan/plan.js";
 import { computeSetupWithRationale } from "./mentor/setup.js";
 import { logKind, orderRows } from "./trading/orderLog.js";
+import { backtestCoin, summarize, type BtTrade } from "./backtest/backtest.js";
 import { mask } from "./util/log.js";
 
 const PAGES: Record<string, string> = {
@@ -408,6 +409,28 @@ export function createApp(ctx: AppContext) {
     store.planPreference = [id, ...store.planPreference.filter((x) => x !== id)].slice(0, 10);
     store.addEvent("bilgi", `${id.split("-")[0]} plana eklendi. Ajan yalnızca plan koşulları sağlanırsa işlem açar.`, id);
     json(res, planPayload());
+  });
+
+  // ---------- G3 madde 6: kurulum sonuçları ve mini backtest ----------
+  app.get("/api/setups/stats", (_req, res) => {
+    const tr = ctx.extras.setupTracker;
+    json(res, tr ? { ...tr.stats(7), recent: tr.list.slice(-20).reverse() } : { setups: 0, text: "Son 7 gün: 0 kurulum", recent: [] });
+  });
+  let btCache: { key: string; at: number; v: unknown } | null = null;
+  app.post("/api/backtest", async (_req, res) => {
+    const plan = store.settings.plan;
+    const coins = plan.coins.slice(0, 8);
+    const key = JSON.stringify([coins, plan.direction, plan.horizon, plan.minRR, plan.partialPct]);
+    if (btCache && btCache.key === key && Date.now() - btCache.at < 10 * 60_000) return json(res, btCache.v);
+    const to = Date.now(), from = to - 30 * 86_400_000;
+    const all: BtTrade[] = [];
+    for (const id of coins) {
+      const c = await ctx.market.candles(id, "4H", 300).catch(() => []);
+      all.push(...backtestCoin(id, c, plan, from));
+    }
+    const v = { ...summarize(all, coins, from, to), plan: planRef(plan), horizon: plan.horizon, coinsNote: plan.coins.length > 8 ? `Hız için plandaki ilk 8 coin test edildi (${plan.coins.length} coin var).` : null };
+    btCache = { key, at: Date.now(), v };
+    json(res, v);
   });
 
   // ---------- Mentor işlemi: çok zaman dilimli kurulum taslağı (yatırım tavsiyesi değildir) ----------
