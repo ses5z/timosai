@@ -329,14 +329,32 @@ export function createApp(ctx: AppContext) {
   // ---------- Uzantılar (mentor, telegram, senaryo) ----------
   for (const mount of (ctx.extras.routes ?? []) as ((a: express.Express) => void)[]) mount(app);
 
+  // ---------- Kısa yoklama (SSE'yi tamponlayan vekillerin arkasında yedek) ----------
+  app.get("/api/poll", (req, res) => {
+    const since = Number(req.query.since) || 0;
+    const prices: Record<string, { p: number; c: number }> = {};
+    for (const [k, v] of agent.prices) prices[k] = { p: v.last, c: round(v.change24hPct, 2) };
+    json(res, {
+      now: Date.now(),
+      prices,
+      events: store.events.filter((e) => e.ts > since).slice(-50),
+      warnings: since ? warnings.list(10).filter((w) => w.ts > since).reverse() : [],
+      chat: since ? store.chat.filter((m) => m.ts > since) : [],
+      lastScanAt: agent.lastScanAt,
+      positions: agent.positionsView(),
+    });
+  });
+
   // ---------- SSE ----------
   app.get("/api/stream", (req, res) => {
-    res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-Accel-Buffering": "no" });
-    res.write(`retry: 3000\n\n`);
+    res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no", "Content-Encoding": "identity" });
+    res.flushHeaders();
+    // Ters vekiller (ör. Cloudflare tüneli) ilk baytları tamponlayabilir: 2 KB yorum dolgusu akışı hemen açar.
+    res.write(`: ${" ".repeat(2048)}\n\nretry: 3000\n\n`);
     const send = (ev: { type: string; data: unknown }) => res.write(`event: ${ev.type}\ndata: ${mask(JSON.stringify(ev.data))}\n\n`);
     send({ type: "hello", data: { ts: Date.now(), agent: agent.status() } });
     store.bus.on("sse", send);
-    const ping = setInterval(() => res.write(`: ping\n\n`), 20_000);
+    const ping = setInterval(() => res.write(`: ping\n\n`), 15_000);
     req.on("close", () => {
       clearInterval(ping);
       store.bus.off("sse", send);

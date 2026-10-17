@@ -251,11 +251,38 @@
   }
 
   // ---------- SSE ----------
-  let es;
+  let es, gotStream = false, polling = false;
+  // SSE'yi tamponlayan vekillerin (ör. HTTP/2 üzerinden Cloudflare tüneli) arkasında kısa yoklamaya geç.
+  function startPolling() {
+    if (polling) return;
+    polling = true;
+    if (es) es.close(); // tamponlanan akış sonradan boşalıp olayları ikiletmesin
+    let since = Date.now(), lastScan = 0;
+    const tick = async () => {
+      try {
+        const d = await T.api(`/api/poll?since=${since}`);
+        Object.assign(tickerPrices, d.prices);
+        renderTicker();
+        fire("prices", d.prices);
+        d.events.forEach((e) => fire("event", e));
+        d.warnings.forEach((w) => { T.showWarning(w); fire("warning", w); });
+        d.chat.forEach((m) => fire("chat", m));
+        if (lastScan && d.lastScanAt !== lastScan) { fire("scan", { at: d.lastScanAt }); fire("candidates", []); }
+        lastScan = d.lastScanAt;
+        fire("positions", d.positions);
+        since = d.now;
+      } catch {}
+    };
+    tick();
+    setInterval(tick, 4000);
+  }
+  setTimeout(() => { if (!gotStream) startPolling(); }, 6000);
   function connect() {
+    if (polling) return;
     es = new EventSource("/api/stream");
     ["hello", "prices", "scan", "candidates", "positions", "event", "warning", "follows", "chat", "agent", "priority", "scenario", "pending", "telegram"].forEach((type) =>
       es.addEventListener(type, (ev) => {
+        gotStream = true;
         let data;
         try { data = JSON.parse(ev.data); } catch { return; }
         if (type === "prices") { Object.assign(tickerPrices, data); renderTicker(); }

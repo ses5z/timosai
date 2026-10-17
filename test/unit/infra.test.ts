@@ -51,7 +51,7 @@ test("API: anahtarlar hiçbir yanıtta geçmez; kullanıcı emir uç noktası yo
   await ctx.agent.scanOnce();
   await withServer(ctx, async (base) => {
     const bodies: string[] = [];
-    for (const p of ["/api/status", "/api/candidates", "/api/portfolio", "/api/contract", "/api/events", "/api/atk", "/api/ledger", "/api/settings"]) {
+    for (const p of ["/api/status", "/api/candidates", "/api/portfolio", "/api/contract", "/api/events", "/api/atk", "/api/ledger", "/api/settings", "/api/poll?since=1"]) {
       const r = await fetch(base + p);
       assert.equal(r.status, 200, p);
       bodies.push(await r.text());
