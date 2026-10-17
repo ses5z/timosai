@@ -1,0 +1,6 @@
+{
+  "_aciklama": "Önemli tarihler (elle, kaynak linkli). Elle girilen veri ÖRNEK VERİ etiketlidir. Tarih ISO formatında (UTC).",
+  "events": [
+    { "coin": "BTC", "date": "2026-10-28T18:00:00Z", "title": "FOMC faiz kararı (örnek)", "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm", "sample": true }
+  ]
+}

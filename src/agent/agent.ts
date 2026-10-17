@@ -28,7 +28,8 @@ export type DevelopmentKind =
   | "pozisyon_açıldı"
   | "pozisyon_kapandı"
   | "daha_iyi_giriş"
-  | "günlük_zarar";
+  | "günlük_zarar"
+  | "bildirim";
 
 export interface Development {
   symbol: string;
@@ -87,6 +88,16 @@ export class Agent {
   private stopped = true;
 
   constructor(readonly d: AgentDeps) {}
+
+  private scanListeners: ((c: Candidate[]) => Promise<void> | void)[] = [];
+  onScan(fn: (c: Candidate[]) => Promise<void> | void): void {
+    this.scanListeners.push(fn);
+  }
+
+  /** Dış modüllerin (bildirim motoru) gelişme yayınlaması için. */
+  emitDev(d: Development): void {
+    this.dev(d);
+  }
 
   onDevelopment(fn: (d: Development) => void): void {
     this.devListeners.push(fn);
@@ -225,6 +236,7 @@ export class Agent {
         }),
       );
       this.applyResults(results);
+      for (const l of this.scanListeners) await Promise.resolve(l(results)).catch((e) => log.warn(`tarama dinleyicisi: ${(e as Error).message}`));
       this.scanCount++;
       this.lastScanAt = Date.now();
       this.lastScanMs = Date.now() - t0;

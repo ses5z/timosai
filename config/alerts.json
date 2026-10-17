@@ -1,0 +1,15 @@
+{
+  "_aciklama": "Haber + hacim + OI bildirim eşikleri. Takip edilenler: olumlu gelişmeler. Eldekiler: kritikler.",
+  "volSpikeMult1h": 3,
+  "volSpikeMult15m": 3,
+  "dropAtrMult15m": 2,
+  "sentimentJump": 0.4,
+  "oiFilterTopN": 30,
+  "oiFilterMinPct": 5,
+  "btcDropPct1h": 2.5,
+  "eventHoursAhead": 24,
+  "repeatHours": 2,
+  "newsPollMinutes": 10,
+  "positiveNewsRe": "(listing|listed|lists|launch|partnership|partners with|integrat|ortaklık|listelen)",
+  "criticalNewsRe": "(hack|exploit|drain|stolen|delist|unlock|vulnerab|saldırı|istismar|listeden çık|kilit açılım)"
+}

@@ -67,6 +67,8 @@ export interface Candidate {
   spark: number[];
   atr: number;
   atrPct: number;
+  vol1hRatio?: number; // son 1 saat hacmi / önceki 20 saatin ortalaması
+  vol15mRatio?: number; // son 15 dk hacmi / önceki 20 mumun ortalaması
   rsi: number | null;
   funding: number | null;
   sentiment: number | null;

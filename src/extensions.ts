@@ -4,6 +4,7 @@ import type { AppContext } from "./context.js";
 import { MentorService } from "./mentor/mentorService.js";
 import { Scenario } from "./scenario.js";
 import { TelegramBot, candidateChart } from "./telegram/bot.js";
+import { AlertEngine } from "./alerts/alertEngine.js";
 
 export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typeof fetch } = {}): Promise<void> {
   ctx.extras.routes = ctx.extras.routes ?? [];
@@ -25,6 +26,16 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
   });
   ctx.extras.startBackground = () => void bot.start();
   ctx.extras.stopBackground = () => bot.stop();
+
+  const alerts = new AlertEngine(ctx);
+  ctx.extras.alerts = alerts;
+  ctx.agent.onScan(async (cands) => {
+    await alerts.refreshSources();
+    for (const a of alerts.evaluate(cands)) {
+      ctx.store.addEvent(a.critical ? "uyarı" : "bilgi", `[Bildirim] ${a.text}`, a.symbol.endsWith("-USDT") ? a.symbol : undefined);
+      ctx.agent.emitDev({ symbol: a.symbol, kind: "bildirim", text: a.text, critical: a.critical });
+    }
+  });
 
   const scenario = new Scenario(ctx);
   ctx.extras.scenario = scenario;

@@ -38,6 +38,17 @@ export function sampleSecurity(instId: string, spreadPct: number | null, depthUs
   };
 }
 
+/** Hacim patlaması oranları (15 dk mumlardan). */
+export function volRatios(c: { vol: number }[]): { vol1hRatio: number; vol15mRatio: number } {
+  const v = c.map((x) => x.vol);
+  const last4 = v.slice(-4).reduce((a, b) => a + b, 0);
+  const prev80 = v.slice(-84, -4);
+  const avgHour = prev80.length ? (prev80.reduce((a, b) => a + b, 0) / prev80.length) * 4 : 0;
+  const prev20 = v.slice(-21, -1);
+  const avg15 = prev20.length ? prev20.reduce((a, b) => a + b, 0) / prev20.length : 0;
+  return { vol1hRatio: avgHour > 0 ? round(last4 / avgHour, 2) : 0, vol15mRatio: avg15 > 0 ? round((v.at(-1) ?? 0) / avg15, 2) : 0 };
+}
+
 export class RuleDecisionProvider implements DecisionProvider {
   readonly name = "kural";
   constructor(
@@ -98,6 +109,7 @@ export class RuleDecisionProvider implements DecisionProvider {
       spark: inp.candles.slice(-60).map((x) => x.close),
       atr: s.atr,
       atrPct: round(s.atrPct, 2),
+      ...volRatios(inp.candles),
       rsi: s.rsi === null ? null : round(s.rsi, 1),
       funding: inp.funding,
       sentiment: inp.sentiment,
