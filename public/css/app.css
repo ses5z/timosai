@@ -330,3 +330,5 @@ tr:last-child td { border-bottom: 0; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
 .history { max-height: 420px; overflow: auto; overscroll-behavior: contain; }
 .confirm-box { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; background: var(--caution-soft); border: 1px solid rgba(242, 193, 78, 0.4); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
+.scenario-steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+.scenario-steps li::marker { color: var(--amber); font-weight: 700; }

@@ -19,7 +19,8 @@ export interface MentorProvider {
 }
 
 export const MAX_TOOL_TURNS = 4;
-export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+// ai.google.dev/gemini-api/docs/models (2026-10-17): en güncel kararlı, ücretsiz katmanlı flash modeli.
+export const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
 export const DEFAULT_CLAUDE_MODEL = "claude-haiku-5-5";
 
 export const wrapData = (v: unknown) => `<durum_verisi>${JSON.stringify(v).slice(0, 6000)}</durum_verisi>`;
@@ -28,11 +29,12 @@ type FetchLike = typeof fetch;
 
 export class GeminiMentor implements MentorProvider {
   readonly name: string;
+  private thinkingOk = true;
   constructor(
     private readonly apiKey: string,
     private readonly model: string = DEFAULT_GEMINI_MODEL,
     private readonly fetchImpl: FetchLike = fetch,
-    private readonly maxTokens = 600,
+    private readonly maxTokens = 1024,
   ) {
     this.name = `Gemini (${model})`;
   }
@@ -52,13 +54,25 @@ export class GeminiMentor implements MentorProvider {
         generationConfig: { maxOutputTokens: this.maxTokens, temperature: 0.4 },
       };
       if (turn < MAX_TOOL_TURNS) body.tools = [{ functionDeclarations: decl }];
+      // Kısa ve hızlı cevap için düşünme en düşük seviyede.
       if (/2\.5-flash/.test(this.model)) body.generationConfig.thinkingConfig = { thinkingBudget: 0 };
-      const res = await this.fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent`, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-goog-api-key": this.apiKey },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(20_000),
-      });
+      else if (/gemini-3/.test(this.model) && this.thinkingOk) body.generationConfig.thinkingConfig = { thinkingLevel: "low" };
+      const send = () =>
+        this.fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-goog-api-key": this.apiKey },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(20_000),
+        });
+      let res = await send();
+      if (res.status === 400 && body.generationConfig.thinkingConfig) {
+        const t = await res.text();
+        if (/thinking/i.test(t)) {
+          this.thinkingOk = false;
+          delete body.generationConfig.thinkingConfig;
+          res = await send();
+        } else throw new Error(mask(`Gemini 400: ${t.slice(0, 200)}`));
+      }
       if (!res.ok) throw new Error(mask(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`));
       const data: any = await res.json();
       const content = data?.candidates?.[0]?.content;

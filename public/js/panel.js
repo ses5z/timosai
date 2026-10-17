@@ -39,6 +39,7 @@
     $("#ct-gauge").innerHTML = T.gauge(c.riskScore.score) + `<div><b>${T.term("risk", "Risk skoru")}</b><p class="kpi-small" style="margin:4px 0 0">Durum: <b class="${c.riskScore.level === "güvenli" ? "up" : c.riskScore.level === "riskli" ? "down" : ""}">${c.riskScore.level}</b></p></div>`;
     $("#ct-warn").textContent = c.warningsTotal;
     $("#ct-blocked").textContent = c.blockedByAgent;
+    T.renderKeep($("#ct-list"), c.warnings.slice(0, 8).map((w) => `<li class="lvl-uyarı"><time>${F.time(w.ts)}</time><span><b>${T.esc(w.title)}</b><br><span class="faint">${T.esc(w.text)}</span></span></li>`).join("") || `<li><span></span><span class="muted">Uyarı yok.</span></li>`);
     $("#ct-bars").innerHTML = c.bars.map((b) => {
       const pct = Math.min(100, (b.value / b.max) * 100);
       return `<div class="bar-row"><header><span>${T.esc(b.label)}${b.warnOnly ? ' <span class="faint">(yalnızca uyarı)</span>' : ""}</span><b class="num">${F.num(b.value, b.unit ? 2 : 0)} / ${b.max} ${b.unit}</b></header><div class="bar ${pct >= 100 ? "bad" : pct >= 80 ? "warn" : ""}"><span style="width:${pct}%"></span></div></div>`;
@@ -90,6 +91,17 @@
     e.target.disabled = true;
     try { await T.api("/api/scenario/start", { body: {} }); T.toast("Senaryo başladı: adımları olay günlüğünden izle."); } catch (err) { T.toast(err.message); } finally { setTimeout(() => (e.target.disabled = false), 4000); }
   });
+
+  function renderScenario(steps) {
+    if (!steps.length) return;
+    $("#scenario-card").hidden = false;
+    const last = steps[steps.length - 1];
+    $("#sc-step").textContent = last.done ? "tamamlandı" : `${last.step}/${last.total}`;
+    $("#sc-list").innerHTML = steps.map((s) => `<li><b>${T.esc(s.title)}</b><br><span class="muted">${T.esc(s.text)}</span></li>`).join("");
+  }
+  let scSteps = [];
+  T.on("scenario", (s) => { if (s.step === 1) scSteps = []; scSteps.push(s); renderScenario(scSteps); if (s.done) refreshAll(); });
+  T.api("/api/scenario").then((d) => { scSteps = d.steps; renderScenario(scSteps); }).catch(() => {});
 
   const refreshAll = () => Promise.allSettled([loadPortfolio(), loadContract(), loadEvents(), loadAtk(), loadLedger()]);
   refreshAll();

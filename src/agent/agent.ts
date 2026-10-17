@@ -309,7 +309,7 @@ export class Agent {
   totalBlocked = 0;
 
   /** Ajanın bir aday için emir denemesi. Sonuç metni döner (senaryo ve testler için). */
-  async tryEnter(c: Candidate, origin: EntryRequest["origin"] = "ajan"): Promise<{ ok: boolean; reason: string; position?: Position }> {
+  async tryEnter(c: Candidate, origin: EntryRequest["origin"] = "ajan", opts: { warnKey?: string } = {}): Promise<{ ok: boolean; reason: string; position?: Position }> {
     const t = this.d.trading;
     const equity = t.equity();
     const riskPct = this.d.store.settings.riskPct;
@@ -326,7 +326,7 @@ export class Agent {
       const summary = `${c.base} için ${size.notionalUsdt.toFixed(2)} USDT alış (giriş ${c.entry}, stop ${c.stop}, hedef ${c.target})`;
       this.d.ledger.append("decision", { instId: c.instId, karar: "ENGELLENDİ", sebep: items, origin });
       this.d.store.addEvent("uyarı", `Ajan şu emri sözleşmeye aykırı buldu ve vermedi: ${summary}.`, c.instId);
-      this.d.warnings.raise("ajan_engelledi", c.instId, "Ajan bir emri vermedi", `Ajan şu emri sözleşmeye aykırı buldu ve vermedi: ${summary}.`, items, this.riskScore().score);
+      this.d.warnings.raise("ajan_engelledi", opts.warnKey ?? c.instId, "Ajan bir emri vermedi", `Ajan şu emri sözleşmeye aykırı buldu ve vermedi: ${summary}.`, items, this.riskScore().score);
       return { ok: false, reason: items.map((i) => i.label).join(", ") };
     }
     const req: EntryRequest = { instId: c.instId, notionalUsdt: size.notionalUsdt, entryPx: c.price, stopPx: c.stop, targetPx: c.target, atr: c.atr, reason: c.reason, origin };

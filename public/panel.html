@@ -18,6 +18,10 @@
     <div id="detail-toggle"></div>
   </div>
   <div id="notices"></div>
+  <section class="card" id="scenario-card" hidden aria-labelledby="sc-h" style="margin-bottom:16px">
+    <div class="card-head"><h2 id="sc-h">Senaryo</h2><span class="badge badge-muted" id="sc-step">-</span></div>
+    <ol class="scenario-steps" id="sc-list"></ol>
+  </section>
 
   <div class="grid-3">
     <section class="card span-2" aria-labelledby="eq-h">
@@ -62,6 +66,8 @@
         <div class="stat"><span class="kpi-small">Ajanın engellediği emir</span><b id="ct-blocked">0</b></div>
       </div>
       <div id="ct-bars"></div>
+      <h3 style="margin-top:6px">Son uyarılar</h3>
+      <ul class="log" id="ct-list" style="max-height:180px"></ul>
       <p class="faint" style="font-size:.82rem;margin:0">Sözleşme uyarır, kilitlemez. Sert limitler hiçbir yolla aşılamaz.</p>
     </section>
 

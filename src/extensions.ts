@@ -2,6 +2,7 @@
 import type express from "express";
 import type { AppContext } from "./context.js";
 import { MentorService } from "./mentor/mentorService.js";
+import { Scenario } from "./scenario.js";
 
 export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typeof fetch } = {}): Promise<void> {
   ctx.extras.routes = ctx.extras.routes ?? [];
@@ -10,7 +11,16 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
   ctx.extras.analyze = async (instId: string) => mentor.analyze(instId);
   ctx.extras.explainPlan = async (plan: any) => mentor.explainPlan(plan);
 
+  const scenario = new Scenario(ctx);
+  ctx.extras.scenario = scenario;
+
   ctx.extras.routes.push((app: express.Express) => {
+    app.post("/api/scenario/start", (_req, res) => {
+      if (scenario.running) return res.status(409).json({ error: "Senaryo zaten çalışıyor." });
+      void scenario.start();
+      res.json({ ok: true });
+    });
+    app.get("/api/scenario", (_req, res) => res.json({ running: scenario.running, steps: scenario.history() }));
     app.post("/api/mentor/chat", async (req, res) => {
       const text = typeof req.body?.text === "string" ? req.body.text : "";
       const via = req.body?.via === "ses" ? "ses" : "web";
