@@ -45,7 +45,7 @@
     const s = d.snapshot, n = (v, k = 2) => (v == null ? "-" : Number(v).toFixed(k));
     return `<div class="view-box"><p style="margin:0 0 6px">${T.derivBadge(d)} <span class="kpi-small">Kalabalık taraf: <b>${T.esc(d.crowded)}</b> · Manipülasyon şüphesi: <b>${T.esc(d.manipulation)}</b></span></p>
       <ul class="cautions">${d.reasons.map((r) => `<li>${T.esc(r)}</li>`).join("")}</ul>
-      <div class="detail-only kpi-small" style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">
+      <div class="pro-only kpi-small" style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">
         <span>${T.term("funding", "Funding")}</span><b class="num">${s.funding == null ? "-" : (s.funding * 100).toFixed(4) + "%"}</b>
         <span>${T.term("oi", "OI")}</span><b class="num">${s.oiUsd == null ? "-" : T.fmt.vol(s.oiUsd) + " USD"}</b>
         <span>OI değişimi 1 sa / 4 sa</span><b class="num">${n(s.oiDeltaPct1h)}% / ${n(s.oiDeltaPct4h)}%</b>
@@ -118,18 +118,19 @@
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelectorAll(".term-tip").forEach((t) => { t.previousElementSibling?.setAttribute("aria-expanded", "false"); t.remove(); }); });
 
-  // ---------- Basit / Ayrıntı ----------
+  // ---------- Basic / Pro (üst gezinmede kalıcı anahtar; tercih tarayıcıda saklanır) ----------
   const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
   T.store = store;
-  document.body.dataset.detail = store.get("tms-detail") || "simple";
-  T.detailToggle = () => `<div class="segment" role="group" aria-label="Görünüm"><button type="button" data-detail="simple" aria-pressed="${document.body.dataset.detail === "simple"}">Basit</button><button type="button" data-detail="detail" aria-pressed="${document.body.dataset.detail === "detail"}">Ayrıntı</button></div>`;
+  document.body.dataset.mode = store.get("tms-mode") === "pro" ? "pro" : "basic";
+  T.detailToggle = () => "";
+  const modeToggle = () => `<div class="segment mode-switch" role="group" aria-label="Görünüm modu"><button type="button" data-mode="basic" aria-pressed="${document.body.dataset.mode === "basic"}">Basic</button><button type="button" data-mode="pro" aria-pressed="${document.body.dataset.mode === "pro"}">Pro</button></div>`;
   document.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-detail]");
-    if (!b || b.tagName !== "BUTTON") return;
-    document.body.dataset.detail = b.dataset.detail;
-    store.set("tms-detail", b.dataset.detail);
-    document.querySelectorAll("[data-detail]").forEach((x) => x.tagName === "BUTTON" && x.setAttribute("aria-pressed", String(x.dataset.detail === b.dataset.detail)));
-    fire("detail", b.dataset.detail);
+    const b = e.target.closest("button[data-mode]");
+    if (!b) return;
+    document.body.dataset.mode = b.dataset.mode;
+    store.set("tms-mode", b.dataset.mode);
+    document.querySelectorAll("button[data-mode]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.mode === b.dataset.mode)));
+    fire("mode", b.dataset.mode);
   });
 
   // ---------- Gezinme + alt bilgi ----------
@@ -152,6 +153,7 @@
       <a class="brand" href="/"><img src="/img/logo.svg" alt="" width="34" height="34"><span>TimosAI</span></a>
       <ul class="nav-links">${links}</ul>
       <div class="nav-right">
+        ${modeToggle()}
         <span id="mode-badge" class="badge badge-dry" title="Emirler borsaya gitmez">KURU ÇALIŞMA</span>
         <button class="menu-btn" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="Menüyü aç">${T.icon("menu")}</button>
       </div>

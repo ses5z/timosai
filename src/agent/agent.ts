@@ -9,7 +9,7 @@ import type { HardLimits } from "../trading/hardLimits.js";
 import { HardLimitError, type EntryRequest, type Position, type TradingClient } from "../trading/tradingClient.js";
 import type { Thresholds } from "./thresholds.js";
 import { sizePosition } from "./sizing.js";
-import { round, roundPrice } from "../util/math.js";
+import { round, roundPrice, type Candle } from "../util/math.js";
 import { log } from "../util/log.js";
 import type { DerivativesData, DerivSnapshot } from "../derivatives/derivativesData.js";
 
@@ -72,6 +72,7 @@ export class Agent {
   private fundingCache = new Map<string, { v: number | null; at: number }>();
   private sentimentCache: { map: Map<string, number>; at: number } = { map: new Map(), at: 0 };
   derivSnap = new Map<string, { at: number; v: DerivSnapshot }>();
+  lastCandles = new Map<string, Candle[]>();
   private blockedTimes: number[] = [];
   lossStreak = 0;
   /** Stop olunan coinler: süreyle değil, karar "aç" dışına çıkıp yeniden "aç" olunca (yeni kurulum) tekrar girilir. */
@@ -188,6 +189,7 @@ export class Agent {
             const idx = i + j;
             try {
               const candles = await this.d.market.candles(w.instId, "15m", 100);
+              this.lastCandles.set(w.instId, candles);
               const rsi = await this.cachedRsi(w.instId, priorityIds.has(w.instId) || idx % 4 === rotate);
               const snap = this.derivSnap.get(w.instId)?.v ?? null;
               const funding = snap?.funding ?? (await this.cachedFunding(w.instId));

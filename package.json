@@ -18,12 +18,14 @@
     "avax:compile": "tsx avalanche/scripts/compile.ts",
     "deploy:fuji": "tsx avalanche/scripts/compile.ts && tsx avalanche/scripts/deploy.ts fuji",
     "deploy:mainnet": "tsx avalanche/scripts/compile.ts && tsx avalanche/scripts/deploy.ts mainnet",
-    "scam:verify": "tsx scripts/scam-verify.ts"
+    "scam:verify": "tsx scripts/scam-verify.ts",
+    "vendor": "node -e \"require('fs').copyFileSync('node_modules/lightweight-charts/dist/lightweight-charts.standalone.production.js','public/vendor/lightweight-charts.standalone.production.js')\""
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@okx_ai/okx-trade-mcp": "^1.4.8",
     "express": "^4.22.3",
+    "lightweight-charts": "^5.2.1",
     "viem": "^2.57.7"
   },
   "devDependencies": {

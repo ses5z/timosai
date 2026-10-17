@@ -148,6 +148,49 @@ export function createApp(ctx: AppContext) {
     json(res, { ...a, source: { atk: "funding, OI, OI geçmişi (ATK)", public: `L/S ve taker hacmi: ${a.snapshot.publicSource ? a.snapshot.publicSource + " vadeli verisi (ATK dışı)" : "veri yok"}` }, stats: ctx.derivatives.stats() });
   });
 
+  // Grafik verisi: mumlar ATK'den (bizim verimiz), giriş/stop/hedef, ajanın al/sat işaretleri, ATR trend çizgisi.
+  const candleCache = new Map<string, { at: number; v: any[] }>();
+  app.get("/api/candles/:instId", async (req, res) => {
+    const id = req.params.instId;
+    const bar = ["15m", "1H", "4H"].includes(String(req.query.bar)) ? String(req.query.bar) : "15m";
+    if (!validInstId(id)) return res.status(400).json({ error: "geçersiz sembol" });
+    let candles: any[] | undefined = bar === "15m" ? agent.lastCandles.get(id) : undefined;
+    const key = `${id}:${bar}`;
+    if (!candles) {
+      const c = candleCache.get(key);
+      if (c && Date.now() - c.at < 60_000) candles = c.v;
+      else {
+        try {
+          candles = await ctx.market.candles(id, bar, 150);
+          candleCache.set(key, { at: Date.now(), v: candles });
+        } catch {
+          return res.status(502).json({ error: "mum verisi yok" });
+        }
+      }
+    }
+    const { atrTrend, loadAtrTrendConfig } = await import("./indicators/atrTrend.js");
+    const cfg = loadAtrTrendConfig();
+    const at = atrTrend(candles as any, cfg.period, cfg.mult);
+    const sec = (ms: number) => Math.floor(ms / 1000);
+    const barMs = bar === "15m" ? 900_000 : bar === "1H" ? 3_600_000 : 14_400_000;
+    const cand = agent.candidates.get(id);
+    const markers = agent.trading
+      .listTrades(200)
+      .filter((t) => t.instId === id)
+      .map((t) => ({ time: sec(Math.floor(t.ts / barMs) * barMs), position: t.side === "buy" ? "belowBar" : "aboveBar", color: t.side === "buy" ? "#62c98f" : "#f06a66", shape: t.side === "buy" ? "arrowUp" : "arrowDown", text: `${t.side === "buy" ? "AL" : "SAT"}${t.origin === "hızlı" ? " (hızlı)" : ""}` }))
+      .filter((m) => m.time >= sec(candles![0].ts))
+      .sort((a, b) => a.time - b.time);
+    json(res, {
+      bar,
+      candles: candles.map((c: any) => ({ time: sec(c.ts), open: c.open, high: c.high, low: c.low, close: c.close, vol: c.vol })),
+      atrTrend: at.map((p, i) => ({ time: sec(candles![i].ts), value: p.line, dir: p.dir })),
+      markers,
+      levels: cand ? { entry: cand.entry, stop: cand.stop, target: cand.target } : null,
+      position: agent.positionsView().find((p) => p.instId === id) ?? null,
+      live: ctx.market.isLive(),
+    });
+  });
+
   app.get("/api/hold/:instId", async (req, res) => {
     const id = req.params.instId;
     if (!validInstId(id)) return res.status(400).json({ error: "geçersiz sembol" });

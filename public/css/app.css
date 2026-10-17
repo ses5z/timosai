@@ -159,7 +159,9 @@ main { max-width: var(--maxw); margin: 0 auto; padding: 20px 16px 40px; }
 .segment { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 .segment button { background: transparent; color: var(--muted); border: 0; padding: 7px 12px; font: inherit; font-size: 0.85rem; cursor: pointer; min-height: 36px; }
 .segment button[aria-pressed="true"] { background: var(--amber); color: var(--ink-950); font-weight: 600; }
-body[data-detail="simple"] .detail-only { display: none !important; }
+body[data-mode="basic"] .pro-only { display: none !important; }
+body[data-mode="pro"] .basic-only { display: none !important; }
+.mode-switch button { min-height: 32px; padding: 5px 10px; font-weight: 600; }
 
 /* Açıklama balonu */
 .term { position: relative; display: inline-flex; align-items: center; gap: 4px; }
@@ -429,3 +431,10 @@ tr:last-child td { border-bottom: 0; }
 @media (min-width: 640px) { .scan-form { grid-template-columns: 160px 1fr auto; } }
 .scan-form select, .scan-form input { min-height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--ink-850); color: var(--text); padding: 0 12px; font: inherit; min-width: 0; }
 .scan-form input { font-family: var(--font-mono); font-size: 0.88rem; }
+.tv-box { width: 100%; border-radius: 12px; overflow: hidden; background: rgba(10, 15, 26, 0.45); }
+.tf { display: flex; gap: 6px; margin-bottom: 8px; }
+.tf .chip { min-height: 32px; padding: 4px 10px; font-size: 0.8rem; }
+.tf .chip[aria-pressed="true"] { background: var(--amber); color: var(--ink-950); border-color: var(--amber); }
+.chart-note { font-size: 0.76rem; margin: 6px 0 0; }
+.parts-mini { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+@media (max-width: 420px) { .mode-switch button { padding: 5px 8px; font-size: 0.78rem; } .nav-right .badge { display: none; } }

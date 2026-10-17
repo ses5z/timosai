@@ -1,7 +1,6 @@
 (function () {
   "use strict";
   const T = window.TimosAI, $ = (s) => document.querySelector(s), F = T.fmt;
-  $("#detail-toggle").innerHTML = T.detailToggle();
 
   async function loadPortfolio() {
     const p = await T.api("/api/portfolio");
@@ -17,8 +16,8 @@
     $("#risk-val").textContent = "%" + p.riskPct;
     $("#risk-usdt").textContent = `Bu, işlem başına en fazla ≈ ${F.usd(p.riskBudgetUsdt, 3)} kayıp demek.`;
     const TAG = { ajan: "OTONOM", senaryo: "SENARYO", "hızlı": "HIZLI" };
-    const rows = p.trades.map((t) => `<tr><td>${F.time(t.ts)}</td><td>${T.esc(t.instId.replace("-USDT", ""))}</td><td>${t.side === "buy" ? "AL" : "SAT"}</td><td class="num">${F.price(t.px)}</td><td class="num">${F.num(t.notionalUsdt, 2)}</td><td class="num ${T.cls(t.pnl)}">${t.pnl == null ? "-" : F.signed(t.pnl, 3)}</td><td><span class="badge ${t.mode === "KURU" ? "badge-dry" : "badge-live"}">${t.mode}</span> <span class="badge badge-muted">${TAG[t.origin] || T.esc(t.origin)}</span></td><td class="detail-only">${T.esc(t.reason)}</td></tr>`).join("");
-    T.renderKeep($("#tr-wrap"), rows ? `<table><thead><tr><th>Saat</th><th>Coin</th><th>Yön</th><th class="num">Fiyat</th><th class="num">USDT</th><th class="num">K/Z</th><th>Mod</th><th class="detail-only">Gerekçe</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Henüz işlem yok. Ajan uygun sinyal görünce küçük bir emir açar.</div>`);
+    const rows = p.trades.map((t) => `<tr><td>${F.time(t.ts)}</td><td>${T.esc(t.instId.replace("-USDT", ""))}</td><td>${t.side === "buy" ? "AL" : "SAT"}</td><td class="num">${F.price(t.px)}</td><td class="num">${F.num(t.notionalUsdt, 2)}</td><td class="num ${T.cls(t.pnl)}">${t.pnl == null ? "-" : F.signed(t.pnl, 3)}</td><td><span class="badge ${t.mode === "KURU" ? "badge-dry" : "badge-live"}">${t.mode}</span> <span class="badge badge-muted">${TAG[t.origin] || T.esc(t.origin)}</span></td><td class="pro-only">${T.esc(t.reason)}</td></tr>`).join("");
+    T.renderKeep($("#tr-wrap"), rows ? `<table><thead><tr><th>Saat</th><th>Coin</th><th>Yön</th><th class="num">Fiyat</th><th class="num">USDT</th><th class="num">K/Z</th><th>Mod</th><th class="pro-only">Gerekçe</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Henüz işlem yok. Ajan uygun sinyal görünce küçük bir emir açar.</div>`);
   }
 
   function renderPositions(list) {
@@ -31,7 +30,7 @@
         <b class="num ${T.cls(p.pnlUsdt)}">${F.signed(p.pnlUsdt, 3)} USDT (${F.pct(p.pnlPct)})</b></div>
         <div class="kpi-row kpi-small"><span>Giriş <b class="num">${F.price(p.entryPx)}</b></span><span>Son <b class="num">${F.price(p.lastPx)}</b></span><span>${T.term("stop", "Stop")} <b class="num">${F.price(p.stopPx)}</b></span><span>Hedef <b class="num">${F.price(p.targetPx)}</b></span><span>Büyüklük <b class="num">${F.num(p.costUsdt, 2)} USDT</b></span></div>
         <div class="bar ${prog < 25 ? "bad" : prog < 50 ? "warn" : ""}" style="margin-top:10px" role="img" aria-label="Stop ile hedef arasında konum yüzde ${Math.round(prog)}"><span style="width:${prog}%"></span></div>
-        <p class="faint detail-only" style="font-size:.82rem;margin:8px 0 0">${T.esc(p.reason)}</p></article>`;
+        <p class="faint pro-only" style="font-size:.82rem;margin:8px 0 0">${T.esc(p.reason)}</p></article>`;
     }).join("");
   }
 

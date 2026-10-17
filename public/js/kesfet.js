@@ -1,7 +1,6 @@
 (function () {
   "use strict";
   const T = window.TimosAI, $ = (s) => document.querySelector(s), F = T.fmt;
-  $("#detail-toggle").innerHTML = T.detailToggle();
   $("#btn-pass").innerHTML = T.icon("x");
   $("#btn-like").innerHTML = T.icon("heart");
   $("#btn-undo").innerHTML = T.icon("undo");
@@ -21,8 +20,9 @@
         <div class="score-box"><span class="kpi-small">${T.term("opportunity", "Fırsat")}</span><br><b>${c.opportunity}</b><div class="bar"><span style="width:${c.opportunity}%"></span></div></div>
         <div class="score-box"><span class="kpi-small">${T.term("risk", "Risk")}</span><br><b>${c.risk}</b><div class="bar ${c.risk >= 55 ? "bad" : c.risk >= 35 ? "warn" : ""}"><span style="width:${c.risk}%"></span></div></div>
       </div>
-      <p class="kpi-small" style="margin:0">Yön: <b style="color:var(--text)">${T.esc(c.direction)}</b><span class="detail-only"> · ${T.term("rr", "R:R")} ${c.rr} · ${T.term("atr", "ATR")} %${c.atrPct}</span></p>
+      <p class="kpi-small" style="margin:0">Yön: <b style="color:var(--text)">${T.esc(c.direction)}</b><span class="pro-only"> · ${T.term("rr", "R:R")} ${c.rr} · ${T.term("atr", "ATR")} %${c.atrPct}</span></p>
       <p class="reason">${T.esc(c.reason)}</p>
+      <div class="pro-only kpi-small parts-mini">${Object.entries(c.parts || {}).map(([k, v]) => `<span>${T.esc(k)} <b class="num">${v}</b></span>`).join("")}${c.atrTrend ? `<span>ATR trend <b>${c.atrTrend.dir === 1 ? "yükseliş" : "düşüş"}</b></span>` : ""}</div>
       <details><summary>Neden önerildi?</summary><ul>${why}</ul>
         <p class="kpi-small" style="margin:8px 0 0"><b>Güvenlik özeti</b> <span class="badge badge-warn">${T.esc(s.label || "ÖRNEK VERİ")}</span><br>Denetim: ${T.esc(s.contractAudit)} · Arz açılışı: ${T.esc(s.unlockNext30d)} · Yoğunlaşma: ${T.esc(s.concentration)}<br>Makas (gerçek): ${s.spreadPct == null ? "ölçülmedi" : "%" + s.spreadPct} · Derinlik: ${s.depthUsdt == null ? "-" : F.vol(s.depthUsdt) + " USDT"}</p>
       </details>
@@ -135,17 +135,20 @@
         <div class="level target"><span>Hedef</span><b>${F.price(L.target)}</b> <small class="faint">+%${L.targetPct}</small></div>
         <div class="level"><span>${T.term("rr", "R:R")}</span><b>${L.rr}</b></div>
       </div>
+      <div id="an-chart" style="margin-top:12px"></div>
       <h3>Risk bütçene göre örnek boyut</h3>
       <p><b class="num">${S.notionalUsdt > 0 ? F.usd(S.notionalUsdt) : "Boyut yok"}</b> ${S.notionalUsdt > 0 ? `· stop olursa ≈ <b class="num">${F.num(S.riskUsdt, 3)} USDT</b>` : ""}</p>
       <p class="kpi-small">${T.esc(S.explain)}</p>
       <h3>Teknik tablo</h3>
-      <div class="table-wrap" style="max-height:none"><table><tbody>${a.table.map((r) => `<tr><td>${T.esc(r.label)}</td><td class="num">${T.esc(r.value)}</td><td class="faint detail-only">${T.esc(r.note)}</td></tr>`).join("")}</tbody></table></div>
+      <div class="table-wrap" style="max-height:none"><table><tbody>${a.table.map((r) => `<tr><td>${T.esc(r.label)}</td><td class="num">${T.esc(r.value)}</td><td class="faint pro-only">${T.esc(r.note)}</td></tr>`).join("")}</tbody></table></div>
       <h3>Senaryolar</h3>
       <p class="kpi-small"><span class="up">Lehte:</span> ${T.esc(a.scenarios.lehte)}<br><span class="down">Aleyhte:</span> ${T.esc(a.scenarios.aleyhte)}</p>
       <h3>Dikkat edilecekler</h3>
       <ul class="cautions">${a.cautions.map((x) => `<li>${T.esc(x)}</li>`).join("")}</ul>
       <p style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-sm" href="/mentor?q=${encodeURIComponent(a.base + " analizi")}">Mentora sor</a><a class="btn btn-sm btn-ghost" href="/isi-haritasi?s=${encodeURIComponent(a.instId)}">Ayrıntı çekmecesi</a></p>
       <p class="faint" style="font-size:.8rem">Yatırım tavsiyesi değildir. Emri ajan kendi kuralları ve sert limitler içinde verir.</p>`;
+    if (window.__anChart) window.__anChart.destroy();
+    window.__anChart = T.tvChart(box.querySelector("#an-chart"), a.instId, { height: 220, levels: a.levels });
   }
 
   // ---- Liste görünümü ----
@@ -210,7 +213,7 @@
       const r = await T.api("/api/scan", { body: { chain: $("#scan-chain").value, address: $("#scan-addr").value.trim() } });
       box.innerHTML = `<div class="view-box" style="margin-top:10px"><p style="margin:0 0 6px"><span class="badge ${vcls[r.verdict]}" style="font-size:.95rem">${r.verdict}</span> <b>${T.esc(r.token ? r.token.name + " (" + r.token.symbol + ")" : "Bilinmeyen token")}</b> · ${T.esc(r.chainName)}</p>
         <ul class="cautions">${r.reasons.map((x) => `<li>${T.esc(x)}</li>`).join("")}</ul>
-        <div class="detail-only kpi-small">${r.sources.map((s) => `<p style="margin:6px 0 0"><b>${T.esc(s.source)}</b>: ${s.available ? Object.entries(s.raw).map(([k, v]) => `${T.esc(k)}=${T.esc(v ?? "-")}`).join(" · ") : T.esc(s.note || "kapalı")}</p>`).join("")}</div></div>`;
+        <div class="pro-only kpi-small">${r.sources.map((s) => `<p style="margin:6px 0 0"><b>${T.esc(s.source)}</b>: ${s.available ? Object.entries(s.raw).map(([k, v]) => `${T.esc(k)}=${T.esc(v ?? "-")}`).join(" · ") : T.esc(s.note || "kapalı")}</p>`).join("")}</div></div>`;
     } catch (err) { box.innerHTML = `<p class="down">${T.esc(err.message)}</p>`; }
   });
   T.api("/api/demo-tokens").then((d) => {
