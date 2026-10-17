@@ -22,6 +22,7 @@ const PAGES: Record<string, string> = {
   "/hakkimizda": "hakkimizda.html",
   "/panel": "panel.html",
   "/terminal": "terminal.html",
+  "/long-short": "long-short.html",
 };
 
 export function validPair(s: unknown): s is string {

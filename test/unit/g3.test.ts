@@ -220,3 +220,37 @@ test("Kurulum sonuç takibi: hedef 1 → hedef 2, stop, süre doldu ve 7 gün ö
   assert.equal(st.hitPct, 50);
   assert.match(st.text, /^Son 7 gün: 2 kurulum · %50 hedefe ulaştı · ort\. [+-]/);
 });
+
+test("Pro L/S tüm SWAP: evren + funding tek çağrı, aranan coin anında, filtrelenebilir tablo", async () => {
+  const { SwapLongShort } = await import("../../src/longshort/swapUniverse.js");
+  const calls: string[] = [];
+  const f = (async (u: string) => {
+    calls.push(u);
+    const ok = (d: unknown) => new Response(JSON.stringify(d), { status: 200 });
+    if (u.includes("tickers?instType=SWAP")) return ok({ code: "0", data: [
+      { instId: "BTC-USDT-SWAP", last: "100000", volCcy24h: "1000" },
+      { instId: "PEPE-USDT-SWAP", last: "0.00001", volCcy24h: "1000000000000" },
+      { instId: "ETH-USD-SWAP", last: "3000", volCcy24h: "5" } ] });
+    if (u.includes("funding-rate?instId=ANY")) return ok({ code: "0", data: [{ instId: "BTC-USDT-SWAP", fundingRate: "0.0001" }] });
+    if (u.includes("rubik")) return ok({ code: "0", data: [["1", "3"]] }); // oran 3 → long %75
+    if (u.includes("binance")) return ok([{ longShortRatio: "1" }]); // %50
+    return new Response("{}", { status: 404 });
+  }) as unknown as typeof fetch;
+  const ctx = mkCtx({ AUTONOMOUS: "false" });
+  const s = new SwapLongShort(ctx, f, 0, 0);
+  await s.loadUniverse();
+  assert.equal(s.rows.size, 2, "yalnızca USDT perpetual");
+  assert.equal(calls.length, 2);
+  assert.equal(s.rows.get("BTC")!.volUsdt24h, 1e8);
+  assert.equal(s.rows.get("BTC")!.funding, 0.0001);
+  const r = await s.ensureCoin("PEPE");
+  assert.equal(r!.okx!.account, 75);
+  assert.equal(r!.bn!.general, 50);
+  const t = s.table("okx");
+  assert.equal(t.total, 2);
+  assert.equal(t.filled, 1);
+  assert.equal(t.rows[0].base, "BTC"); // hacim sırası
+  assert.ok(t.summary.some((x) => x.label === "Top 10"));
+  assert.match(t.units.volume, /USDT/);
+  assert.equal(await s.ensureCoin("YOK"), null);
+});

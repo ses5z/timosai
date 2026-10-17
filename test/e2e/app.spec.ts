@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 
-const PAGES = ["/", "/kesfet", "/mentor", "/panel", "/isi-haritasi", "/telegram", "/hakkimizda", "/terminal"];
+const PAGES = ["/", "/kesfet", "/mentor", "/panel", "/isi-haritasi", "/telegram", "/hakkimizda", "/terminal", "/long-short"];
 const SHOTS = "artifacts/screens";
 
 function watchErrors(page: Page) {

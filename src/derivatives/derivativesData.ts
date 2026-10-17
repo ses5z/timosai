@@ -1,6 +1,7 @@
 // DerivativesData: vadeli piyasa verisi (hesaba değil piyasaya ait; OKX TR'de kaldıraç olmaması okumayı engellemez).
 // ATK: funding, open interest, OI geçmişi. OKX global public Trading Statistics (ATK dışı, anahtarsız): genel hesap
 // L/S oranı, üst trader L/S (hesap + pozisyon), taker al/sat hacmi. OKX global erişilemezse Binance Futures yedeği.
+import { okxRubikSlot } from "../util/okxThrottle.js";
 import type { AtkCaller } from "../atk/mcpClient.js";
 
 export interface DerivSnapshot {
@@ -16,6 +17,8 @@ export interface DerivSnapshot {
   lsTopPosition: number | null; // üst trader pozisyon oranı
   takerBuy: number | null;
   takerSell: number | null;
+  /** Taker hacmi birimi: OKX "USDT" (unit=2), Binance coin adedi. */
+  takerUnit?: string;
   publicSource: "OKX" | "Binance" | null;
   ts: number;
   live: boolean;
@@ -52,12 +55,9 @@ export class LiveDerivativesData implements DerivativesData {
   }
 
   // OKX rubik uç noktaları IP başına ~5 istek / 2 sn ile sınırlı: istekler kuyrukla ~2/sn'ye yayılır.
-  private okxQueue: Promise<void> = Promise.resolve();
   private throttle(url: string): Promise<void> {
     if (!url.includes("okx.com") || this.minGapMs <= 0) return Promise.resolve();
-    const p = this.okxQueue.then(() => new Promise<void>((r) => setTimeout(r, this.minGapMs)));
-    this.okxQueue = p.catch(() => undefined);
-    return p;
+    return okxRubikSlot(this.minGapMs); // Pro L/S ile ortak kuyruk
   }
 
   private async getJson(url: string): Promise<any> {
@@ -79,10 +79,10 @@ export class LiveDerivativesData implements DerivativesData {
     const a = await this.getJson(`${base}/contracts/long-short-account-ratio-contract?${q}`);
     const ta = await this.getJson(`${base}/contracts/long-short-account-ratio-contract-top-trader?${q}`);
     const tp = await this.getJson(`${base}/contracts/long-short-position-ratio-contract-top-trader?${q}`);
-    const tv = await this.getJson(`${base}/taker-volume-contract?${q}`);
+    const tv = await this.getJson(`${base}/taker-volume-contract?${q}&unit=2`); // unit=2: USDT (varsayılan 1 = kontrat)
     for (const x of [a, ta, tp, tv]) if (x?.code !== "0") throw new Error(`OKX public: ${x?.msg ?? "kod " + x?.code}`);
     // taker-volume-contract: [ts, satış hacmi, alış hacmi]
-    return { lsAccount: num(a.data?.[0]?.[1]), lsTopAccount: num(ta.data?.[0]?.[1]), lsTopPosition: num(tp.data?.[0]?.[1]), takerSell: num(tv.data?.[0]?.[1]), takerBuy: num(tv.data?.[0]?.[2]), publicSource: "OKX" as const };
+    return { lsAccount: num(a.data?.[0]?.[1]), lsTopAccount: num(ta.data?.[0]?.[1]), lsTopPosition: num(tp.data?.[0]?.[1]), takerSell: num(tv.data?.[0]?.[1]), takerBuy: num(tv.data?.[0]?.[2]), takerUnit: "USDT", publicSource: "OKX" as const };
   }
 
   private async binancePublic(instId: string) {
@@ -95,7 +95,7 @@ export class LiveDerivativesData implements DerivativesData {
       this.getJson(`${base}/topLongShortPositionRatio?${q}`),
       this.getJson(`${base}/takerlongshortRatio?${q}`),
     ]);
-    return { lsAccount: num(a?.[0]?.longShortRatio), lsTopAccount: num(ta?.[0]?.longShortRatio), lsTopPosition: num(tp?.[0]?.longShortRatio), takerBuy: num(tv?.[0]?.buyVol), takerSell: num(tv?.[0]?.sellVol), publicSource: "Binance" as const };
+    return { lsAccount: num(a?.[0]?.longShortRatio), lsTopAccount: num(ta?.[0]?.longShortRatio), lsTopPosition: num(tp?.[0]?.longShortRatio), takerBuy: num(tv?.[0]?.buyVol), takerSell: num(tv?.[0]?.sellVol), takerUnit: instId.split("-")[0], publicSource: "Binance" as const };
   }
 
   async snapshot(instId: string): Promise<DerivSnapshot> {

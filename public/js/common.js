@@ -58,7 +58,7 @@
         <span>${T.term("ls", "Genel hesap oranı")}</span><b class="num">${n(s.lsAccount)}</b>
         <span>Üst trader oranı (hesap)</span><b class="num">${n(s.lsTopAccount)}</b>
         <span>Üst trader oranı (pozisyon)</span><b class="num">${n(s.lsTopPosition)}</b>
-        <span>Taker alış / satış</span><b class="num">${s.takerBuy == null ? "-" : T.fmt.vol(s.takerBuy)} / ${s.takerSell == null ? "-" : T.fmt.vol(s.takerSell)}</b>
+        <span>Taker alış / satış${s.takerUnit ? ` (${T.esc(s.takerUnit)}, 1 sa)` : ""}</span><b class="num">${s.takerBuy == null ? "-" : T.fmt.vol(s.takerBuy)} / ${s.takerSell == null ? "-" : T.fmt.vol(s.takerSell)}</b>
       </div>
       <p class="faint" style="font-size:.78rem;margin:8px 0 0">Funding ve OI: ATK. L/S ve taker hacmi: ${s.publicSource ? T.esc(s.publicSource) + " vadeli verisi (ATK dışı)" : "veri yok"}. Vadeli veri yalnızca analiz girdisidir; işlem spot.</p></div>`;
   };
@@ -165,9 +165,10 @@
     ["/telegram", "Telegram"],
     ["/hakkimizda", "Hakkımızda"],
     ["/terminal", "Terminal"],
+    ["/long-short", "Long/Short"],
   ];
   const here = location.pathname.replace(/\/$/, "") || "/";
-  const links = LINKS.map(([h, t]) => `<li${h === "/terminal" ? ' class="pro-only"' : ""}><a href="${h}"${h === here ? ' aria-current="page"' : ""}>${t}</a></li>`).join("");
+  const links = LINKS.map(([h, t]) => `<li${h === "/terminal" || h === "/long-short" ? ' class="pro-only"' : ""}><a href="${h}"${h === here ? ' aria-current="page"' : ""}>${t}</a></li>`).join("");
   const header = document.createElement("header");
   header.className = "site-header";
   header.innerHTML = `

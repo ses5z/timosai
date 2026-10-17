@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Long/Short · TimosAI</title>
+  <meta name="description" content="OKX'teki tüm USDT perpetual coinlerin long/short oranları (Pro).">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<main id="main" tabindex="-1">
+  <div class="page-head">
+    <div>
+      <h1>Long/Short</h1>
+      <p>OKX'teki tüm USDT perpetual coinler. Long % = oran / (1 + oran). Vadeli veri yalnızca analiz girdisidir; ajan spot işlem yapar.</p>
+    </div>
+  </div>
+  <div id="notices"></div>
+  <section class="card basic-only"><p>Long/Short tablosu Pro sürümdedir. Sağ üstten <b>Pro</b>'ya geçebilirsin.</p></section>
+  <section class="card pro-only" aria-labelledby="lsa-h">
+    <div class="card-head"><h2 id="lsa-h">Tüm coinler</h2><span class="kpi-small" id="lsa-meta" aria-live="polite"></span></div>
+    <div class="lsa-tools">
+      <div class="tabs" role="tablist" aria-label="Kaynak">
+        <button role="tab" aria-selected="true" data-src="okx">OKX</button>
+        <button role="tab" aria-selected="false" data-src="bn">Binance</button>
+      </div>
+      <input type="search" id="lsa-q" placeholder="Coin ara (ör. PEPE) ve Enter" aria-label="Coin ara" autocomplete="off">
+      <select id="lsa-cat" aria-label="Kategori"><option value="">Tüm kategoriler</option></select>
+      <label class="lsa-num">Min hacim <input id="lsa-vol" type="number" min="0" step="1" value="0" inputmode="decimal"> M USDT</label>
+      <label class="switch"><input type="checkbox" id="lsa-long" role="switch"> <span>Long &gt; %70</span></label>
+      <label class="switch"><input type="checkbox" id="lsa-short" role="switch"> <span>Long &lt; %35 (short ağır)</span></label>
+      <label class="switch"><input type="checkbox" id="lsa-div" role="switch"> <span>Ayrışma (hesap ≠ pozisyon, ≥15 puan)</span></label>
+    </div>
+    <div class="lsa-sum" id="lsa-sum"></div>
+    <div class="table-wrap lsa-table" id="lsa-wrap"></div>
+    <p class="faint lsa-note" id="lsa-note"></p>
+  </section>
+</main>
+<script src="/js/common.js"></script>
+<script src="/js/lsAll.js"></script>
+</body>
+</html>

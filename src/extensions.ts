@@ -13,6 +13,7 @@ import { CexService, PAIR_RE } from "./discover/cex.js";
 import { DEX_CHAINS, onchainOsStatus, resolveChain, validateAddress } from "./discover/dex.js";
 import { buildSecurityTable } from "./security/table.js";
 import { LongShortService, lsText } from "./longshort/longShort.js";
+import { SwapLongShort } from "./longshort/swapUniverse.js";
 import { analyzeCandidate } from "./mentor/analysis.js";
 import { holdReportFor } from "./fundamentals/view.js";
 import { derivAnalysisFor } from "./derivatives/view.js";
@@ -70,6 +71,8 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
   const ls = new LongShortService(ctx, ctx.env.atkMode === "live" ? opts.fetchImpl ?? fetch : null);
   ctx.extras.ls = ls;
   ctx.extras.lsText = lsText;
+  const swapLs = new SwapLongShort(ctx, ctx.env.atkMode === "live" ? opts.fetchImpl ?? fetch : null);
+  ctx.extras.swapLs = swapLs;
   const lsAlerted = new Map<string, number>();
   ctx.agent.onScan(async () => {
     await ls.refresh();
@@ -120,9 +123,13 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
     ctx.proof = new NoopProofAnchor("Anahtar var ama sözleşme dağıtılmamış: npm run deploy:fuji");
   }
 
-  ctx.extras.startBackground = () => void bot.start();
+  ctx.extras.startBackground = () => {
+    void bot.start();
+    swapLs.start();
+  };
   ctx.extras.stopBackground = () => {
     bot.stop();
+    swapLs.stop();
     clearInterval(futTimer);
     if (anchorTimer) clearInterval(anchorTimer);
   };
@@ -216,6 +223,16 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
       res.json({ query: String(req.query.q ?? ""), results: [], onchainos: onchainOsStatus(), warning: "Aynı isimli sahte tokenlar olabilir; kontrat adresini doğrula." });
     });
 
+    app.get("/api/ls-all", async (req, res) => {
+      await swapLs.loadUniverse().catch(() => undefined);
+      res.json(swapLs.table(req.query.source === "bn" ? "bn" : "okx"));
+    });
+    app.get("/api/ls-all/coin/:base", async (req, res) => {
+      const base = String(req.params.base).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
+      const r = await swapLs.ensureCoin(base);
+      if (!r) return res.status(404).json({ error: `${base} için OKX USDT perpetual yok.` });
+      res.json(r);
+    });
     app.get("/api/longshort", async (_req, res) => {
       await ls.refresh();
       res.json(ls.table());
