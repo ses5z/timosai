@@ -100,6 +100,19 @@ export class RuleMentor {
       const r = await this.tools.call("senaryo_baslat", {});
       return { text: r.pending ? `Onayın gerekiyor: ${r.pending.summary} Onaylıyor musun?` : r.error ?? "Tamam." };
     }
+    const addr = text.match(/0x[0-9a-fA-F]{40}/)?.[0];
+    if (addr) {
+      const chain = (t.match(/\b(eth|ethereum|bsc|bnb|avax|avalanche|polygon|arbitrum|base|optimism)\b/)?.[1]) ?? "avax";
+      const r = await this.tools.call("token_tara", { zincir: chain, adres: addr });
+      if (!r.ok) return { text: r.error! };
+      const d = r.data as any;
+      return { text: `Token tarama sonucu: ${d.karar} (${d.token?.symbol ?? "bilinmeyen"}, ${d.zincir}). ${d.gerekceler.slice(0, 3).join(" ")}` };
+    }
+    if (/(hold|temel\s*analiz|arz|fdv|kilit\s*a[çc][ıi]l)/.test(t) && sym) {
+      const r = await this.tools.call("hold_raporu", { sembol: sym });
+      const d = r.data as any;
+      return { text: r.ok ? `${d.sembol} hold raporu: ${d.karar}. ${d.gerekceler.slice(0, 3).join(" ")}` : r.error! };
+    }
     if (/(vadeli|funding|open\s*interest|\boi\b|long\s*short|l\/s|kalabal)/.test(t)) {
       const id = sym ?? "BTC-USDT";
       const r = await this.tools.call("vadeli_durum", { sembol: id });

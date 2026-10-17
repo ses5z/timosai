@@ -24,6 +24,18 @@
     </div>
   </div>
   <div id="notices"></div>
+  <section class="card scan-box" aria-labelledby="scan-h">
+    <h2 id="scan-h" style="font-size:1.1rem">Token tarama (DEX)</h2>
+    <form id="scan-form" class="scan-form" autocomplete="off">
+      <label for="scan-chain" class="visually-hidden">Zincir</label>
+      <select id="scan-chain"><option value="avax">Avalanche</option><option value="eth">Ethereum</option><option value="bsc">BNB Chain</option><option value="base">Base</option><option value="arbitrum">Arbitrum</option><option value="polygon">Polygon</option><option value="optimism">Optimism</option></select>
+      <label for="scan-addr" class="visually-hidden">Kontrat adresi</label>
+      <input id="scan-addr" placeholder="0x… kontrat adresi" spellcheck="false" maxlength="42">
+      <button class="btn btn-primary" type="submit">Tara</button>
+    </form>
+    <p class="kpi-small" id="scan-demo" style="margin:6px 0 0"></p>
+    <div id="scan-result" aria-live="polite"></div>
+  </section>
 
   <section id="view-cards" role="tabpanel" aria-labelledby="tab-cards">
     <div class="discover">

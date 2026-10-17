@@ -153,6 +153,7 @@
         <p class="kpi-small" style="margin-top:8px">Risk bütçene göre örnek boyut: <b>${s.notionalUsdt > 0 ? F.usd(s.notionalUsdt) : "yok"}</b>${s.notionalUsdt > 0 ? ` · stop olursa ≈ ${F.num(s.riskUsdt, 3)} USDT` : ""}. <span class="detail-only">${T.esc(s.explain)}</span></p></section>
       <section data-pos>${posHtml(p)}</section>
       <section><h3>Vadeli durum</h3><div id="dr-deriv">${T.derivCard(c.derivatives)}</div></section>
+      <section><h3>Hold raporu</h3><div id="dr-hold"><p class="kpi-small">Yükleniyor…</p></div></section>
       <section><h3>Skor bileşenleri</h3><p class="kpi-small">${T.term("opportunity", "Fırsat")} ${c.opportunity} · ${T.term("risk", "Risk")} ${c.risk}<span class="detail-only"> · ${T.term("rsi", "RSI")} ${c.rsi ?? "-"} · ${T.term("atr", "ATR")} %${c.atrPct} · ${T.term("funding", "Funding")} ${c.funding == null ? "-" : (c.funding * 100).toFixed(4) + "%"}</span></p>${parts}</section>
       <section class="detail-only"><h3>Neden?</h3><ul class="cautions">${c.whyBullets.map((b) => `<li>${T.esc(b)}</li>`).join("")}</ul><p class="kpi-small">Güvenlik özeti <span class="badge badge-warn">${T.esc(c.security.label)}</span>: ${T.esc(c.security.level)} · makas (gerçek) ${c.security.spreadPct == null ? "ölçülmedi" : "%" + c.security.spreadPct}</p></section>
       <section style="display:flex;gap:8px;flex-wrap:wrap">
@@ -178,6 +179,20 @@
       T.toast(`${c.base} ajanın tarama sırasında öne alındı.`);
     });
     if (first) body.querySelector("[data-x]").focus();
+    T.api("/api/hold/" + encodeURIComponent(c.instId)).then((h) => {
+      const el = body.querySelector("#dr-hold"); if (!el) return;
+      const m = h.metrics, n = (v, d = 2) => (v == null ? "-" : Number(v).toFixed(d));
+      const cls = h.verdict === "hold profiline uygun" ? "badge-ok" : h.verdict === "kısa vade trade edilebilir" ? "badge-warn" : "badge-bad";
+      el.innerHTML = `<div class="view-box"><p style="margin:0 0 6px"><span class="badge ${cls}">${T.esc(h.verdict)}</span></p><ul class="cautions">${h.reasons.map((r) => `<li>${T.esc(r)}</li>`).join("")}</ul>
+        <div class="detail-only kpi-small" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px">
+          <span>Dolaşım oranı</span><b class="num">${m.circulatingRatio == null ? "-" : "%" + (m.circulatingRatio * 100).toFixed(0)}</b>
+          <span>${T.term("fdv", "FDV/piyasa değeri")}</span><b class="num">${n(m.fdvToMc)}</b>
+          <span>Piyasa değeri / FDV</span><b class="num">${m.marketCap == null ? "-" : T.fmt.vol(m.marketCap)} / ${m.fdv == null ? "-" : T.fmt.vol(m.fdv)}</b>
+          <span>Dolaşım dışı arz</span><b class="num">${m.outsideSupplyPct == null ? "-" : n(m.outsideSupplyPct, 1) + "%"}</b>
+          <span>90 gün kilit açılımı</span><b class="num">%${n(m.unlock90dPct, 1)} <span class="badge badge-warn">ÖRNEK VERİ</span></b>
+          <span>Cüzdan dağılımı</span><b>${T.esc(h.distribution.status)}</b>
+        </div><p class="faint" style="font-size:.78rem;margin:8px 0 0">Arz: ${T.esc(h.supply ? h.supply.source : "veri yok")}. ${T.esc(h.distribution.note)}</p></div>`;
+    }).catch(() => {});
     T.api("/api/derivatives/" + encodeURIComponent(c.instId)).then((dv) => { const el = body.querySelector("#dr-deriv"); if (el) el.innerHTML = T.derivCard(dv); }).catch(() => {});
   }
   function posHtml(p) {

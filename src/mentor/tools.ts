@@ -5,6 +5,8 @@ import { followWarning, makePlan, validInstId } from "../app.js";
 import { analyzeCandidate } from "./analysis.js";
 import { round } from "../util/math.js";
 import { derivAnalysisFor } from "../derivatives/view.js";
+import { holdReportFor } from "../fundamentals/view.js";
+import { scanToken } from "../security/view.js";
 
 export interface ToolDef {
   name: string;
@@ -19,6 +21,8 @@ export const TOOL_DEFS: ToolDef[] = [
   { name: "adaylar", description: "Ajanın sıraladığı aday coinler (karar, fırsat, risk, gerekçe).", parameters: { type: "object", properties: { adet: { type: "number", description: "kaç aday (varsayılan 5)" } } } },
   { name: "aday_analizi", description: "Bir coin için teknik tablo, giriş/stop/hedef, R:R, risk bütçesine göre örnek boyut ve dikkat edilecekler.", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. SOL veya SOL-USDT" } }, required: ["sembol"] } },
   { name: "vadeli_durum", description: "Bir coinin vadeli piyasa durumu: funding, open interest, genel hesap ve üst trader L/S oranları, kalabalık taraf, manipülasyon şüphesi ve gerekçeler. Vadeli veri yalnızca analiz girdisidir.", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. BTC" } }, required: ["sembol"] } },
+  { name: "hold_raporu", description: "Bir coinin temel yapısı: arz (dolaşım/toplam/maks), FDV/piyasa değeri, kilit açılımı, cüzdan dağılımı ve 'kısa vade trade edilebilir / hold profiline uygun / ikisi de riskli' değerlendirmesi.", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. ARB" } }, required: ["sembol"] } },
+  { name: "token_tara", description: "DEX tokenı için güvenlik taraması (GoPlus + OKX OnchainOS): honeypot, vergiler, mint, sahip yetkileri, LP kilidi → PASS/WARN/BLOCK.", parameters: { type: "object", properties: { zincir: { type: "string", description: "eth, bsc, avax, polygon, arbitrum, base, optimism" }, adres: { type: "string", description: "0x ile başlayan kontrat adresi" } }, required: ["zincir", "adres"] } },
   { name: "listem", description: "Kullanıcının takip listesi.", parameters: { type: "object", properties: {} } },
   { name: "listeye_ekle", description: "Bir coini takip listesine ekler (işlem açmaz).", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. SOL" } }, required: ["sembol"] } },
   { name: "listeden_cikar", description: "Bir coini takip listesinden çıkarır.", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. SOL" } }, required: ["sembol"] } },
@@ -130,6 +134,20 @@ export class MentorTools {
         if (!d || !d.available) return { ok: false, error: `${id} için vadeli veri yok.` };
         const s = d.snapshot;
         return { ok: true, data: { sembol: id.split("-")[0], ozet: d.badge, kalabalikTaraf: d.crowded, manipulasyonSuphesi: d.manipulation, gerekceler: d.reasons, funding: s.funding, oiUsd: s.oiUsd, oiDegisim1sa: s.oiDeltaPct1h, genelHesapOrani: s.lsAccount, ustTraderHesapOrani: s.lsTopAccount, ustTraderPozisyonOrani: s.lsTopPosition, takerAlis: s.takerBuy, takerSatis: s.takerSell, kaynak: s.publicSource ? `${s.publicSource} vadeli verisi (ATK dışı) + ATK` : "ATK" } };
+      }
+      case "hold_raporu": {
+        const id = normSymbol(args.sembol);
+        if (!id) return { ok: false, error: "Geçersiz sembol." };
+        const r = await holdReportFor(ctx, id);
+        return { ok: true, data: { sembol: r.base, karar: r.verdict, gerekceler: r.reasons, olcumler: r.metrics, kilitAcilimi: r.unlocks.map((u) => ({ tarih: u.date, yuzde: u.pctOfCirculating, kaynak: u.source, not: "ÖRNEK VERİ" })), cuzdanDagilimi: r.distribution, kaynak: r.supply?.source ?? "veri yok" } };
+      }
+      case "token_tara": {
+        try {
+          const r = await scanToken(ctx, String(args.zincir ?? ""), String(args.adres ?? ""));
+          return { ok: true, data: { karar: r.verdict, token: r.token, zincir: r.chainName, gerekceler: r.reasons, kaynaklar: r.sources.map((s) => ({ kaynak: s.source, erisim: s.available, not: s.note })) } };
+        } catch (e) {
+          return { ok: false, error: (e as Error).message };
+        }
       }
       case "listem":
         return { ok: true, data: ctx.store.follows.map((id) => ({ sembol: id.split("-")[0], karar: a.candidates.get(id)?.decision ?? "taranmadı" })) };

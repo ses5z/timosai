@@ -1,6 +1,7 @@
 // Express uygulaması: JSON API + SSE + statik sayfalar. KULLANICI EMİR UÇ NOKTASI YOKTUR.
 import express, { type Request, type Response } from "express";
 import path from "node:path";
+import fs from "node:fs";
 import { slim } from "./agent/agent.js";
 import { buildPlan, sizePosition } from "./agent/sizing.js";
 import type { AppContext } from "./context.js";
@@ -145,6 +146,31 @@ export function createApp(ctx: AppContext) {
     const a = await derivAnalysisFor(ctx, id);
     if (!a) return res.status(404).json({ error: "vadeli veri yok" });
     json(res, { ...a, source: { atk: "funding, OI, OI geçmişi (ATK)", public: `L/S ve taker hacmi: ${a.snapshot.publicSource ? a.snapshot.publicSource + " vadeli verisi (ATK dışı)" : "veri yok"}` }, stats: ctx.derivatives.stats() });
+  });
+
+  app.get("/api/hold/:instId", async (req, res) => {
+    const id = req.params.instId;
+    if (!validInstId(id)) return res.status(400).json({ error: "geçersiz sembol" });
+    const { holdReportFor } = await import("./fundamentals/view.js");
+    json(res, await holdReportFor(ctx, id));
+  });
+
+  app.post("/api/scan", async (req, res) => {
+    const { chain, address } = req.body ?? {};
+    if (typeof chain !== "string" || typeof address !== "string") return res.status(400).json({ error: "zincir ve adres gerekli" });
+    try {
+      const { scanToken } = await import("./security/view.js");
+      json(res, await scanToken(ctx, chain, address.trim()));
+    } catch (e) {
+      res.status(400).json({ error: (e as Error).message });
+    }
+  });
+  app.get("/api/demo-tokens", (_req, res) => {
+    try {
+      res.json(JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "config/demo-tokens.json"), "utf8")));
+    } catch {
+      res.json({ tokens: [], honeypot: null });
+    }
   });
 
   // ---------- Plan (tercih listesi; emir değildir) ----------

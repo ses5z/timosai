@@ -1,0 +1,8 @@
+{
+  "_aciklama": "Demo için önceden GoPlus ile doğrulanmış gerçek adresler. Uydurma adres eklenmez; yeni adres eklendikten sonra 'npm run scam:verify' ile doğrulayın.",
+  "tokens": [
+    { "label": "Temiz örnek: USDC (Avalanche, Circle yerel)", "chain": "avax", "address": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E", "expected": "PASS veya WARN (merkezi ihraççı: mint/proxy)" }
+  ],
+  "honeypot": null,
+  "_honeypot_not": "Doğrulanmış bir honeypot adresi henüz eklenmedi. Mentorlardan ya da GoPlus'ta is_honeypot=1 dönen gerçek bir adres alıp buraya { chain, address } olarak yazın."
+}

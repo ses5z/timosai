@@ -5,6 +5,8 @@ import type { Notifier, NotifyMessage } from "../ports.js";
 import type { MentorService } from "../mentor/mentorService.js";
 import { analyzeCandidate } from "../mentor/analysis.js";
 import { derivAnalysisFor, derivText } from "../derivatives/view.js";
+import { holdReportFor, holdText } from "../fundamentals/view.js";
+import { scanToken, scanText } from "../security/view.js";
 import { normSymbol } from "../mentor/tools.js";
 import { NotifyPolicy } from "./notifyPolicy.js";
 import { log, mask } from "../util/log.js";
@@ -299,6 +301,8 @@ export class TelegramBot implements Notifier {
             "/takip - takip listen",
             "/birak SOL - takibi bırak",
             "/vadeli SOL - vadeli durum (funding, OI, L/S)",
+            "/hold ARB - hold raporu (arz, FDV, kilit açılımı)",
+            "/tara avax 0x... - DEX token güvenlik taraması (PASS/WARN/BLOCK)",
             "/durum - ajan durumu",
             "/portfoy - değer ve pozisyonlar",
             "/bildirim - bildirim ayarları",
@@ -321,6 +325,19 @@ export class TelegramBot implements Notifier {
         const q = this.ctx.extras.quick;
         const r = q ? await q.run(text, "telegram") : { text: "Hızlı komutlar kapalı." };
         return void (await this.send(r.text));
+      }
+      case "/hold": {
+        const id = normSymbol(args[0] ?? "");
+        if (!id) return void (await this.send("Kullanım: /hold ARB"));
+        return void (await this.send(holdText(await holdReportFor(this.ctx, id))));
+      }
+      case "/tara": {
+        if (args.length < 2) return void (await this.send("Kullanım: /tara avax 0x... (zincirler: eth, bsc, avax, polygon, arbitrum, base, optimism)"));
+        try {
+          return void (await this.send(scanText(await scanToken(this.ctx, args[0], args[1]))));
+        } catch (e) {
+          return void (await this.send((e as Error).message));
+        }
       }
       case "/vadeli": {
         const id = normSymbol(args[0] ?? "BTC");

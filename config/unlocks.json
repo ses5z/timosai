@@ -1,0 +1,10 @@
+{
+  "_aciklama": "Kilit açılımı takvimi: elle girilir, kaynak linklidir ve ÖRNEK VERİ etiketlidir. pctOfCirculating: açılacak miktarın dolaşımdaki arza oranı (%).",
+  "unlocks": [
+    { "coin": "ARB", "date": "2026-11-16", "pctOfCirculating": 1.9, "source": "https://tokenomist.ai/arbitrum", "sample": true },
+    { "coin": "OP", "date": "2026-11-30", "pctOfCirculating": 1.7, "source": "https://tokenomist.ai/optimism", "sample": true },
+    { "coin": "WLD", "date": "2026-10-24", "pctOfCirculating": 4.5, "source": "https://tokenomist.ai/worldcoin", "sample": true },
+    { "coin": "APT", "date": "2026-11-12", "pctOfCirculating": 1.1, "source": "https://tokenomist.ai/aptos", "sample": true },
+    { "coin": "SUI", "date": "2026-11-01", "pctOfCirculating": 1.3, "source": "https://tokenomist.ai/sui", "sample": true }
+  ]
+}

@@ -16,6 +16,8 @@ import type { MarketData, ProofAnchor } from "./ports.js";
 import { NoopProofAnchor } from "./proof/proofAnchor.js";
 import { LiveDerivativesData, MockDerivativesData, type DerivativesData } from "./derivatives/derivativesData.js";
 import { loadDerivConfig, type DerivConfig } from "./derivatives/rules.js";
+import { CoinGeckoFundamentals, MockFundamentals, type FundamentalsData } from "./fundamentals/holdReport.js";
+import { GoPlusSecurity, MockTokenSecurity, OnchainOsSecurity, ScamScanner } from "./security/tokenSecurity.js";
 import { Store } from "./state/store.js";
 import { loadHardLimits, type HardLimits } from "./trading/hardLimits.js";
 import { AtkTradingClient, MockTradingClient, type TradingClient } from "./trading/tradingClient.js";
@@ -34,6 +36,8 @@ export interface AppContext {
   mock: MockMarketData;
   derivatives: DerivativesData;
   derivConfig: DerivConfig;
+  fundamentals: FundamentalsData;
+  scanner: ScamScanner;
   atk: AtkCaller | null;
   agent: Agent;
   proof: ProofAnchor;
@@ -109,7 +113,7 @@ export function createContext(env: AppEnv, opts: ContextOptions = {}): AppContex
     store.bus.publish("warning", w);
   });
 
-  return { env, store, ledger, warnings, limits, thresholds, contract, watchlist, market, mock, derivatives, derivConfig, atk, agent, proof: new NoopProofAnchor(), missingEnv: missingEnvLines(env), extras: {} };
+  return { env, store, ledger, warnings, limits, thresholds, contract, watchlist, market, mock, derivatives, derivConfig, fundamentals: env.atkMode === "live" ? new CoinGeckoFundamentals() : new MockFundamentals(), scanner: new ScamScanner(env.atkMode === "live" ? [new GoPlusSecurity(), new OnchainOsSecurity()] : [new MockTokenSecurity()]), atk, agent, proof: new NoopProofAnchor(), missingEnv: missingEnvLines(env), extras: {} };
 }
 
 /** LIVE=true ise ve koşullar uygunsa gerçek işlem istemcisine geçer; değilse KURU kalır. */

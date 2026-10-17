@@ -17,7 +17,8 @@
     "atk:probe": "tsx scripts/atk-probe.ts",
     "avax:compile": "tsx avalanche/scripts/compile.ts",
     "deploy:fuji": "tsx avalanche/scripts/compile.ts && tsx avalanche/scripts/deploy.ts fuji",
-    "deploy:mainnet": "tsx avalanche/scripts/compile.ts && tsx avalanche/scripts/deploy.ts mainnet"
+    "deploy:mainnet": "tsx avalanche/scripts/compile.ts && tsx avalanche/scripts/deploy.ts mainnet",
+    "scam:verify": "tsx scripts/scam-verify.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
