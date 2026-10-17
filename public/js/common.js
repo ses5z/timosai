@@ -8,6 +8,12 @@
 
   // ---------- Yardımcılar ----------
   T.esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  /** URL parametresini değiştirir; diğerlerini (ör. ?tf=4H) korur. v null ise siler. */
+  T.setParam = (k, v) => {
+    const u = new URL(location.href);
+    if (v === null || v === undefined || v === "") u.searchParams.delete(k); else u.searchParams.set(k, v);
+    history.replaceState(null, "", u);
+  };
   T.api = async (path, opts = {}) => {
     const r = await fetch(path, { method: opts.method || (opts.body ? "POST" : "GET"), headers: { "content-type": "application/json" }, body: opts.body ? JSON.stringify(opts.body) : undefined });
     const data = await r.json().catch(() => ({}));

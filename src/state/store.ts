@@ -1,5 +1,6 @@
 // Bellek içi durum + olay veri yolu (SSE). Web ve Telegram aynı takip listesini/kuyruğu/sohbeti paylaşır.
 import { EventEmitter } from "node:events";
+import { defaultPlan, type TradingPlan } from "../plan/plan.js";
 
 export interface AppEvent {
   id: number;
@@ -57,6 +58,7 @@ export class Store {
     quick: { amountUsdt: 5, stopMode: "atr" as "atr" | "pct", stopValue: 1.6 },
     autonomous: true,
     notifications: { developments: true, critical: true, opportunitySummary: false, quietUntil: 0 } as NotificationSettings,
+    plan: defaultPlan(false, []) as TradingPlan,
   };
 
   constructor() {

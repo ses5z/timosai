@@ -4,7 +4,7 @@
   "use strict";
   const T = window.TimosAI, $ = (s) => document.querySelector(s), F = T.fmt;
   const params = new URLSearchParams(location.search);
-  const setUrl = (obj) => { const u = new URLSearchParams(obj); history.replaceState(null, "", `${location.pathname}?${u}`); };
+  const setUrl = (obj) => { const u = new URLSearchParams(obj); const tf = new URLSearchParams(location.search).get("tf"); if (tf) u.set("tf", tf); history.replaceState(null, "", `${location.pathname}?${u}`); };
 
   // ---- Sekmeler ----
   function tab(which) {

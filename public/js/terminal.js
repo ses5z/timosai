@@ -16,7 +16,7 @@
   }
   function select(id) {
     sel = id;
-    history.replaceState(null, "", `?s=${encodeURIComponent(id)}`);
+    T.setParam("s", id);
     renderWatch();
     const c = cands.find((x) => x.instId === id);
     $("#tc-sym").textContent = id;

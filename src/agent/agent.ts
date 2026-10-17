@@ -4,7 +4,8 @@ import type { Candidate, DecisionProvider, MarketData, Ticker } from "../ports.j
 import type { SignalLedger } from "../ledger/signalLedger.js";
 import type { Store } from "../state/store.js";
 import type { WarningCenter } from "../contract/warnings.js";
-import { checkAgentEntry, computeRiskScore, type ContractRules, type RiskScore } from "../contract/contract.js";
+import { checkAgentEntry, computeRiskScore, planBlockText, type ContractRules, type RiskScore } from "../contract/contract.js";
+import { planRef } from "../plan/plan.js";
 import type { HardLimits } from "../trading/hardLimits.js";
 import { HardLimitError, type EntryRequest, type Position, type TradingClient } from "../trading/tradingClient.js";
 import type { Thresholds } from "./thresholds.js";
@@ -414,14 +415,16 @@ export class Agent {
       return { ok: false, reason: size.explain };
     }
     const rs = this.riskScore();
-    const items = checkAgentEntry(c, size, { riskScore: rs.score, equityUsdt: equity, riskPct, rules: this.d.contract });
+    const plan = this.d.store.settings.plan;
+    const items = checkAgentEntry(c, size, { riskScore: rs.score, equityUsdt: equity, riskPct, rules: this.d.contract, plan });
     if (items.length) {
       this.blockedTimes.push(Date.now());
       this.totalBlocked++;
       const summary = `${c.base} için ${size.notionalUsdt.toFixed(2)} USDT alış (giriş ${c.entry}, stop ${c.stop}, hedef ${c.target})`;
       this.d.ledger.append("decision", { instId: c.instId, karar: "ENGELLENDİ", sebep: items, origin });
-      this.d.store.addEvent("uyarı", `Ajan şu emri sözleşmeye aykırı buldu ve vermedi: ${summary}.`, c.instId);
-      this.d.warnings.raise("ajan_engelledi", opts.warnKey ?? c.instId, "Ajan bir emri vermedi", `Ajan şu emri sözleşmeye aykırı buldu ve vermedi: ${summary}.`, items, this.riskScore().score);
+      const text = planBlockText(c.base, items);
+      this.d.store.addEvent("uyarı", `${text}. Emir verilmedi (${summary}).`, c.instId);
+      this.d.warnings.raise("ajan_engelledi", opts.warnKey ?? c.instId, "Ajan bir emri vermedi", `${text}. Emir verilmedi.`, items, this.riskScore().score);
       return { ok: false, reason: items.map((i) => i.label).join(", ") };
     }
     const req: EntryRequest = { instId: c.instId, notionalUsdt: size.notionalUsdt, entryPx: c.price, stopPx: c.stop, targetPx: c.target, atr: c.atr, reason: c.reason, origin };
@@ -436,7 +439,7 @@ export class Agent {
       this.techFailures = 0;
       const slip = Math.abs(pos.entryPx - c.price) / c.price;
       if (slip > 0.015) this.tripBreaker(`aşırı slipaj: ${(slip * 100).toFixed(2)}% (${c.base})`);
-      const msg = `${t.mode === "PAPER" ? "PAPER" : "CANLI"} emir: ${c.base} ${pos.costUsdt.toFixed(2)} USDT @ ${roundPrice(pos.entryPx)}, stop ${pos.stopPx}, hedef ${pos.targetPx}. ${c.reason}`;
+      const msg = `${t.mode === "PAPER" ? "PAPER" : "CANLI"} emir: ${c.base} ${pos.costUsdt.toFixed(2)} USDT @ ${roundPrice(pos.entryPx)}, stop ${pos.stopPx}, hedef ${pos.targetPx}. ${planRef(plan, { followLine: c.atrTrend ? c.atrTrend.dir === 1 : undefined })}. ${c.reason}`;
       this.d.store.addEvent("emir", msg, c.instId);
       this.d.store.bus.publish("positions", this.positionsView());
       this.dev({ symbol: c.instId, kind: "pozisyon_açıldı", text: msg, critical: false });

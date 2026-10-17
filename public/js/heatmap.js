@@ -120,7 +120,7 @@
   };
   async function openDrawer(id, push) {
     openId = id;
-    if (push) history.replaceState(null, "", `?s=${encodeURIComponent(id)}`);
+    if (push) T.setParam("s", id);
     document.querySelectorAll(".tile").forEach((t) => t.setAttribute("aria-pressed", String(t.dataset.id === id)));
     const root = $("#drawer-root");
     root.innerHTML = `<div class="drawer-backdrop" data-close></div><aside class="drawer drawer-wide" role="dialog" aria-modal="true" aria-labelledby="dr-h" id="drawer"><div class="grabber"></div><div id="dr-body"><p class="muted">Yükleniyor…</p></div></aside>`;
@@ -217,7 +217,7 @@
   function closeDrawer() {
     $("#drawer-root").innerHTML = "";
     openId = null;
-    history.replaceState(null, "", location.pathname);
+    T.setParam("s", null);
     document.querySelectorAll(".tile").forEach((t) => t.setAttribute("aria-pressed", "false"));
     const back = lastFocus && document.querySelector(`.tile[data-id="${lastFocus.dataset.id}"]`);
     back && back.focus();

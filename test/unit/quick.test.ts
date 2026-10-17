@@ -31,8 +31,9 @@ test("bayrak kapalı: /al reddedilir, /api/quick 404, mentor hizli_islem aracın
   assert.match(m.text, /Emir veremem|kapalı/);
 });
 
-test("bayrak açık: /al tutarı 5 USDT'ye kırpar ve söyler, zorunlu stop konur, HIZLI etiketi", async () => {
+test("bayrak açık: /al tutarı planın tek işlem tavanına kırpar ve söyler, zorunlu stop konur, HIZLI etiketi", async () => {
   const ctx = await ctxWith(true);
+  ctx.limits.maxOrderNotionalUsdt = 5; // planda tek işlem maks 5 USDT
   const r = await ctx.extras.quick.run("/al SOL 20", "test");
   assert.equal(r.ok, true, r.text);
   assert.match(r.text, /kırpıldı/);
@@ -45,8 +46,9 @@ test("bayrak açık: /al tutarı 5 USDT'ye kırpar ve söyler, zorunlu stop konu
   assert.equal(ctx.agent.trading.listPositions().length, 0);
 });
 
-test("bayrak açık: sert limit kapısı atlanmaz (4. pozisyon reddedilir)", async () => {
+test("bayrak açık: plan limit kapısı atlanmaz (planda 3 pozisyon: 4. reddedilir)", async () => {
   const ctx = await ctxWith(true);
+  Object.assign(ctx.limits, { maxOrderNotionalUsdt: 5, maxTotalOpenUsdt: 15, maxOpenPositions: 3 });
   for (const s of ["SOL", "ETH", "BTC"]) assert.equal((await ctx.extras.quick.run(`/al ${s} 5`, "t")).ok, true);
   const r = await ctx.extras.quick.run("/al XRP 1", "t");
   assert.equal(r.ok, false);

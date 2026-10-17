@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Candidate } from "../ports.js";
 import type { SizeResult } from "../agent/sizing.js";
+import type { TradingPlan } from "../plan/plan.js";
 import { clamp, round } from "../util/math.js";
 
 export interface ContractRules {
@@ -39,19 +40,33 @@ export interface ContractItem {
   label: string;
   value: string;
   limit: string;
+  key?: string;
+  /** Plana referanslı kısa metin: "R:R 0.56 (planın min 2)". */
+  planText?: string;
+}
+
+/** "ADA long planına uymadı: R:R 0.56 (planın min 2) · stop %9 (planın maks %6)" */
+export function planBlockText(base: string, items: ContractItem[]): string {
+  return `${base} long planına uymadı: ${items.map((i) => i.planText ?? `${i.label} ${i.value} (${i.limit})`).join(" · ")}`;
 }
 
 /** Ajanın bir giriş kararını sözleşmeye göre denetler. Boş dizi = uygun. */
 export function checkAgentEntry(
   c: Candidate,
   size: SizeResult,
-  ctx: { riskScore: number; equityUsdt: number; riskPct: number; rules: ContractRules },
+  ctx: { riskScore: number; equityUsdt: number; riskPct: number; rules: ContractRules; plan?: TradingPlan },
 ): ContractItem[] {
-  const r = ctx.rules;
+  const r = ctx.plan ? { ...ctx.rules, minRR: ctx.plan.minRR, riskPerTradePct: ctx.plan.riskPct } : ctx.rules;
   const out: ContractItem[] = [];
-  if (c.rr < r.minRR) out.push({ label: "Ödül/risk oranı (R:R) düşük", value: c.rr.toFixed(2), limit: `en az ${r.minRR}` });
+  if (c.rr < r.minRR) out.push({ label: "Ödül/risk oranı (R:R) düşük", value: c.rr.toFixed(2), limit: `en az ${r.minRR}`, key: "R:R", planText: `R:R ${c.rr.toFixed(2)} (planın min ${r.minRR})` });
   const stopPct = ((c.entry - c.stop) / c.entry) * 100;
-  if (stopPct > r.maxStopPct) out.push({ label: "Stop çok uzak", value: `%${stopPct.toFixed(2)}`, limit: `en fazla %${r.maxStopPct}` });
+  if (stopPct > r.maxStopPct) out.push({ label: "Stop çok uzak", value: `%${stopPct.toFixed(2)}`, limit: `en fazla %${r.maxStopPct}`, planText: `stop %${stopPct.toFixed(1)} (planın maks %${r.maxStopPct})` });
+  if (ctx.plan) {
+    const p = ctx.plan;
+    if (c.opportunity < p.minOpportunity) out.push({ label: "Fırsat puanı plan eşiğinin altında", value: String(c.opportunity), limit: `en az ${p.minOpportunity}`, planText: `fırsat ${c.opportunity} (planın min ${p.minOpportunity})` });
+    if (p.followLine && c.atrTrend && c.atrTrend.dir !== 1) out.push({ label: "Trend çizgisiyle uyumsuz", value: "trend aşağı", limit: "plan: trend çizgisi uyumlu", planText: "trend çizgisi aşağı (plan: uyumlu olmalı)" });
+    if (p.avoidCrowded && c.derivatives?.available && c.derivatives.crowded === "long") out.push({ label: "Kalabalık long tarafı", value: "long kalabalık", limit: "plan: kalabalıktan kaçın", planText: "long tarafı kalabalık (plan: kaçın)" });
+  }
   const maxRisk = (ctx.equityUsdt * Math.min(ctx.riskPct, r.riskPerTradePct)) / 100;
   if (size.riskUsdt > maxRisk * 1.05) out.push({ label: "İşlem riski bütçeyi aşıyor", value: `${size.riskUsdt.toFixed(3)} USDT`, limit: `en fazla ${maxRisk.toFixed(3)} USDT` });
   if (ctx.riskScore >= r.maxRiskScoreForEntry) out.push({ label: "Risk skoru yüksek", value: String(Math.round(ctx.riskScore)), limit: `girişte en fazla ${r.maxRiskScoreForEntry}` });

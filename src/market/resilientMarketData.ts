@@ -44,8 +44,8 @@ export class ResilientMarketData implements MarketData {
   tickers(ids: string[]): Promise<Map<string, Ticker>> {
     return this.run((m) => m.tickers(ids), true);
   }
-  candles(id: string, bar: string, limit: number): Promise<Candle[]> {
-    return this.run((m) => m.candles(id, bar, limit));
+  candles(id: string, bar: string, limit: number, after?: number): Promise<Candle[]> {
+    return this.run((m) => m.candles(id, bar, limit, after));
   }
   indicatorRsi(id: string, bar: string): Promise<number | null> {
     return this.run((m) => m.indicatorRsi(id, bar)).catch(() => null);

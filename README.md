@@ -87,14 +87,19 @@ Portlar ve uygulamaları (`src/ports.ts`; her biri için gerçek ve `Mock*`, `AT
 | `MentorProvider` | `GeminiMentor`, `ClaudeMentor` | `RuleMentor` |
 | `ProofAnchor` | `AvalancheProofAnchor` (DecisionLog) | `NoopProofAnchor` |
 
-## Sert limitler (kodda, koşulsuz)
+## Planım ve sabit kurallar (G3)
 
-`config/hardlimits.json` yalnızca **sıkılaştırabilir** (`src/trading/hardLimits.ts`). Kapı `TradingClient` içindedir; pop-up, mentor, Telegram, hızlı komut ya da ayar ile aşılamaz.
+Planı ve limitleri **kullanıcı** yapar (`src/plan/plan.ts`, `GET/POST /api/plan`); ajan yalnızca bu plana göre otonom işlem açar ve her emir günlüğünde plana referans verir (ör. `Plan: risk %1 · R:R ≥ 2 · trend çizgisi uyumlu ✓`). Kapı `TradingClient` içindedir; plan değerleri `applyPlan` ile limit kapısına uygulanır.
 
-- Tek emir ≤ 5 USDT · toplam açık ≤ 15 USDT · en fazla 3 açık pozisyon · saatte en fazla 6 emir
-- Yalnızca spot, yalnızca izin listesindeki 28 likit USDT çifti, her girişte stop zorunlu
-- Çekim, transfer, earn, bot, event, swap/futures/option araçları çağrılamaz (`ToolNotAllowedError`)
+- Paper varsayılanları: 1000 USDT · risk %1 · tek işlem 100 · toplam 400 · 4 pozisyon
+- Canlı ilk açılış (`LIVE=true`): risk %0,5 · tek işlem 5 · toplam 15 · 3 pozisyon · stop zorunlu
+- Kodda kalan sabit kurallar: canlıda tutarlar bakiyeyi aşamaz; yalnızca spot ve izin listesindeki 28 USDT çifti; her girişte stop zorunlu
+- Çekim, transfer, earn, bot, event, swap/futures/option araçları her koşulda çağrılamaz (`ToolNotAllowedError`)
 - Gerçek emir yalnızca `LIVE=true` ve bakiye ≥ 1 USDT iken
+
+### Mum aralıkları (EK 1b)
+
+Desteklenen OKX `bar` değerleri: `1m 3m 5m 15m 30m 1H 2H 4H 6H 12H 1D 3D 1W 1M` (2026-10-17, `market/candles` ile hepsi `code: 0`). **Karar:** 6H ve üstü için OKX'in `utc` varyantları (`6Hutc … 1Mutc`) kullanılır; böylece günlük mum 00:00 UTC'de (İstanbul 03:00) açılır. `utc`'siz değerler Hong Kong saatine (UTC+8) hizalanır. Grafik zaman ekseni Europe/Istanbul gösterir. Eski mumlar `history-candles` (`after` parametresi) ile sola kaydırınca yüklenir.
 
 ## Risk yönetimi (kilit yok, boyutla yönetilir)
 

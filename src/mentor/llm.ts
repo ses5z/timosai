@@ -28,6 +28,8 @@ export interface MentorProvider {
 export const MAX_TOOL_TURNS = 4;
 // ai.google.dev/gemini-api/docs/models (2026-10-17): en güncel kararlı, ücretsiz katmanlı flash modeli.
 export const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
+/** Ücretsiz katman kotası (429) dolunca sırayla denenecek flash modelleri (aynı anahtarla doğrulandı, 2026-10-17). */
+export const GEMINI_FALLBACKS = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
 export const DEFAULT_CLAUDE_MODEL = "claude-haiku-5-5";
 
 export const wrapData = (v: unknown) => `<durum_verisi>${JSON.stringify(v).slice(0, 6000)}</durum_verisi>`;
@@ -35,21 +37,56 @@ export const wrapData = (v: unknown) => `<durum_verisi>${JSON.stringify(v).slice
 type FetchLike = typeof fetch;
 
 export class GeminiMentor implements MentorProvider {
-  readonly name: string;
+  name: string;
   private thinkingOk = true;
+  /** Kotası dolan modeller: tekrar denenebileceği zaman (ms). */
+  private exhausted = new Map<string, number>();
+  activeModel: string;
   constructor(
     private readonly apiKey: string,
     private readonly model: string = DEFAULT_GEMINI_MODEL,
     private readonly fetchImpl: FetchLike = fetch,
   ) {
     this.name = `Gemini (${model})`;
+    this.activeModel = model;
   }
 
   available(): boolean {
     return Boolean(this.apiKey);
   }
 
-  async reply({ text, history, tools, detail }: LlmInput): Promise<string> {
+  /** Kota (429) dolunca sıradaki modele geçer; hepsi doluysa hata fırlatır (servis kural tabanlıya düşer). */
+  async reply(input: LlmInput): Promise<string> {
+    const chain = [this.model, ...GEMINI_FALLBACKS.filter((m) => m !== this.model)];
+    let lastErr: Error | null = null;
+    for (const m of chain) {
+      if ((this.exhausted.get(m) ?? 0) > Date.now()) continue;
+      try {
+        const out = await this.replyWith(m, input);
+        this.activeModel = m;
+        this.name = `Gemini (${m})`;
+        return out;
+      } catch (e) {
+        lastErr = e as Error;
+        const msg = lastErr.message;
+        if (/Gemini 429/.test(msg)) {
+          const h = msg.match(/retry in (?:(\d+)h)?(?:(\d+)m)?/);
+          const ms = h ? ((Number(h[1] ?? 0) * 60 + Number(h[2] ?? 0)) * 60_000 || 60_000) : 10 * 60_000;
+          this.exhausted.set(m, Date.now() + ms);
+          log.warn(`Gemini ${m} kotası doldu; sıradaki modele geçiliyor.`);
+          continue;
+        }
+        if (/Gemini 404/.test(msg)) {
+          this.exhausted.set(m, Date.now() + 24 * 3_600_000);
+          continue;
+        }
+        throw lastErr;
+      }
+    }
+    throw lastErr ?? new Error("Gemini: kullanılabilir model yok");
+  }
+
+  private async replyWith(model: string, { text, history, tools, detail }: LlmInput): Promise<string> {
     let maxOut = maxTokensFor(detail);
     const decl = activeToolDefs(tools).map((t) => (Object.keys(t.parameters.properties).length ? { name: t.name, description: t.description, parameters: t.parameters } : { name: t.name, description: t.description }));
     const contents: any[] = history.slice(-8).map((m) => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.text }] }));
@@ -62,10 +99,10 @@ export class GeminiMentor implements MentorProvider {
       };
       if (turn < MAX_TOOL_TURNS) body.tools = [{ functionDeclarations: decl }];
       // Kısa ve hızlı cevap için düşünme en düşük ayarda.
-      if (/2\.5-flash/.test(this.model)) body.generationConfig.thinkingConfig = { thinkingBudget: 0 };
-      else if (/gemini-3/.test(this.model) && this.thinkingOk) body.generationConfig.thinkingConfig = { thinkingLevel: "low" };
+      if (/2\.5-flash/.test(model)) body.generationConfig.thinkingConfig = { thinkingBudget: 0 };
+      else if (/gemini-3/.test(model) && !/lite/.test(model) && this.thinkingOk) body.generationConfig.thinkingConfig = { thinkingLevel: "low" };
       const send = () =>
-        this.fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.model)}:generateContent`, {
+        this.fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method: "POST",
           headers: { "content-type": "application/json", "x-goog-api-key": this.apiKey },
           body: JSON.stringify(body),

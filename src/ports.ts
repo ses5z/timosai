@@ -26,7 +26,7 @@ export interface MarketData {
   /** Son çağrılar gerçek veriden mi geldi? */
   isLive(): boolean;
   tickers(instIds: string[]): Promise<Map<string, Ticker>>;
-  candles(instId: string, bar: string, limit: number): Promise<Candle[]>;
+  candles(instId: string, bar: string, limit: number, after?: number): Promise<Candle[]>;
   indicatorRsi(instId: string, bar: string): Promise<number | null>;
   funding(instId: string): Promise<number | null>;
   orderbook(instId: string): Promise<OrderbookSummary | null>;

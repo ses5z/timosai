@@ -14,7 +14,7 @@ test("senaryo: tarar, PAPER emir verir, riskli kararı engeller ve uyarı açar"
   assert.equal(steps.at(-1)!.done, true);
   assert.equal(ctx.agent.trading.listPositions().length, 1);
   assert.equal(ctx.agent.trading.mode, "PAPER");
-  assert.ok(warnings.some((w) => w.startsWith("Ajan şu emri sözleşmeye aykırı buldu ve vermedi")));
+  assert.ok(warnings.some((w) => w.includes("long planına uymadı")));
   assert.equal(ctx.store.follows.length, 1);
   // ikinci çalıştırmada da uyarı çıkar (senaryoya özel anahtar)
   await new Scenario(ctx, 0).start();

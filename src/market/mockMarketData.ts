@@ -97,8 +97,24 @@ export class MockMarketData implements MarketData {
     return out;
   }
 
-  async candles(instId: string, _bar: string, limit: number): Promise<Candle[]> {
-    return this.gen(instId).slice(-limit);
+  async candles(instId: string, _bar: string, limit: number, after?: number): Promise<Candle[]> {
+    const s = this.gen(instId);
+    if (after) {
+      const have = s.filter((c) => c.ts < after);
+      if (have.length) return have.slice(-limit);
+      // Örnek veri: geçmiş istenirse deterministik eski mumlar üretilir (sola kaydırma testi için; en fazla 30 gün geri).
+      if (after < s[0].ts - 30 * 86_400_000) return [];
+      const rnd = seeded(hash(instId) ^ Math.floor(after / 900_000));
+      const out: Candle[] = [];
+      let p = s[0].open;
+      for (let i = 1; i <= limit; i++) {
+        const c = p;
+        p = p * (1 + (rnd() - 0.5) * 0.01);
+        out.unshift({ ts: after - i * 900_000, open: p, high: Math.max(p, c) * 1.002, low: Math.min(p, c) * 0.998, close: c, vol: 1e6 });
+      }
+      return out;
+    }
+    return s.slice(-limit);
   }
 
   async indicatorRsi(instId: string): Promise<number | null> {

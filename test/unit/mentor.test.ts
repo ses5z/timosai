@@ -35,7 +35,7 @@ test("RuleMentor: enjeksiyon/kural delme girişimlerine direnir", async () => {
     assert.match(r.text, /yapamam|paylaşmıyorum/i, q);
     assert.equal(r.text.includes(SYSTEM_PROMPT.slice(0, 40)), false);
   }
-  assert.equal(ctx.limits.maxOrderNotionalUsdt, 5);
+  assert.equal(ctx.limits.maxOrderNotionalUsdt, 100); // paper planı varsayılanı değişmedi
 });
 
 test("RuleMentor: tahmin istemez, aday analizi verir, tavsiye kelimesi kullanmaz", async () => {

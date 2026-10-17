@@ -1,4 +1,6 @@
-// SERT LİMİTLER: kodda tavan + config/hardlimits.json yalnızca sıkılaştırır. Hiçbir ayar/pop-up bunları aşamaz.
+// LİMİTLER: başlangıç değerleri (canlı ilk açılış varsayılanları) + config/hardlimits.json yalnızca sıkılaştırır.
+// G3: sayısal limitleri kullanıcının Planı belirler (applyPlan). Kodda kalan sabit kurallar: canlıda tutarlar
+// bakiyeyi aşamaz, stop zorunlu, yalnızca spot ve çekim/transfer/earn/bot/event araçları her koşulda yasak.
 import fs from "node:fs";
 import path from "node:path";
 
@@ -14,7 +16,7 @@ export interface HardLimits {
   allowedPairs: string[];
 }
 
-/** Koddaki tavanlar: dosya bunlardan gevşek olamaz. */
+/** Başlangıç değerleri (= canlı ilk açılış varsayılanları); Plan değiştirir. */
 export const CEILING = Object.freeze({
   maxOrderNotionalUsdt: 5,
   maxTotalOpenUsdt: 15,
@@ -38,7 +40,7 @@ const tighten = (fileVal: unknown, ceiling: number, minOk = 0) => {
 
 export function resolveHardLimits(fileObj: Record<string, unknown> = {}): HardLimits {
   const filePairs = Array.isArray(fileObj.allowedPairs) ? (fileObj.allowedPairs as unknown[]).map(String) : [...CODE_ALLOWED_PAIRS];
-  return Object.freeze({
+  return {
     maxOrderNotionalUsdt: tighten(fileObj.maxOrderNotionalUsdt, CEILING.maxOrderNotionalUsdt),
     maxTotalOpenUsdt: tighten(fileObj.maxTotalOpenUsdt, CEILING.maxTotalOpenUsdt),
     maxOpenPositions: Math.floor(tighten(fileObj.maxOpenPositions, CEILING.maxOpenPositions)),
@@ -48,8 +50,19 @@ export function resolveHardLimits(fileObj: Record<string, unknown> = {}): HardLi
     minBalanceForLiveUsdt: Math.max(CEILING.minBalanceForLiveUsdt, Number(fileObj.minBalanceForLiveUsdt) || 0),
     spotOnly: true as const,
     requireStop: true as const,
-    allowedPairs: Object.freeze(filePairs.filter((p) => CODE_ALLOWED_PAIRS.includes(p))) as string[],
-  });
+    allowedPairs: filePairs.filter((p) => CODE_ALLOWED_PAIRS.includes(p)),
+  };
+}
+
+/** Planı limit kapısına uygular (yerinde değiştirir; tüm bileşenler aynı nesneyi okur). */
+export function applyPlan(L: HardLimits, p: { coins: string[]; maxOrderUsdt: number; maxTotalUsdt: number; maxPositions: number; maxOrdersPerHour: number; dailyLossWarnUsdt: number }): HardLimits {
+  L.maxOrderNotionalUsdt = p.maxOrderUsdt;
+  L.maxTotalOpenUsdt = p.maxTotalUsdt;
+  L.maxOpenPositions = p.maxPositions;
+  L.maxOrdersPerHour = p.maxOrdersPerHour;
+  L.dailyLossWarnUsdt = p.dailyLossWarnUsdt;
+  L.allowedPairs = p.coins.filter((c) => CODE_ALLOWED_PAIRS.includes(c));
+  return L;
 }
 
 export function loadHardLimits(file = path.resolve(process.cwd(), "config/hardlimits.json")): HardLimits {

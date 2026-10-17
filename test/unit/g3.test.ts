@@ -1,0 +1,150 @@
+// GÜNCELLEME 3: Plan, Mentor işlemi (çok zaman dilimi), zaman dilimleri, Gemini yedek zinciri.
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mkCtx } from "./helpers.js";
+import { defaultPlan, sanitizePlan, planRef } from "../../src/plan/plan.js";
+import { buildSetup, tfDirection, DISCLAIMER } from "../../src/mentor/setup.js";
+import { BARS, okxBar, isBar, BAR_MS } from "../../src/market/bars.js";
+import { GeminiMentor } from "../../src/mentor/llm.js";
+import { MentorTools } from "../../src/mentor/tools.js";
+import { planBlockText } from "../../src/contract/contract.js";
+import type { Candle } from "../../src/util/math.js";
+
+/** Doğrusal trendli sentetik mumlar (dalgalı). */
+function trend(n: number, slope: number, start = 100): Candle[] {
+  return Array.from({ length: n }, (_, i) => {
+    const mid = start + slope * i + Math.sin(i / 3) * 0.4;
+    return { ts: i * 60_000, open: mid - slope / 2, high: mid + 0.6, low: mid - 0.6, close: mid + slope / 2, vol: 100, volUsdt: 10_000 };
+  });
+}
+const up = trend(120, 0.5);
+const down = trend(120, -0.5, 200);
+
+test("zaman dilimi: 14 OKX bar değeri, 6H ve üstü utc hizalı", () => {
+  assert.deepEqual([...BARS], ["1m", "3m", "5m", "15m", "30m", "1H", "2H", "4H", "6H", "12H", "1D", "3D", "1W", "1M"]);
+  assert.equal(okxBar("4H"), "4H");
+  assert.equal(okxBar("1D"), "1Dutc");
+  assert.equal(okxBar("1M"), "1Mutc");
+  assert.equal(isBar("2H"), true);
+  assert.equal(isBar("2h"), false);
+  assert.equal(BAR_MS["1W"], 7 * 86_400_000);
+});
+
+test("trend yönü: trend çizgisi + EMA eğimi", () => {
+  assert.equal(tfDirection(up), "up");
+  assert.equal(tfDirection(down), "down");
+  assert.equal(tfDirection(up.slice(0, 10)), "flat");
+});
+
+test("Mentor işlemi: 4s+1g yukarı → LONG, seviyeler, R:R, sabit ibare, 4 rozet", () => {
+  const plan = defaultPlan(false, ["SOL-USDT"]);
+  const s = buildSetup("SOL-USDT", { "15m": down, "1H": down, "4H": up, "1D": up }, plan, { agentDecision: "izle", opportunity: 70 });
+  assert.equal(s.badgeText, "15dk ↓ · 1s ↓ · 4s ↑ · 1g ↑");
+  assert.equal(s.direction, "LONG");
+  assert.equal(s.showLevels, true);
+  assert.ok(s.stop! < s.entryZone![0] && s.target1! > s.entryZone![1] && s.target2! > s.target1!);
+  assert.equal(s.rr1, 1.5);
+  assert.ok(s.rr2! >= plan.minRR);
+  assert.ok(s.stopType);
+  assert.ok(s.reasons.length >= 2 && s.reasons.length <= 3);
+  assert.match(s.invalidation!, /^Geçersiz olur eğer/);
+  assert.equal(s.disclaimer, DISCLAIMER);
+  assert.equal(DISCLAIMER, "Ajan kurulum taslağı; yatırım tavsiyesi değildir.");
+  assert.doesNotMatch(JSON.stringify(s), /\b(al|sat)\b!|hemen al|şimdi al/i);
+});
+
+test("Mentor işlemi: üst dilimler çelişirse işlem yok, seviye yok", () => {
+  const s = buildSetup("SOL-USDT", { "15m": up, "1H": up, "4H": up, "1D": down }, defaultPlan(false, []), { agentDecision: "izle" });
+  assert.equal(s.direction, null);
+  assert.equal(s.showLevels, false);
+  assert.equal(s.stop, null);
+  assert.match(s.noTradeReason!, /İşlem yok: zaman dilimleri çelişiyor/);
+});
+
+test("Mentor işlemi: ajan eledi → yalnızca sebep, seviye yok", () => {
+  const s = buildSetup("SOL-USDT", { "15m": up, "1H": up, "4H": up, "1D": up }, defaultPlan(false, []), { agentDecision: "ele", agentReason: "makas geniş" });
+  assert.equal(s.showLevels, false);
+  assert.equal(s.entryZone, null);
+  assert.match(s.noTradeReason!, /makas geniş/);
+});
+
+test("Mentor işlemi: güvenlik nedeniyle elenen coinde SHORT da seviye göstermez", () => {
+  const s = buildSetup("SOL-USDT", { "15m": down, "1H": down, "4H": down, "1D": down }, defaultPlan(false, []), { agentDecision: "ele", agentSafetyBlock: true, agentReason: "risk yüksek" });
+  assert.equal(s.showLevels, false);
+});
+
+test("Mentor işlemi: SHORT notu spot'ta sat/bekle (long ajanının trend elemesi SHORT'u engellemez)", () => {
+  const s = buildSetup("SOL-USDT", { "15m": down, "1H": down, "4H": down, "1D": down }, defaultPlan(false, []), { agentDecision: "ele", agentSafetyBlock: false });
+  assert.equal(s.direction, "SHORT");
+  assert.match(s.shortNote!, /sat \/ bekle/);
+  assert.ok(s.stop! > s.entryZone![1]);
+  assert.equal(s.confidence, "orta"); // 4 dilim uyumlu ama fırsat eşiği altında
+});
+
+test("Plan: paper ve canlı varsayılanları", () => {
+  const p = defaultPlan(false, ["BTC-USDT"]);
+  assert.deepEqual([p.riskPct, p.maxOrderUsdt, p.maxTotalUsdt, p.maxPositions, p.requireStop], [1, 100, 400, 4, true]);
+  const l = defaultPlan(true, []);
+  assert.deepEqual([l.riskPct, l.maxOrderUsdt, l.maxTotalUsdt, l.maxPositions, l.requireStop], [0.5, 5, 15, 3, true]);
+});
+
+test("Plan: canlıda tutarlar bakiyeyi aşamaz (tek sabit kural)", () => {
+  const { plan, notes } = sanitizePlan({ maxTotalUsdt: 500, maxOrderUsdt: 200 }, defaultPlan(true, []), { live: true, balance: 42.5, validCoins: [] });
+  assert.equal(plan.maxTotalUsdt, 42.5);
+  assert.equal(plan.maxOrderUsdt, 42.5);
+  assert.ok(notes.some((n) => /bakiyeyi/.test(n)));
+  const paper = sanitizePlan({ maxTotalUsdt: 500 }, defaultPlan(false, []), { live: false, balance: null, validCoins: [] });
+  assert.equal(paper.plan.maxTotalUsdt, 500);
+});
+
+test("Plan: geçersiz coin ve aralık dışı değerler süzülür", () => {
+  const { plan } = sanitizePlan({ coins: ["SOL-USDT", "FAKE-USDT"], riskPct: 99, direction: "x" as any }, defaultPlan(false, ["BTC-USDT"]), { live: false, balance: null, validCoins: ["SOL-USDT", "BTC-USDT"] });
+  assert.deepEqual(plan.coins, ["SOL-USDT"]);
+  assert.equal(plan.riskPct, 10);
+  assert.equal(plan.direction, "long");
+});
+
+test("Plan referansı ve plana referanslı engel metni", () => {
+  assert.equal(planRef(defaultPlan(false, [])), "Plan: risk %1 · R:R ≥ 2 · trend çizgisi uyumlu ✓");
+  const t = planBlockText("ADA", [
+    { label: "R:R", value: "0.56", limit: "en az 2", planText: "R:R 0.56 (planın min 2)" },
+    { label: "Stop", value: "%9", limit: "en fazla %6", planText: "stop %9.0 (planın maks %6)" },
+  ]);
+  assert.equal(t, "ADA long planına uymadı: R:R 0.56 (planın min 2) · stop %9.0 (planın maks %6)");
+});
+
+test("Plan API: kaydet → limit kapısı plana göre değişir; emir günlüğü plana referans verir", async () => {
+  const ctx = mkCtx({ AUTONOMOUS: "false" });
+  assert.equal(ctx.limits.maxOrderNotionalUsdt, 100);
+  const { sanitizePlan: sp } = await import("../../src/plan/plan.js");
+  const { applyPlan } = await import("../../src/trading/hardLimits.js");
+  const { plan } = sp({ maxPositions: 2, maxOrderUsdt: 50 }, ctx.store.settings.plan, { live: false, balance: null, validCoins: ctx.limits.allowedPairs });
+  ctx.store.settings.plan = plan;
+  applyPlan(ctx.limits, plan);
+  assert.equal(ctx.limits.maxOpenPositions, 2);
+  assert.equal(ctx.limits.maxOrderNotionalUsdt, 50);
+  await ctx.agent.scanOnce();
+  const c = ctx.agent.queue().find((x) => x.rr >= 2 && x.atrTrend?.dir === 1);
+  if (c) {
+    const r = await ctx.agent.tryEnter({ ...c, decision: "aç", opportunity: 99 });
+    if (r.ok) assert.match(r.reason, /Plan: risk %1 · R:R ≥ 2/);
+  }
+});
+
+test("Gemini: 429 kota dolunca sıradaki flash modeline geçer", async () => {
+  const urls: string[] = [];
+  const f = (async (u: string) => {
+    urls.push(u);
+    if (u.includes("gemini-3.8-flash")) return new Response("Quota exceeded. Please retry in 10h12m.", { status: 429 });
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "Tamam." }] } }] }), { status: 200 });
+  }) as unknown as typeof fetch;
+  const g = new GeminiMentor("k", "gemini-3.8-flash", f);
+  const ctx = mkCtx({ AUTONOMOUS: "false" });
+  const out = await g.reply({ text: "selam", history: [], tools: new MentorTools(ctx) });
+  assert.equal(out, "Tamam.");
+  assert.equal(g.activeModel, "gemini-3.7-flash");
+  assert.match(g.name, /3\.7/);
+  urls.length = 0;
+  await g.reply({ text: "tekrar", history: [], tools: new MentorTools(ctx) });
+  assert.ok(!urls.some((u) => u.includes("3.8")), "kotası dolan model tekrar denenmez");
+});

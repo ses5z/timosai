@@ -44,8 +44,9 @@ export class AtkMarketData implements MarketData {
     return out;
   }
 
-  async candles(instId: string, bar: string, limit: number): Promise<Candle[]> {
-    const rows: any[] = await this.atk.call("market_get_candles", { instId, bar, limit });
+  async candles(instId: string, bar: string, limit: number, after?: number): Promise<Candle[]> {
+    // after: bu zamandan ÖNCEKİ mumlar (geçmiş yükleme, ATK history=true)
+    const rows: any[] = await this.atk.call("market_get_candles", after ? { instId, bar, limit, after: String(after), history: true } : { instId, bar, limit });
     return parseCandles(rows);
   }
 

@@ -6,6 +6,9 @@ import { slim } from "./agent/agent.js";
 import { buildPlan, sizePosition } from "./agent/sizing.js";
 import type { AppContext } from "./context.js";
 import { round } from "./util/math.js";
+import { applyPlan, CODE_ALLOWED_PAIRS } from "./trading/hardLimits.js";
+import { planRef, sanitizePlan } from "./plan/plan.js";
+import { computeSetupWithRationale } from "./mentor/setup.js";
 import { mask } from "./util/log.js";
 
 const PAGES: Record<string, string> = {
@@ -158,27 +161,30 @@ export function createApp(ctx: AppContext) {
   const candleCache = new Map<string, { at: number; v: any[] }>();
   app.get("/api/candles/:instId", async (req, res) => {
     const id = req.params.instId;
-    const bar = ["15m", "1H", "4H", "1D"].includes(String(req.query.bar)) ? String(req.query.bar) : "15m";
+    const { isBar, okxBar, BAR_MS } = await import("./market/bars.js");
+    const bar = isBar(req.query.bar) ? req.query.bar : "15m";
+    const before = Number(req.query.before) || 0; // geçmiş yükleme: bu zamandan önceki mumlar
     if (!validPair(id)) return res.status(400).json({ error: "geçersiz sembol" });
-    let candles: any[] | undefined = bar === "15m" ? agent.lastCandles.get(id) : undefined;
-    const key = `${id}:${bar}`;
+    let candles: any[] | undefined = bar === "15m" && !before ? agent.lastCandles.get(id) : undefined;
+    const key = `${id}:${bar}:${before}`;
     if (!candles) {
       const c = candleCache.get(key);
-      if (c && Date.now() - c.at < 60_000) candles = c.v;
+      if (c && Date.now() - c.at < (before ? 3_600_000 : 60_000)) candles = c.v;
       else {
         try {
-          candles = await ctx.market.candles(id, bar, 150);
+          candles = await ctx.market.candles(id, okxBar(bar), before ? 100 : 200, before || undefined);
           candleCache.set(key, { at: Date.now(), v: candles });
         } catch {
           return res.status(502).json({ error: "mum verisi yok" });
         }
       }
     }
+    if (!candles.length) return json(res, { bar, okxBar: okxBar(bar), tickSz: 0, candles: [], atrTrend: [], trendFlips: [], markers: [], levels: null, position: null, live: ctx.market.isLive(), end: true });
     const { atrTrend, loadAtrTrendConfig } = await import("./indicators/atrTrend.js");
     const cfg = loadAtrTrendConfig();
     const at = atrTrend(candles as any, cfg.period, cfg.mult);
     const sec = (ms: number) => Math.floor(ms / 1000);
-    const barMs = bar === "15m" ? 900_000 : bar === "1H" ? 3_600_000 : bar === "4H" ? 14_400_000 : 86_400_000;
+    const barMs = BAR_MS[bar];
     const cand = agent.candidates.get(id);
     const markers = agent.trading
       .listTrades(200)
@@ -194,7 +200,9 @@ export function createApp(ctx: AppContext) {
       .map(({ p, i }) => ({ time: sec(candles![i].ts), position: p.dir === 1 ? "belowBar" : "aboveBar", color: p.dir === 1 ? "#4f8cff" : "#f06a66", shape: p.dir === 1 ? "arrowUp" : "arrowDown", text: p.dir === 1 ? "yukarı" : "aşağı" }));
     json(res, {
       bar,
+      okxBar: okxBar(bar),
       tickSz,
+      atrCfg: cfg,
       trendFlips: flips,
       candles: candles.map((c: any) => ({ time: sec(c.ts), open: c.open, high: c.high, low: c.low, close: c.close, vol: c.vol })),
       atrTrend: at.map((p, i) => ({ time: sec(candles![i].ts), value: p.line, dir: p.dir })),
@@ -359,6 +367,7 @@ export function createApp(ctx: AppContext) {
     const v = Number(req.body?.riskPct);
     if (!Number.isFinite(v) || v < 0.25 || v > ctx.contract.riskPerTradePct) return res.status(400).json({ error: `risk %0.25 ile %${ctx.contract.riskPerTradePct} arasında olmalı` });
     store.settings.riskPct = round(v, 2);
+    store.settings.plan.riskPct = store.settings.riskPct;
     store.addEvent("bilgi", `İşlem başı risk bütçesi %${store.settings.riskPct} olarak ayarlandı.`);
     json(res, { riskPct: store.settings.riskPct });
   });
@@ -371,6 +380,42 @@ export function createApp(ctx: AppContext) {
     json(res, n);
   });
   app.get("/api/settings", (_req, res) => json(res, store.settings));
+
+  // ---------- Planım: planı ve limitleri kullanıcı yapar; ajan bu plana göre otonom işler ----------
+  const planPayload = (notes: string[] = []) => {
+    const live = agent.trading.mode === "CANLI";
+    return { plan: store.settings.plan, live, balance: live ? round(agent.trading.equity(), 2) : null, coinsAvailable: [...CODE_ALLOWED_PAIRS], notes, fixedRules: ["Canlı modda tutarlar hesap bakiyesini aşamaz.", "Her girişte stop zorunlu; yalnızca spot (short yalnızca paper futures).", "Çekim, transfer, earn, bot ve event araçları her koşulda kapalı."] };
+  };
+  app.get("/api/plan", (_req, res) => json(res, planPayload()));
+  app.post("/api/plan", (req, res) => {
+    const live = agent.trading.mode === "CANLI";
+    const { plan, notes } = sanitizePlan(req.body ?? {}, store.settings.plan, { live, balance: live ? agent.trading.equity() : null, validCoins: [...CODE_ALLOWED_PAIRS] });
+    store.settings.plan = plan;
+    store.settings.riskPct = plan.riskPct;
+    applyPlan(limits, plan);
+    store.addEvent("bilgi", `Plan güncellendi: ${planRef(plan)} · tek işlem ≤ ${plan.maxOrderUsdt} USDT · toplam ≤ ${plan.maxTotalUsdt} USDT · ${plan.maxPositions} pozisyon · ${plan.coins.length} coin.`);
+    store.bus.publish("plan", plan);
+    json(res, planPayload(notes));
+  });
+  app.post("/api/plan/add", (req, res) => {
+    const id = String(req.body?.instId ?? "");
+    if (!CODE_ALLOWED_PAIRS.includes(id)) return res.status(400).json({ error: `${id} plana eklenebilir coinler arasında değil (spot izin listesi).` });
+    const p = store.settings.plan;
+    if (!p.coins.includes(id)) p.coins.push(id);
+    applyPlan(limits, p);
+    store.planPreference = [id, ...store.planPreference.filter((x) => x !== id)].slice(0, 10);
+    store.addEvent("bilgi", `${id.split("-")[0]} plana eklendi. Ajan yalnızca plan koşulları sağlanırsa işlem açar.`, id);
+    json(res, planPayload());
+  });
+
+  // ---------- Mentor işlemi: çok zaman dilimli kurulum taslağı (yatırım tavsiyesi değildir) ----------
+  app.get("/api/setup/:instId", async (req, res) => {
+    try {
+      json(res, await computeSetupWithRationale(ctx, req.params.instId));
+    } catch (e) {
+      res.status(500).json({ error: (e as Error).message });
+    }
+  });
 
   // ---------- Uzantılar (mentor, telegram, senaryo) ----------
   for (const mount of (ctx.extras.routes ?? []) as ((a: express.Express) => void)[]) mount(app);

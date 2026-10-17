@@ -21,7 +21,8 @@ import { InstrumentCatalog, mockInstruments } from "./market/instruments.js";
 import { SupplyService } from "./fundamentals/supply.js";
 import { GoPlusSecurity, MockTokenSecurity, OnchainOsSecurity, ScamScanner } from "./security/tokenSecurity.js";
 import { Store } from "./state/store.js";
-import { loadHardLimits, type HardLimits } from "./trading/hardLimits.js";
+import { applyPlan, CODE_ALLOWED_PAIRS, loadHardLimits, type HardLimits } from "./trading/hardLimits.js";
+import { defaultPlan, sanitizePlan } from "./plan/plan.js";
 import { AtkTradingClient, MockTradingClient, loadPaperConfig, type PaperConfig, type QuoteFn, type TradingClient } from "./trading/tradingClient.js";
 import { log, registerSecrets } from "./util/log.js";
 
@@ -75,6 +76,10 @@ export function createContext(env: AppEnv, opts: ContextOptions = {}): AppContex
   const ledger = new SignalLedger();
   const warnings = new WarningCenter();
   const limits = loadHardLimits();
+  // Plan: paper varsayılanları (1000 USDT, %1, tek 100, toplam 400, 4 pozisyon); canlıya geçişte muhafazakâr varsayılanlar.
+  store.settings.plan = defaultPlan(false, limits.allowedPairs);
+  store.settings.riskPct = store.settings.plan.riskPct;
+  applyPlan(limits, store.settings.plan);
   const thresholds = loadThresholds();
   const contract = loadContract();
   const watchlist = loadWatchlist();
@@ -150,8 +155,13 @@ export async function maybeEnableLiveTrading(ctx: AppContext): Promise<void> {
       ctx.store.addEvent("uyarı", `Bakiye ${bal.toFixed(2)} USDT; gerçek emir için en az ${ctx.limits.minBalanceForLiveUsdt} USDT gerekli. Paper trade sürüyor.`);
       return;
     }
+    // Canlı ilk açılış: risk %0,5 · tek 5 · toplam 15 · 3 pozisyon · stop zorunlu; bakiye aşılamaz.
+    const { plan } = sanitizePlan({}, defaultPlan(true, ctx.store.settings.plan.coins), { live: true, balance: bal, validCoins: [...CODE_ALLOWED_PAIRS] });
+    ctx.store.settings.plan = plan;
+    ctx.store.settings.riskPct = plan.riskPct;
+    applyPlan(ctx.limits, plan);
     ctx.agent.setTrading(live);
-    ctx.store.addEvent("uyarı", `CANLI İŞLEM AÇIK: bakiye ${bal.toFixed(2)} USDT. Sert limitler: tek emir ≤ ${ctx.limits.maxOrderNotionalUsdt} USDT.`);
+    ctx.store.addEvent("uyarı", `CANLI İŞLEM AÇIK: bakiye ${bal.toFixed(2)} USDT. Plan: tek işlem ≤ ${plan.maxOrderUsdt} USDT · toplam ≤ ${plan.maxTotalUsdt} USDT · ${plan.maxPositions} pozisyon · risk %${plan.riskPct}.`);
     log.warn("CANLI İŞLEM modu etkin.");
   } catch (e) {
     ctx.store.addEvent("uyarı", `Bakiye okunamadı (${(e as Error).message}); Paper trade sürüyor.`);

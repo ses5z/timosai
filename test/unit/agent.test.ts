@@ -92,7 +92,7 @@ test("ajan: örnek veriyle tarar, kuyruk üretir, sözleşmeye aykırı kararı 
   ctx.warnings.onWarning((w) => warnings.push(w.text));
   const r = await ctx.agent.tryEnter(c);
   assert.equal(r.ok, false);
-  assert.ok(warnings[0].startsWith("Ajan şu emri sözleşmeye aykırı buldu ve vermedi"));
+  assert.ok(warnings[0].includes("long planına uymadı: R:R"));
   assert.equal(ctx.agent.trading.listPositions().length, 0);
 });
 

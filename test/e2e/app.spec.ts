@@ -370,3 +370,81 @@ test("Güncelleme2 madde 9: Pro Terminal düzeni ve gündüz/gece (4 palet, terc
   await expect(page).toHaveURL(/\/panel$/);
   await page.screenshot({ path: `${SHOTS}/g2-madde9-basic-${theme}.png` });
 });
+
+// ---------------- GÜNCELLEME 3 ----------------
+test("G3 EK 1b: favoriler + Diğer ▾ + yıldız + ?tf= kalıcılığı + Pro 1-7 + sola kaydırma + rozetler değişmez", async ({ page, context }) => {
+  await waitForScan(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => { try { localStorage.setItem("tms-mode", "basic"); } catch {} });
+  await page.goto("/kesfet?tab=cex&s=AVAX-USDT");
+  const bars = page.locator(".tf-bars [data-bar]");
+  await expect(bars).toHaveText(["15dk", "1s", "4s", "1g", "1h"]); // Basic favorileri
+  await bars.filter({ hasText: "15dk" }).click();
+  await expect(page).toHaveURL(/tf=15m/);
+  await bars.filter({ hasText: "4s" }).click();
+  await expect(page).toHaveURL(/tf=4H/);
+  await page.locator("[data-layer=setup]").click();
+  await expect(page.locator(".setup-card .mtf-b")).toHaveCount(4);
+  const badges = await page.locator(".setup-card .mtf-b").allTextContents();
+  await page.locator("[data-more]").click();
+  await expect(page.locator(".tf-menu")).toBeVisible();
+  await page.locator('[data-pick="1M"]').click();
+  await expect(page).toHaveURL(/tf=1M/);
+  await expect(page.locator("[data-more]")).toContainText("1a");
+  await expect(page.locator(".chart-note")).toContainText("1Mutc");
+  await expect(page.locator(".setup-card .mtf-b")).toHaveText(badges); // MTF analizi grafik aralığından bağımsız
+  await page.locator("[data-more]").click();
+  await page.locator('[data-star="2H"]').click();
+  await expect(bars).toHaveText(["15dk", "1s", "2s", "4s", "1g", "1h"]);
+  await page.screenshot({ path: `${SHOTS}/g3-1b-diger-1440.png` });
+  // yeni sekme: ?tf=4H açılır, sonra başka sayfaya geçince seçim korunur
+  const p2 = await context.newPage();
+  await p2.goto("/terminal?s=AVAX-USDT&tf=4H");
+  await expect(p2.locator('.tf-bars [data-bar="4H"]')).toHaveAttribute("aria-pressed", "true");
+  await p2.goto("/kesfet");
+  expect(await p2.evaluate(() => (window as any).TimosAI.currentTf())).toBe("4H");
+  await p2.close();
+  // Pro: 7 favori ve 1-7 tuşları
+  await page.evaluate(() => localStorage.setItem("tms-mode", "pro"));
+  await page.addInitScript(() => { try { localStorage.setItem("tms-mode", "pro"); } catch {} });
+  await page.goto("/terminal?s=AVAX-USDT");
+  await expect(bars).toHaveText(["1dk", "5dk", "15dk", "1s", "4s", "1g", "1h"]); // Pro favorileri (ayrı kayıt)
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("1");
+  await expect(page).toHaveURL(/tf=1m/);
+  await page.keyboard.press("5");
+  await expect(page).toHaveURL(/tf=4H/);
+  // sola kaydırma: eski mumlar yüklenir
+  const before = await page.evaluate(() => (window as any).TimosAI.activeChart().count);
+  const box = (await page.locator(".tv-box").boundingBox())!;
+  for (let i = 0; i < 3; i++) {
+    await page.mouse.move(box.x + box.width * 0.3, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.95, box.y + box.height / 2, { steps: 8 });
+    await page.mouse.up();
+  }
+  await expect.poll(() => page.evaluate(() => (window as any).TimosAI.activeChart().count)).toBeGreaterThan(before);
+});
+
+test("G3 madde 1: Mentor işlemi kartı (360/1440), sabit ibare, Plana ekle", async ({ page }) => {
+  await waitForScan(page);
+  for (const width of [360, 1440]) {
+    await page.setViewportSize({ width, height: width === 360 ? 780 : 900 });
+    await page.goto("/terminal?s=SOL-USDT&tf=1H");
+    await page.locator("[data-layer=setup]").click();
+    const card = page.locator(".setup-card");
+    await expect(card).toContainText("Mentor işlemi");
+    await expect(card).toContainText("Ajan kurulum taslağı; yatırım tavsiyesi değildir.");
+    await expect(card).not.toContainText(/Seviyeler/);
+    await expect(page.locator("[data-layer=levels]")).toHaveCount(0);
+    await card.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${SHOTS}/g3-madde1-mentor-islemi-${width}.png` });
+    const sw = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(sw).toBeLessThanOrEqual(width);
+  }
+  const s = await (await page.request.get("/api/setup/SOL-USDT")).json();
+  expect(s.disclaimer).toBe("Ajan kurulum taslağı; yatırım tavsiyesi değildir.");
+  expect(s.frames.map((f: any) => f.tf)).toEqual(["15m", "1H", "4H", "1D"]);
+  const add = await page.request.post("/api/plan/add", { data: { instId: "SOL-USDT" } });
+  expect((await add.json()).plan.coins).toContain("SOL-USDT");
+});

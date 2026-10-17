@@ -54,6 +54,23 @@ export class MentorService {
     return { active: this.lastProvider, ai: this.lastAi, provider: this.chain[0]?.name ?? "kural tabanlı", chain: [...this.chain.map((c) => c.name), "kural tabanlı"], hourlyLimit: this.ctx.env.mentorHourlyLimit, usedLastHour: this.usedLastHour() };
   }
 
+  /** Mentor işlemi gerekçesi: seviyeleri kod hesaplar, LLM yalnızca 2-3 kısa gerekçe cümlesi yazar. */
+  async rationale(prompt: string): Promise<{ lines: string[]; provider: string } | null> {
+    if (this.usedLastHour() >= this.ctx.env.mentorHourlyLimit) return null;
+    for (const p of this.chain) {
+      if (!p.available()) continue;
+      try {
+        this.calls.push(Date.now());
+        const out = await p.reply({ text: prompt, history: [], tools: this.tools, detail: false });
+        const lines = out.split(/\n+/).map((l) => l.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, "").replace(/\*\*/g, "").trim()).filter((l) => l.length > 8).map((l) => l[0].toLocaleUpperCase("tr-TR") + l.slice(1)).slice(0, 3);
+        if (lines.length >= 2) return { lines, provider: p.name };
+      } catch {
+        /* sıradakine geç */
+      }
+    }
+    return null;
+  }
+
   private usedLastHour(): number {
     const now = Date.now();
     this.calls = this.calls.filter((t) => now - t < 3_600_000);
