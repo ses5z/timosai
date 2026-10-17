@@ -114,18 +114,18 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [x] DONE 7.12 Test + ekran görüntüsü + commit
 
 ## Madde 8 – Long/Short tablosu
-- [ ] 8.1 OKX top trader L/S (hesap + pozisyon)
-- [ ] 8.2 Binance topLongShortAccountRatio / topLongShortPositionRatio / globalLongShortAccountRatio (5m), curl ile doğrulandı
-- [ ] 8.3 Sütunlarda kaynak etiketi; "top trader" tanım farkı açıklama balonunda
-- [ ] 8.4 Long yüzdesi = oran / (1 + oran)
-- [ ] 8.5 Coin bazında görünüm
-- [ ] 8.6 Özet satırları: BTC, ETH, Top 10, Top 20, All, Ex Top 20
-- [ ] 8.7 Kategori bazında, 24 sa USDT hacmiyle ağırlıklı
-- [ ] 8.8 Güncelleme zamanı görünür
-- [ ] 8.9 Vadeli durum kartı bu verileri kullanır (hesap vs pozisyon ayrışması)
-- [ ] 8.10 Telegram /ls monospace tablo, /ls SOL tek coin
-- [ ] 8.11 Kategori long oranı eşiği (%75/%25, config) aşınca tek bildirim
-- [ ] 8.12 Test + ekran görüntüsü + commit
+- [x] DONE 8.1 OKX top trader L/S (hesap + pozisyon)
+- [x] DONE 8.2 Binance topLongShortAccountRatio / topLongShortPositionRatio / globalLongShortAccountRatio (5m), curl ile doğrulandı
+- [x] DONE 8.3 Sütunlarda kaynak etiketi; "top trader" tanım farkı açıklama balonunda
+- [x] DONE 8.4 Long yüzdesi = oran / (1 + oran)
+- [x] DONE 8.5 Coin bazında görünüm
+- [x] DONE 8.6 Özet satırları: BTC, ETH, Top 10, Top 20, All, Ex Top 20
+- [x] DONE 8.7 Kategori bazında, 24 sa USDT hacmiyle ağırlıklı
+- [x] DONE 8.8 Güncelleme zamanı görünür
+- [x] DONE 8.9 Vadeli durum kartı bu verileri kullanır (hesap vs pozisyon ayrışması)
+- [x] DONE 8.10 Telegram /ls monospace tablo, /ls SOL tek coin
+- [x] DONE 8.11 Kategori long oranı eşiği (%75/%25, config) aşınca tek bildirim
+- [x] DONE 8.12 Test + ekran görüntüsü + commit
 
 ## Madde 9 – Basic / Pro + gündüz/gece
 - [ ] 9.1 Basic mevcut tasarım korunur

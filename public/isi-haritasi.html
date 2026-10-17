@@ -28,12 +28,18 @@
   </div>
   <div class="treemap" id="treemap" role="group" aria-label="Coin ısı haritası"></div>
   <div class="tm-tip" id="tm-tip" hidden></div>
+  <section class="card" style="margin-top:18px" aria-labelledby="ls-h">
+    <h2 id="ls-h">Long/Short</h2>
+    <div id="ls-box"></div>
+  </section>
 </main>
 <div id="drawer-root"></div>
 <script src="/vendor/lightweight-charts.standalone.production.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/chart.js"></script>
 <script src="/js/supply.js"></script>
+<script src="/js/longshort.js"></script>
 <script src="/js/heatmap.js"></script>
+<script>window.TimosAI.lsTable(document.getElementById("ls-box"));</script>
 </body>
 </html>

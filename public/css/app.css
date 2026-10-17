@@ -493,3 +493,8 @@ tr.sel td { background: rgba(242, 169, 59, 0.08); }
 .supply-grid { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 8px 0; }
 .supply-grid b { text-align: right; }
 .supply-chart { width: 100%; border-radius: 10px; overflow: hidden; background: rgba(10, 15, 26, 0.35); }
+.ls-tools { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.ls-table th, .ls-table td { white-space: nowrap; }
+.ls-table tbody th { position: static; text-transform: none; letter-spacing: 0; font-size: 0.88rem; color: var(--text); background: transparent; }
+.ls-table thead th { text-transform: none; letter-spacing: 0; }
+.lsbar { display: inline-block; width: 36px; height: 6px; border-radius: 3px; margin-right: 6px; vertical-align: middle; background: linear-gradient(90deg, var(--safe) var(--p), var(--risky) var(--p)); opacity: 0.8; }

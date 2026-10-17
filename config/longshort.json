@@ -1,0 +1,7 @@
+{
+  "_aciklama": "Long/Short tablosu. Long yüzdesi = oran / (1 + oran). Kategori long oranı eşikleri aşınca tek bildirim (kritik değil).",
+  "refreshMinutes": 5,
+  "categoryLongHighPct": 75,
+  "categoryLongLowPct": 25,
+  "binanceSymbolMap": { "PEPE": "1000PEPEUSDT", "SHIB": "1000SHIBUSDT" }
+}

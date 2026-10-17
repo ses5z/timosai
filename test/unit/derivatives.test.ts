@@ -49,7 +49,7 @@ test("vadeli veri: ATK funding/OI + OKX public L/S; OKX erişilemezse Binance ye
     if (u.includes("okx.com")) return new Response("blocked", { status: 403 });
     return new Response(JSON.stringify([{ longShortRatio: "1.9", buyVol: "10", sellVol: "8" }]), { status: 200 });
   }) as unknown as typeof fetch;
-  const d = new LiveDerivativesData(atk, okxFail);
+  const d = new LiveDerivativesData(atk, okxFail, 300_000, 0);
   const s = await d.snapshot("SOL-USDT");
   assert.equal(s.funding, 0.0004);
   assert.equal(s.oiDeltaPct1h, 4);

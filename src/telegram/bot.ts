@@ -306,6 +306,7 @@ export class TelegramBot implements Notifier {
             "/coin AVAX [BTC] - CEX özeti (parite seçilebilir)",
             "/hold ARB - hold raporu (arz, FDV, kilit açılımı)",
             "/arz AVAX - arz dedektörü (arz değişimi, açılım, baskı)",
+            "/ls · /ls SOL - long/short tablosu (OKX + Binance)",
             "/tara avax 0x... - DEX token güvenlik taraması (PASS/WARN/BLOCK)",
             "/durum - ajan durumu",
             "/portfoy - değer ve pozisyonlar",
@@ -342,6 +343,13 @@ export class TelegramBot implements Notifier {
         const an = c ? analyzeCandidate(this.ctx, p.instId, c) : null;
         const vol = p.volUsdt === null ? "-" : `${(p.volUsdt / 1e6).toFixed(2)} Mn USDT`;
         return void (await this.send([`${p.instId} · ${p.name || base}`, `Son ${p.last} (${p.change24hPct >= 0 ? "+" : ""}${(p.change24hPct ?? 0).toFixed(2)}% 24 sa) · hacim ${vol}${p.lowLiquidity ? " · likidite düşük" : ""}`, an ? an.short : "Analiz için yeterli mum yok.", p.tradable ? "İşlem izin listesinde." : "Analiz için; işlem izin listesinde değil.", `Pariteler: ${pairs.map((x) => x.quote).join(" · ")}`].join("\n")));
+      }
+      case "/ls": {
+        const ls = this.ctx.extras.ls;
+        if (!ls) return void (await this.send("L/S modülü yüklü değil."));
+        await ls.refresh();
+        const base = args[0] ? args[0].toUpperCase().replace(/-.*$/, "") : undefined;
+        return void (await this.send(this.ctx.extras.lsText(ls.table(), base)));
       }
       case "/arz": {
         const base = (args[0] ?? "").toUpperCase().replace(/-.*$/, "");

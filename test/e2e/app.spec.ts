@@ -318,3 +318,21 @@ test("Güncelleme2 madde 7: arz dedektörü Keşfet CEX görünümünde ve ısı
   await page.goto("/isi-haritasi?s=ARB-USDT");
   await expect(page.getByRole("dialog").locator("#dr-supply")).toContainText("Arz baskısı");
 });
+
+test("Güncelleme2 madde 8: Long/Short kartı (Özet/Kategori/Coin, kaynak etiketleri, güncelleme zamanı)", async ({ page }) => {
+  await waitForScan(page);
+  for (const width of [360, 1440]) {
+    await page.setViewportSize({ width, height: width === 360 ? 780 : 900 });
+    await page.goto("/isi-haritasi");
+    const box = page.locator("#ls-box");
+    for (const g of ["BTC", "ETH", "Top 10", "Top 20", "All", "Ex Top 20"]) await expect(box.locator("tbody")).toContainText(g);
+    await expect(box.locator("thead")).toContainText("Binance üst · hesap");
+    await expect(box).toContainText("Güncelleme:");
+    await box.getByRole("tab", { name: "Kategori" }).click();
+    await expect(box.locator("tbody")).toContainText("Layer 1");
+    await box.getByRole("tab", { name: "Coin" }).click();
+    await expect(box.locator("tbody tr")).toHaveCount(28);
+    await box.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${SHOTS}/g2-madde8-ls-${width}.png` });
+  }
+});

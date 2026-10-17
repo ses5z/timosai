@@ -91,6 +91,15 @@ export function analyzeDerivatives(s: DerivSnapshot, px: PriceContext, cfg: Deri
       suspicion += 1;
     }
   }
+  if (s.lsTopAccount !== null && s.lsTopPosition !== null) {
+    const m = cfg.divergenceMargin;
+    const a = s.lsTopAccount, p = s.lsTopPosition;
+    if ((a > 1 + m && p < 1 - m) || (a < 1 - m && p > 1 + m)) {
+      flags.push("ust_trader_ayrisma");
+      reasons.push(`Üst trader hesap oranı ${a.toFixed(2)}, pozisyon oranı ${p.toFixed(2)}: hesapların çoğu bir yönde, büyük pozisyonlar ters yönde.`);
+      suspicion += 1;
+    }
+  }
   if (oi1 !== null && oi1 <= -cfg.oiDropPct1h && px.maxWickPct >= cfg.wickPct) {
     flags.push("likidasyon_kaskadi");
     reasons.push(`OI 1 saatte ${pct(oi1)} düştü ve uzun fitil var (%${px.maxWickPct.toFixed(2)}): likidasyon kaskadı yaşandı.`);

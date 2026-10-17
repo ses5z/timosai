@@ -12,6 +12,7 @@ import { PaperFutures } from "./trading/paperFutures.js";
 import { CexService, PAIR_RE } from "./discover/cex.js";
 import { DEX_CHAINS, onchainOsStatus, resolveChain, validateAddress } from "./discover/dex.js";
 import { buildSecurityTable } from "./security/table.js";
+import { LongShortService, lsText } from "./longshort/longShort.js";
 import { analyzeCandidate } from "./mentor/analysis.js";
 import { holdReportFor } from "./fundamentals/view.js";
 import { derivAnalysisFor } from "./derivatives/view.js";
@@ -58,6 +59,21 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
     return t;
   };
   ctx.extras.scanTable = scanTable;
+  const ls = new LongShortService(ctx, ctx.env.atkMode === "live" ? opts.fetchImpl ?? fetch : null);
+  ctx.extras.ls = ls;
+  ctx.extras.lsText = lsText;
+  const lsAlerted = new Map<string, number>();
+  ctx.agent.onScan(async () => {
+    await ls.refresh();
+    for (const a of ls.categoryAlerts()) {
+      const key = `${a.category}:${a.side}`;
+      if (Date.now() - (lsAlerted.get(key) ?? 0) < 6 * 3_600_000) continue; // tek bildirim
+      lsAlerted.set(key, Date.now());
+      const text = `${a.category} kategorisinde üst trader long oranı %${a.pct.toFixed(0)} (${a.side === "high" ? `eşik %${ls.cfg.categoryLongHighPct}` : `eşik %${ls.cfg.categoryLongLowPct}`}): ${a.side === "high" ? "long kalabalık" : "short kalabalık"}. Vadeli veri yalnızca analiz girdisidir.`;
+      ctx.store.addEvent("bilgi", `[L/S] ${text}`);
+      void bot.notify({ kind: "market", symbol: `KATEGORI:${a.category}`, text });
+    }
+  });
   const cex = new CexService(ctx);
   ctx.extras.cex = cex;
   const quick = new QuickTrader(ctx);
@@ -192,6 +208,10 @@ export async function installExtensions(ctx: AppContext, opts: { fetchImpl?: typ
       res.json({ query: String(req.query.q ?? ""), results: [], onchainos: onchainOsStatus(), warning: "Aynı isimli sahte tokenlar olabilir; kontrat adresini doğrula." });
     });
 
+    app.get("/api/longshort", async (_req, res) => {
+      await ls.refresh();
+      res.json(ls.table());
+    });
     app.get("/api/paper", (_req, res) => {
       const t = ctx.agent.trading;
       res.json({ mode: t.mode, config: ctx.paper, stats: t.stats(ctx.agent.equityHistory), futures: futures.view(), futuresStats: futures.stats(), quickCommands: quick.enabled() });

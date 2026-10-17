@@ -47,6 +47,15 @@ export class NotifyPolicy {
       this.seen.set(h, t);
       return { send: true, reason: "uyarı" };
     }
+    if (m.kind === "market") {
+      // Genel piyasa bildirimi (ör. kategori long oranı): takip şartı yok, normal saatlik sınır geçerli.
+      if (!c.settings.developments) return { send: false, reason: "gelişme bildirimleri kapalı" };
+      this.sentTimes = this.sentTimes.filter((x) => t - x < 3_600_000);
+      if (this.sentTimes.length >= this.limits.perHour) return { send: false, reason: "saatlik sınır" };
+      this.sentTimes.push(t);
+      this.seen.set(h, t);
+      return { send: true, reason: "piyasa" };
+    }
     // gelişme
     if (!c.settings.developments) return { send: false, reason: "gelişme bildirimleri kapalı" };
     if (!m.symbol || (!c.follows.includes(m.symbol) && !c.held.includes(m.symbol))) return { send: false, reason: "takip dışı coin" };

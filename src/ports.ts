@@ -110,7 +110,7 @@ export interface DecisionProvider {
   decide(input: DecisionInput): Candidate;
 }
 
-export type NotifyKind = "development" | "chat" | "critical" | "warning";
+export type NotifyKind = "development" | "chat" | "critical" | "warning" | "market";
 
 export interface NotifyMessage {
   kind: NotifyKind;

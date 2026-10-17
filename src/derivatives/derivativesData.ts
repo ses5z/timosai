@@ -44,13 +44,24 @@ export class LiveDerivativesData implements DerivativesData {
     private readonly atk: AtkCaller,
     private readonly fetchImpl: FetchLike = fetch,
     private readonly cacheMs = 5 * 60_000,
+    private readonly minGapMs = 450,
   ) {}
 
   stats() {
     return { publicCalls: this.publicCalls, publicErrors: this.publicErrors, source: Date.now() < this.okxDownUntil ? "Binance (yedek)" : "OKX global" };
   }
 
+  // OKX rubik uç noktaları IP başına ~5 istek / 2 sn ile sınırlı: istekler kuyrukla ~2/sn'ye yayılır.
+  private okxQueue: Promise<void> = Promise.resolve();
+  private throttle(url: string): Promise<void> {
+    if (!url.includes("okx.com") || this.minGapMs <= 0) return Promise.resolve();
+    const p = this.okxQueue.then(() => new Promise<void>((r) => setTimeout(r, this.minGapMs)));
+    this.okxQueue = p.catch(() => undefined);
+    return p;
+  }
+
   private async getJson(url: string): Promise<any> {
+    await this.throttle(url);
     this.publicCalls++;
     try {
       const r = await this.fetchImpl(url, { signal: AbortSignal.timeout(8000), headers: { accept: "application/json" } });
@@ -65,12 +76,10 @@ export class LiveDerivativesData implements DerivativesData {
   private async okxPublic(swapId: string) {
     const base = "https://www.okx.com/api/v5/rubik/stat";
     const q = `instId=${encodeURIComponent(swapId)}&period=1H`;
-    const [a, ta, tp, tv] = await Promise.all([
-      this.getJson(`${base}/contracts/long-short-account-ratio-contract?${q}`),
-      this.getJson(`${base}/contracts/long-short-account-ratio-contract-top-trader?${q}`),
-      this.getJson(`${base}/contracts/long-short-position-ratio-contract-top-trader?${q}`),
-      this.getJson(`${base}/taker-volume-contract?${q}`),
-    ]);
+    const a = await this.getJson(`${base}/contracts/long-short-account-ratio-contract?${q}`);
+    const ta = await this.getJson(`${base}/contracts/long-short-account-ratio-contract-top-trader?${q}`);
+    const tp = await this.getJson(`${base}/contracts/long-short-position-ratio-contract-top-trader?${q}`);
+    const tv = await this.getJson(`${base}/taker-volume-contract?${q}`);
     for (const x of [a, ta, tp, tv]) if (x?.code !== "0") throw new Error(`OKX public: ${x?.msg ?? "kod " + x?.code}`);
     // taker-volume-contract: [ts, satış hacmi, alış hacmi]
     return { lsAccount: num(a.data?.[0]?.[1]), lsTopAccount: num(ta.data?.[0]?.[1]), lsTopPosition: num(tp.data?.[0]?.[1]), takerSell: num(tv.data?.[0]?.[1]), takerBuy: num(tv.data?.[0]?.[2]), publicSource: "OKX" as const };
@@ -107,7 +116,7 @@ export class LiveDerivativesData implements DerivativesData {
         if (Date.now() < this.okxDownUntil) throw new Error("OKX global geçici olarak erişilemez");
         v = await this.okxPublic(swapId);
       } catch {
-        this.okxDownUntil = Date.now() + 10 * 60_000;
+        this.okxDownUntil = Date.now() + 2 * 60_000;
         v = await this.binancePublic(instId).catch(() => v);
       }
       pub = { at: Date.now(), v: { instId, swapId, ...v, ts: Date.now(), live: true } };
