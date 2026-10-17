@@ -1,0 +1,11 @@
+{
+  "network": "fuji",
+  "chainId": 43113,
+  "address": "0x45799138bec5ab18a89859d45c3c06f90da18d54",
+  "deployTx": "0x68e56a0009a2a414d84f2e8a7e6ea950138d8cbedca3e7f34fab9801df7281f7",
+  "deployer": "0xE6080ebEeA57001D396B1aE4469B015AD24b98E1",
+  "block": 59596121,
+  "explorer": "https://testnet.snowtrace.io/address/0x45799138bec5ab18a89859d45c3c06f90da18d54",
+  "txUrl": "https://testnet.snowtrace.io/tx/0x68e56a0009a2a414d84f2e8a7e6ea950138d8cbedca3e7f34fab9801df7281f7",
+  "at": "2026-10-17T11:26:47.863Z"
+}

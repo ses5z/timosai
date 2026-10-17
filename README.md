@@ -137,7 +137,11 @@ Portlar ve uygulamaları (`src/ports.ts`; her biri için gerçek ve `Mock*`, `AT
 - `avalanche/contracts/DecisionLog.sol`: kimlik olayı (`Registered`: TimosAI, görevler `scam-scan,opportunity-scan`), `anchor(head, count)` ve `logOutcome(symbol, pnl, hash)`. Değer tutmaz, token çıkarmaz.
 - `npm run deploy:fuji`: solc-js ile derler, `.env`'deki `AVAX_DEPLOYER_PRIVATE_KEY` ile Fuji'ye dağıtır ve `avalanche/deployment.fuji.json` yazar. Mainnet için `npm run deploy:mainnet` (chainId 43114).
 - Sunucu çalışırken kayıt özeti her `ANCHOR_INTERVAL_MIN` dakikada bir, kapanan işlem sonuçları her kapanışta zincire yazılır. Panelde **Avalanche kanıtı** kartı sözleşme ve Snowtrace işlem linklerini gösterir.
-- **Kanıt:** sözleşme adresi ve Snowtrace linki dağıtımdan sonra buraya eklenecek (`avalanche/deployment.fuji.json`).
+- **Kanıt (Fuji, chainId 43113):**
+  - DecisionLog sözleşmesi: [`0x45799138bec5ab18a89859d45c3c06f90da18d54`](https://testnet.snowtrace.io/address/0x45799138bec5ab18a89859d45c3c06f90da18d54)
+  - Dağıtım işlemi: [`0x68e56a00…df7281f7`](https://testnet.snowtrace.io/tx/0x68e56a0009a2a414d84f2e8a7e6ea950138d8cbedca3e7f34fab9801df7281f7) (blok 59596121)
+  - Dağıtıcı (yalnızca bu iş için üretilmiş cüzdan): `0xE6080ebEeA57001D396B1aE4469B015AD24b98E1`
+  - Sonraki özet ve sonuç işlemleri sözleşme sayfasında ve panelin **Avalanche kanıtı** kartında görünür. Ayrıntılar: `avalanche/deployment.fuji.json`.
 
 ## Sayfa haritası
 
@@ -203,7 +207,7 @@ npm run test:e2e    # Playwright (bilgisayardaki Microsoft Edge ile; PW_CHANNEL=
 
 ## Yol haritası / bilinen eksikler
 
-- Avalanche Fuji dağıtımı kullanıcının cüzdan anahtarı ve faucet AVAX'ı bekliyor. Mainnet ve resmi ERC-8004 Reputation registry entegrasyonu sonra.
+- Avalanche Fuji'ye dağıtıldı. Mainnet ve resmi ERC-8004 Reputation registry entegrasyonu sonra.
 - Scam katman 2 (`anvil --fork-url` ile al/approve/sat simülasyonu) yapılmadı. Karar mantığı simülasyonu destekliyor.
 - ATK `news`/`smartmoney` için OKX OAuth, OnchainOS için Web3 API anahtarı gerekli; şimdilik "veri yok".
 - Canlı veri sinyal üretmediğinde kayıtlı tarama anını tekrar oynatan "KAYIT" modu yazılmadı. Senaryo düğmesi canlı fiyatlardan deterministik kararlar üretiyor.
