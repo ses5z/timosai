@@ -365,6 +365,37 @@ export class AtkTradingClient extends TradingClient {
     return this.balance;
   }
 
+  /**
+   * Cüzdan senkronu: OKX TR yalnızca spot (kaldıraç yok). Cüzdanda olup uygulamanın izlemediği spot varlıklar
+   * (önceki oturum, Telegram ya da uygulama dışı alımlar) pozisyon olarak eklenir; borsada bekleyen stop/hedef varsa
+   * onlar kullanılır. Cüzdanda artık olmayan izlenen pozisyonlar kapanmış sayılır. Dönen: eklenen sembol listesi.
+   */
+  async syncWallet(minUsd = 1): Promise<string[]> {
+    await this.refreshBalance(true);
+    const added: string[] = [];
+    for (const w of this.wallet) {
+      if (w.ccy === "USDT" || w.usd < minUsd || w.cash <= 0) continue;
+      const instId = `${w.ccy}-USDT`;
+      if ([...this.positions.values()].some((p) => p.instId === instId)) continue;
+      let sl = 0, tp = 0;
+      for (const ordType of ["conditional", "oco"]) {
+        const list: any[] = (await this.tool<any[]>("spot_get_algo_orders", { instId, ordType, status: "pending" }).catch(() => [])) ?? [];
+        for (const a of list) { sl = sl || Number(a.slTriggerPx) || 0; tp = tp || Number(a.tpTriggerPx) || 0; }
+      }
+      const px = w.usd / w.cash;
+      const stop = sl > 0 && sl < px ? sl : px * 0.95;
+      const id = crypto.randomUUID().slice(0, 8);
+      this.positions.set(id, { id, instId, qty: w.cash, entryPx: px, stopPx: stop, initialStop: stop, targetPx: tp > px ? tp : px * 1.1, costUsdt: w.usd, openCost: w.usd, openedAt: Date.now(), partialDone: false, trailing: false, mode: "CANLI", reason: `Cüzdanda bulunan spot varlık (${sl ? "borsadaki stop kullanılıyor" : "borsada stop yok; uygulama stopu %5 altta"}).`, realizedPnl: 0, lastPx: px, atr: px * 0.01, origin: "cüzdan" });
+      added.push(instId);
+    }
+    // Cüzdanda kalmayan pozisyonlar (borsada stop/hedef tetiklendi ya da uygulama dışında satıldı)
+    for (const [id, p] of this.positions) {
+      const w = this.wallet.find((x) => `${x.ccy}-USDT` === p.instId);
+      if (!w || w.usd < 0.2) this.positions.delete(id);
+    }
+    return added;
+  }
+
   /** Canlı hesapta değer = cüzdanın toplam USD karşılığı (ajanın açmadığı varlıklar dahil). */
   equity(): number {
     return this.walletTotalUsd > 0 ? this.walletTotalUsd : super.equity();

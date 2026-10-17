@@ -280,6 +280,13 @@ test("Canlı kapanış: bağlı stop varlığı donduruyorsa önce iptal edilir,
   const t = new AtkTradingClient(resolveHardLimits({}), new SignalLedger(), atk, 0);
   await t.refreshBalance(true);
   assert.equal(t.equity(), 30);
+  // cüzdan senkronu: izlenmeyen spot BTC pozisyon olarak eklenir (borsadaki stop yoksa %5 altı)
+  const added = await t.syncWallet();
+  assert.deepEqual(added, ["BTC-USDT"]);
+  const adopted = t.listPositions()[0];
+  assert.equal(adopted.origin, "cüzdan");
+  assert.equal(adopted.qty, 0.0001);
+  (t as any).positions.clear();
   assert.ok(t.wallet.some((w) => w.ccy === "BTC" && w.frozen > 0));
   const pos: any = { id: "p1", instId: "BTC-USDT", qty: 0.0001, entryPx: 80000, stopPx: 79000, initialStop: 79000, targetPx: 82000, costUsdt: 8, openedAt: 0, partialDone: false, trailing: false, mode: "CANLI", reason: "", realizedPnl: 0, lastPx: 80000, atr: 1, origin: "test" };
   (t as any).positions.set("p1", pos);

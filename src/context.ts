@@ -161,6 +161,14 @@ export async function maybeEnableLiveTrading(ctx: AppContext): Promise<void> {
     ctx.store.settings.riskPct = plan.riskPct;
     applyPlan(ctx.limits, plan);
     ctx.agent.setTrading(live);
+    const adopted = await live.syncWallet().catch(() => [] as string[]);
+    if (adopted.length) ctx.store.addEvent("bilgi", `Cüzdanda bulunan spot varlıklar pozisyon olarak eklendi: ${adopted.map((x) => x.split("-")[0]).join(", ")}.`);
+    // Cüzdan 30 sn'de bir taranır: uygulama dışı alım/satımlar ve borsada tetiklenen stoplar portföye yansır.
+    const t = setInterval(() => {
+      if (ctx.agent.trading !== live) return clearInterval(t);
+      live.syncWallet().then((a) => { if (a.length) { ctx.store.addEvent("bilgi", `Cüzdanda yeni spot varlık: ${a.map((x) => x.split("-")[0]).join(", ")}.`); ctx.store.bus.publish("positions", ctx.agent.positionsView()); } }).catch(() => undefined);
+    }, 30_000);
+    t.unref?.();
     ctx.store.addEvent("uyarı", `CANLI İŞLEM AÇIK: bakiye ${bal.toFixed(2)} USDT. Plan: tek işlem ≤ ${plan.maxOrderUsdt} USDT · toplam ≤ ${plan.maxTotalUsdt} USDT · ${plan.maxPositions} pozisyon · risk %${plan.riskPct}.`);
     log.warn("CANLI İŞLEM modu etkin.");
   } catch (e) {
