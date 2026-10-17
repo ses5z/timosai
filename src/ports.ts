@@ -85,6 +85,7 @@ export interface Candidate {
   whyBullets: string[];
   security: SecuritySummary;
   derivatives: DerivAnalysis | null;
+  atrTrend: { dir: 1 | -1; line: number; lines: number[] } | null;
   updatedAt: number;
   live: boolean;
 }

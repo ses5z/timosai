@@ -166,3 +166,25 @@ test("devre kesici: piyasa kaybı tetiklemez; ardışık teknik hata ve anormal 
   assert.equal(ctx.agent.breaker.active, true);
   assert.match(ctx.agent.breaker.reason, /anormal emir sıklığı/);
 });
+
+test("ATR trend filtresi: elle hesaplanmış fixture ile birebir", async () => {
+  const fs = await import("node:fs");
+  const { atrTrend } = await import("../../src/indicators/atrTrend.js");
+  const fx = JSON.parse(fs.readFileSync("test/fixtures/atrtrend.json", "utf8"));
+  const candles = fx.candles.map(([h, l, c]: number[], i: number) => ({ ts: i, open: c, high: h, low: l, close: c, vol: 1 }));
+  const out = atrTrend(candles, fx.period, fx.mult);
+  for (const e of fx.expected) {
+    assert.equal(out[e.i].dir, e.dir, `yön i=${e.i}`);
+    assert.ok(Math.abs(out[e.i].line - e.line) < 1e-9, `çizgi i=${e.i}: ${out[e.i].line} != ${e.line}`);
+  }
+});
+
+test("ATR trend filtresi düşüşteyken ajan long açmaz (karar izle, gerekçede yazar)", () => {
+  const dp = new RuleDecisionProvider(DEFAULT_THRESHOLDS);
+  const up = trendCandles(1);
+  // son mumlarda sert düşüş: trend çizgisi kırılır
+  const crash = [...up.slice(0, 95), ...Array.from({ length: 5 }, (_, i) => { const p = up[94].close * (1 - 0.01 * (i + 1)); return { ts: 0, open: p, high: p * 1.001, low: p * 0.999, close: p, vol: 1e6 }; })];
+  const d = dp.decide({ instId: "SOL-USDT", category: "x", ticker: tick(crash), candles: crash, rsi: 60, funding: 0.00001, sentiment: 0.5, orderbook: null, live: true });
+  assert.equal(d.atrTrend?.dir, -1);
+  assert.notEqual(d.decision, "aç");
+});

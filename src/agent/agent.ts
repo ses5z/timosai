@@ -503,7 +503,9 @@ export class Agent {
         this.dev({ symbol: p.instId, kind: "pozisyon_kapandı", text: `${base}: kısmi kâr alındı, stop başa başa (${roundPrice(p.entryPx)}).`, critical: false });
       }
       if (rNow >= m.trailStartR && p.atr > 0) {
-        const ns = price - m.trailAtrMult * p.atr;
+        const at = this.candidates.get(p.instId)?.atrTrend;
+        // trailMode "atrTrend": iz süren stop ATR trend çizgisini izler (çizgi yükseliş yönündeyse)
+        const ns = m.trailMode === "atrTrend" && at && at.dir === 1 ? at.line : price - m.trailAtrMult * p.atr;
         if (ns > p.stopPx + 0.25 * R) {
           t.updateStop(p.id, ns, true);
           this.d.store.addEvent("karar", `${base}: iz süren stop ${roundPrice(ns)} fiyatına yükseltildi (+${rNow.toFixed(1)}R).`, p.instId);

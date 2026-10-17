@@ -19,6 +19,7 @@
     "trailStartR": 1.5,
     "trailAtrMult": 1,
     "timeStopHours": 6,
-    "timeStopMinR": 0.3
+    "timeStopMinR": 0.3,
+    "trailMode": "atr"
   }
 }

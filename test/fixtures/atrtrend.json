@@ -1,0 +1,13 @@
+{
+  "_aciklama": "ATR trend filtresi için elle hesaplanmış değerler (period=2, mult=1). Mumlar: [high, low, close].",
+  "period": 2,
+  "mult": 1,
+  "candles": [[11, 9, 10], [12, 10, 11], [13, 11, 12], [12, 8, 9], [10, 7, 8]],
+  "expected": [
+    { "i": 0, "dir": 1, "line": 8 },
+    { "i": 1, "dir": 1, "line": 9 },
+    { "i": 2, "dir": 1, "line": 10 },
+    { "i": 3, "dir": -1, "line": 12 },
+    { "i": 4, "dir": -1, "line": 11 }
+  ]
+}
