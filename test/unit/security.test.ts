@@ -40,14 +40,25 @@ test("tarayıcı: geçersiz adres/zincir reddedilir; sahte fetch ile GoPlus hone
 
 test("hold raporu: yüksek FDV/MC + 90 günde büyük kilit açılımı → hold riskli; düşük dolaşım → manipülasyona açık", () => {
   const now = Date.parse("2026-10-17T00:00:00Z");
-  const r = buildHoldReport("XYZ", { circulating: 200, total: 1000, max: 1000, marketCap: 100, fdv: 500, source: "test" }, [{ coin: "XYZ", date: "2026-11-20", pctOfCirculating: 15, source: "x", sample: true }], { volUsdt24h: 1e6, risk: 60 }, now);
+  const r = buildHoldReport("XYZ", { circulating: 200, total: 1000, max: 1000, marketCap: 100, fdv: 500, source: "test" }, [{ coin: "XYZ", date: "2026-11-20", pctOfCirculating: 15, source: "x", sample: true }], { volumeScore: 20, risk: 60 }, now);
   assert.equal(r.verdict, "ikisi de riskli");
   assert.ok(r.reasons.some((x) => x.includes("hold riskli")));
   assert.ok(r.reasons.some((x) => x.includes("manipülasyona açık")));
   assert.equal(r.distribution.status, "veri yok");
-  const btc = buildHoldReport("BTC", { circulating: 19.9e6, total: 19.9e6, max: 21e6, marketCap: 1.6e12, fdv: 1.7e12, source: "test" }, [], { volUsdt24h: 1e9, risk: 30 }, now);
+  const btc = buildHoldReport("BTC", { circulating: 19.9e6, total: 19.9e6, max: 21e6, marketCap: 1.6e12, fdv: 1.7e12, source: "test" }, [], { volumeScore: 70, risk: 30 }, now);
   assert.equal(btc.verdict, "hold profiline uygun");
   assert.equal(btc.distribution.status, "uygulanmaz");
-  const trade = buildHoldReport("ABC", { circulating: 400, total: 1000, max: null, marketCap: 100, fdv: 250, source: "test" }, [], { volUsdt24h: 5e7, risk: 30 }, now);
+  const trade = buildHoldReport("ABC", { circulating: 400, total: 1000, max: null, marketCap: 100, fdv: 250, source: "test" }, [], { volumeScore: 100, risk: 30 }, now);
   assert.equal(trade.verdict, "kısa vade trade edilebilir");
+});
+
+test("Güncelleme2 madde 3: hold raporu hacim kuralı skor motoruyla aynı fonksiyon/eşik (hacim skoru 100 iken 'hacim düşük' yazmaz)", async () => {
+  const { volumeScore, isVolumeLow } = await import("../../src/agent/scoring.js");
+  const s = { circulating: 400, total: 1000, max: null, marketCap: 100, fdv: 250, source: "test" };
+  const hi = buildHoldReport("ABC", s, [], { volumeScore: volumeScore(3, 1), risk: 30 });
+  assert.equal(volumeScore(3, 1), 100);
+  assert.equal(hi.reasons.some((r) => r.includes("Hacim düşük")), false);
+  const lo = buildHoldReport("ABC", s, [], { volumeScore: volumeScore(0.4, -1), risk: 30 });
+  assert.equal(isVolumeLow(volumeScore(0.4, -1), {}), true);
+  assert.ok(lo.reasons.some((r) => r.includes("Hacim düşük")));
 });

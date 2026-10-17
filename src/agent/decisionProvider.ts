@@ -1,7 +1,7 @@
 // RuleDecisionProvider: skorlardan aç/izle/ele, giriş/stop/hedef ve sade Türkçe gerekçe üretir.
 import type { Candidate, DecisionInput, DecisionKind, DecisionProvider, SecuritySummary } from "../ports.js";
 import { clamp, round, roundPrice } from "../util/math.js";
-import { scoreInput } from "./scoring.js";
+import { isVolumeLow, scoreInput } from "./scoring.js";
 import type { Thresholds } from "./thresholds.js";
 import { atrTrend, loadAtrTrendConfig } from "../indicators/atrTrend.js";
 import { analyzeDerivatives, priceContext, DEFAULT_DERIV, type DerivConfig } from "../derivatives/rules.js";
@@ -79,10 +79,11 @@ export class RuleDecisionProvider implements DecisionProvider {
     const target = roundPrice(price + (price - stop) * th.targetRR);
     const rr = price - stop > 0 ? round((target - price) / (price - stop), 2) : 0;
 
-    const ranked = Object.entries(s.parts).sort((a, b) => b[1] - a[1]);
+    const ranked = (Object.entries(s.parts).filter(([, v]) => v !== null) as [string, number][]).sort((a, b) => b[1] - a[1]);
     const strong = ranked.slice(0, 2).map(([k]) => PART_LABEL[k]);
     const weak = ranked.at(-1)!;
-    const direction = s.trendUp ? "Yukarı eğilimli" : s.trendDown ? "Aşağı eğilimli" : "Yatay, yön arıyor";
+    // Zaman aralığı açıkça yazılır: trend 15 dk mumlarda EMA20/EMA50 ile ölçülür (24 sa değişimle çelişebilir).
+    const direction = s.trendUp ? "15 dk trend: yukarı" : s.trendDown ? "15 dk trend: aşağı" : "15 dk trend: yatay";
 
     let reason: string;
     if (decision === "aç") reason = `${strong.join(" ve ")} güçlü, risk makul; stop ${stopPct.toFixed(1)}% altta, hedef ${th.targetRR}R.`;
@@ -100,12 +101,13 @@ export class RuleDecisionProvider implements DecisionProvider {
     const why: string[] = [];
     why.push(`Son 4 saatte ${s.mom4h >= 0 ? "+" : ""}${s.mom4h.toFixed(2)}%, 24 saatte ${inp.ticker.change24hPct >= 0 ? "+" : ""}${inp.ticker.change24hPct.toFixed(2)}% değişim.`);
     why.push(s.trendUp ? "Fiyat kısa ve orta ortalamaların üstünde (EMA20 > EMA50)." : s.trendDown ? "Fiyat ortalamaların altında, eğilim aşağı." : "Ortalamalar iç içe; net bir trend yok.");
-    why.push(`Hacim son saatte normalin ${s.volRatio.toFixed(1)} katı.`);
+    why.push(`Hacim son saatte normalin ${s.volRatio.toFixed(1)} katı${isVolumeLow(s.parts.volume, th) ? " (düşük)" : ""}.`);
     if (s.rsi !== null) why.push(`RSI ${s.rsi.toFixed(0)}: ${s.rsi >= th.rsiOverbought ? "aşırı alım bölgesi, dikkat" : s.rsi <= th.rsiOversold ? "aşırı satım bölgesi" : "dengeli bölgede"}.`);
     why.push(`Oynaklık (ATR) fiyatın %${s.atrPct.toFixed(2)}'si.`);
     if (inp.funding !== null) why.push(`Funding ${(inp.funding * 100).toFixed(4)}%: ${Math.abs(inp.funding) > th.fundingCrowdedAbs ? "kalabalık pozisyon işareti" : "nötr"}.`);
     if (deriv?.available) why.push(`Vadeli: ${deriv.badge}; ${deriv.reasons[0]}`);
     if (atLast) why.push(`ATR trend filtresi ${atLast.dir === 1 ? "yükseliş" : "düşüş"} yönünde (çizgi ${roundPrice(atLast.line)}).`);
+    if (inp.sentiment === null) why.push("Haber duygusu: veri yok (OKX haber modülü kimlik istiyor).");
     if (inp.sentiment !== null) why.push(`Haber duygusu ${inp.sentiment >= 0 ? "olumlu" : "olumsuz"} (${(inp.sentiment * 100).toFixed(0)}).`);
 
     return {
@@ -122,7 +124,7 @@ export class RuleDecisionProvider implements DecisionProvider {
       rsi: s.rsi === null ? null : round(s.rsi, 1),
       funding: inp.funding,
       sentiment: inp.sentiment,
-      parts: Object.fromEntries(Object.entries(s.parts).map(([k, v]) => [k, Math.round(v)])) as any,
+      parts: Object.fromEntries(Object.entries(s.parts).map(([k, v]) => [k, v === null ? null : Math.round(v)])) as any,
       opportunity: Math.round(s.opportunity),
       risk: Math.round(s.risk),
       decision,

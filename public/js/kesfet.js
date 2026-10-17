@@ -20,9 +20,9 @@
         <div class="score-box"><span class="kpi-small">${T.term("opportunity", "Fırsat")}</span><br><b>${c.opportunity}</b><div class="bar"><span style="width:${c.opportunity}%"></span></div></div>
         <div class="score-box"><span class="kpi-small">${T.term("risk", "Risk")}</span><br><b>${c.risk}</b><div class="bar ${c.risk >= 55 ? "bad" : c.risk >= 35 ? "warn" : ""}"><span style="width:${c.risk}%"></span></div></div>
       </div>
-      <p class="kpi-small" style="margin:0">Yön: <b style="color:var(--text)">${T.esc(c.direction)}</b><span class="pro-only"> · ${T.term("rr", "R:R")} ${c.rr} · ${T.term("atr", "ATR")} %${c.atrPct}</span></p>
+      <p class="kpi-small" style="margin:0"><b style="color:var(--text)">${T.esc(c.direction)}</b> · 24 sa: <b class="${T.cls(c.change24hPct)}" data-chg2>${F.pct(c.change24hPct)}</b><span class="pro-only"> · ${T.term("rr", "R:R")} ${c.rr} · ${T.term("atr", "ATR")} %${c.atrPct}</span></p>
       <p class="reason">${T.esc(c.reason)}</p>
-      <div class="pro-only kpi-small parts-mini">${Object.entries(c.parts || {}).map(([k, v]) => `<span>${T.esc(k)} <b class="num">${v}</b></span>`).join("")}${c.atrTrend ? `<span>ATR trend <b>${c.atrTrend.dir === 1 ? "yükseliş" : "düşüş"}</b></span>` : ""}</div>
+      <div class="pro-only kpi-small parts-mini">${Object.entries(c.parts || {}).map(([k, v]) => `<span>${T.esc(k)} <b class="num">${v == null ? "veri yok" : v}</b></span>`).join("")}${c.atrTrend ? `<span>ATR trend <b>${c.atrTrend.dir === 1 ? "yükseliş" : "düşüş"}</b></span>` : ""}</div>
       <details><summary>Neden önerildi?</summary><ul>${why}</ul>
         <p class="kpi-small" style="margin:8px 0 0"><b>Güvenlik özeti</b> <span class="badge badge-warn">${T.esc(s.label || "ÖRNEK VERİ")}</span><br>Denetim: ${T.esc(s.contractAudit)} · Arz açılışı: ${T.esc(s.unlockNext30d)} · Yoğunlaşma: ${T.esc(s.concentration)}<br>Makas (gerçek): ${s.spreadPct == null ? "ölçülmedi" : "%" + s.spreadPct} · Derinlik: ${s.depthUsdt == null ? "-" : F.vol(s.depthUsdt) + " USDT"}</p>
       </details>

@@ -2,6 +2,7 @@
 // Arz: CoinGecko public API. Kilit açılımı: config/unlocks.json (ÖRNEK VERİ). Cüzdan dağılımı: OKX OnchainOS (anahtar yoksa veri yok;
 // ana zincir coinlerinde uygulanmaz). Ham "ilk 10 cüzdan" kullanılmaz.
 import fs from "node:fs";
+import { isVolumeLow } from "../agent/scoring.js";
 import path from "node:path";
 
 export const COINGECKO_IDS: Record<string, string> = {
@@ -87,7 +88,8 @@ export interface HoldReport {
 }
 
 /** Kurallar (saf fonksiyon). */
-export function buildHoldReport(base: string, s: Supply | null, unlocks: UnlockItem[], market: { volUsdt24h: number; risk: number }, now = Date.now()): HoldReport {
+/** market.volumeScore: skor motorundaki hacim ölçüsü (volumeScore); eşik lowVolumeScore — ikisi de aynı fonksiyon/eşik. */
+export function buildHoldReport(base: string, s: Supply | null, unlocks: UnlockItem[], market: { volumeScore: number | null; risk: number; lowVolumeScore?: number }, now = Date.now()): HoldReport {
   const reasons: string[] = [];
   const supplyCap = s?.max ?? s?.total ?? null;
   const circRatio = s?.circulating && supplyCap ? s.circulating / supplyCap : null;
@@ -110,7 +112,8 @@ export function buildHoldReport(base: string, s: Supply | null, unlocks: UnlockI
   if (unlock90 > 0 && unlock90 <= 10) reasons.push(`90 gün içinde dolaşımın %${unlock90.toFixed(1)}'i kadar kilit açılımı var (ÖRNEK VERİ).`);
   if (fdvMc !== null && fdvMc <= 1.3) reasons.push(`FDV/piyasa değeri ${fdvMc.toFixed(2)}: arzın çoğu dolaşımda.`);
   if (s?.max && s.circulating && s.max > 0) reasons.push(`Maksimum arz sabit (${(s.circulating / s.max * 100).toFixed(0)}% dolaşımda).`);
-  const liquid = market.volUsdt24h >= 5_000_000;
+  const volKnown = market.volumeScore !== null;
+  const liquid = volKnown && !isVolumeLow(market.volumeScore as number, { lowVolumeScore: market.lowVolumeScore });
   const tradeOk = liquid && market.risk < 55;
   if (!s) reasons.push("Arz verisi alınamadı (veri yok).");
   let verdict: HoldVerdict;
@@ -118,7 +121,7 @@ export function buildHoldReport(base: string, s: Supply | null, unlocks: UnlockI
   else if (tradeOk) verdict = "kısa vade trade edilebilir";
   else verdict = "ikisi de riskli";
   if (tradeOk && verdict !== "kısa vade trade edilebilir") reasons.push("Likidite yeterli; kısa vadeli işlem için de uygun görünüyor.");
-  if (!tradeOk) reasons.push(liquid ? `Kısa vadede risk puanı yüksek (${market.risk}).` : "24 saatlik hacim düşük; kısa vadede likidite sınırlı.");
+  if (!tradeOk) reasons.push(!volKnown ? "Hacim verisi yok (coin henüz taranmadı)." : liquid ? `Kısa vadede risk puanı yüksek (${market.risk}).` : `Hacim düşük (hacim skoru ${Math.round(market.volumeScore as number)} < ${market.lowVolumeScore ?? 35}); kısa vadede likidite sınırlı.`);
   return {
     base,
     verdict,

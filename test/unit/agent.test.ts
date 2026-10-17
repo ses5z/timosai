@@ -188,3 +188,24 @@ test("ATR trend filtresi düşüşteyken ajan long açmaz (karar izle, gerekçed
   assert.equal(d.atrTrend?.dir, -1);
   assert.notEqual(d.decision, "aç");
 });
+
+test("Güncelleme2 madde 3: haber duygusu yoksa skor 'veri yok' (null), 50 değil; yön etiketinde zaman aralığı", () => {
+  const dp = new RuleDecisionProvider(DEFAULT_THRESHOLDS);
+  const up = trendCandles(1);
+  const d = dp.decide({ instId: "SOL-USDT", category: "x", ticker: tick(up), candles: up, rsi: 60, funding: 0.00001, sentiment: null, orderbook: null, live: true });
+  assert.equal(d.parts.sentiment, null);
+  assert.match(d.direction, /^15 dk trend: (yukarı|aşağı|yatay)$/);
+  assert.ok(d.whyBullets.some((b) => b.includes("Haber duygusu: veri yok")));
+});
+
+test("Güncelleme2 madde 3: her taramada news_get_coin_sentiment ve news_get_latest çağrılır", async () => {
+  const calls: string[] = [];
+  const { AtkMarketData } = await import("../../src/market/atkMarketData.js");
+  const atk = { available: () => true, toolNames: () => [], call: async (n: string) => { calls.push(n); if (n.startsWith("news")) throw new Error("okx-auth rejected"); return []; } } as any;
+  const m = new AtkMarketData(atk);
+  await m.sentiment(["BTC", "SOL"]);
+  await m.sentiment(["BTC", "SOL"]);
+  await assert.rejects(() => m.news(["BTC"]));
+  assert.equal(calls.filter((c) => c === "news_get_coin_sentiment").length, 2);
+  assert.equal(calls.filter((c) => c === "news_get_latest").length, 1);
+});

@@ -5,7 +5,7 @@ export async function holdReportFor(ctx: AppContext, instId: string): Promise<Ho
   const base = instId.split("-")[0];
   const c = ctx.agent.candidates.get(instId);
   const s = await ctx.fundamentals.supply(base);
-  return buildHoldReport(base, s, loadUnlocks(), { volUsdt24h: c?.volUsdt24h ?? 0, risk: c?.risk ?? 50 });
+  return buildHoldReport(base, s, loadUnlocks(), { volumeScore: c ? c.parts.volume : null, risk: c?.risk ?? 50, lowVolumeScore: ctx.thresholds.lowVolumeScore });
 }
 
 export function holdText(r: HoldReport): string {

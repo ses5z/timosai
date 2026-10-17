@@ -105,20 +105,9 @@ export class AlertEngine {
         log.warn(`OI değişim filtresi alınamadı: ${(e as Error).message}`);
       }
     }
-    if (t - this.newsAt > this.cfg.newsPollMinutes * 60_000 && t > this.newsDisabledUntil) {
-      this.newsAt = t;
-      const coins = [...new Set([...this.ctx.store.follows, ...this.ctx.agent.trading.listPositions().map((p) => p.instId)])].map((i) => i.split("-")[0]);
-      if (!coins.length) return;
-      try {
-        const data: any = await atk.call("news_get_latest", { coins: coins.slice(0, 20).join(","), importance: "low", limit: 20 });
-        const list: any[] = Array.isArray(data) ? data : data?.list ?? data?.items ?? data?.news ?? [];
-        this.news = list.map((n) => ({ coin: String(n.ccy ?? n.coin ?? n.coins?.[0] ?? "").toUpperCase(), title: String(n.title ?? n.headline ?? ""), ts: Number(n.ts ?? n.publishTime ?? t) })).filter((n) => n.title);
-        this.newsStatus = `canlı (${this.news.length} haber)`;
-      } catch (e) {
-        this.newsDisabledUntil = t + 30 * 60_000;
-        this.newsStatus = `kapalı: ${(e as Error).message.slice(0, 80)}`;
-      }
-    }
+    // Haberler ajanın her tarama turunda çektiği listeden gelir (ATK news_get_latest).
+    this.news = this.ctx.agent.news.slice();
+    this.newsStatus = this.ctx.agent.newsStatus;
   }
 
   /** Haberleri dışarıdan beslemek için (test ve ileride OAuth'lu kaynak). */

@@ -116,7 +116,7 @@
     rsi: ["RSI dengesi", "RSI 50-66 arası en yüksek puanı alır; aşırı alım/satım puanı düşürür."],
     volatility: ["Oynaklık dengesi", "ATR ılımlıysa yüksek puan; aşırı oynaklık düşürür."],
     funding: ["Funding", "Sıfıra yakın funding nötr; aşırı pozitif kalabalık long işareti."],
-    sentiment: ["Haber duygusu", "OKX haber duygusu; erişilemezse nötr (50) kabul edilir."],
+    sentiment: ["Haber duygusu", "OKX haber duygusu (ATK news). Erişilemezse \"veri yok\" gösterilir ve skora katılmaz."],
   };
   async function openDrawer(id, push) {
     openId = id;
@@ -141,7 +141,7 @@
       return;
     }
     body.dataset.inst = c.instId;
-    const parts = Object.entries(c.parts).map(([k, v]) => `<div class="part-row"><span>${PART[k][0]} <button type="button" class="term-btn" data-term="part-${k}" aria-label="${PART[k][0]} nedir?" aria-expanded="false">?</button></span><div class="bar ${v < 35 ? "bad" : v < 55 ? "warn" : ""}"><span style="width:${v}%"></span></div><b class="num">${v}</b></div>`).join("");
+    const parts = Object.entries(c.parts).map(([k, v]) => `<div class="part-row"><span>${PART[k][0]} <button type="button" class="term-btn" data-term="part-${k}" aria-label="${PART[k][0]} nedir?" aria-expanded="false">?</button></span>${v == null ? `<span class="faint">veri yok</span><b></b>` : `<div class="bar ${v < 35 ? "bad" : v < 55 ? "warn" : ""}"><span style="width:${v}%"></span></div><b class="num">${v}</b>`}</div>`).join("");
     Object.entries(PART).forEach(([k, [, txt]]) => (T.TERMS["part-" + k] = txt));
     body.innerHTML = `
       <div class="card-head" style="margin-bottom:4px"><h2 id="dr-h">${T.esc(c.base)} <span class="cat">${T.esc(c.category)}</span></h2><button class="btn btn-sm btn-ghost" type="button" data-x aria-label="Çekmeceyi kapat">${T.icon("x")}</button></div>

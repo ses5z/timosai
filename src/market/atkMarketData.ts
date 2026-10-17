@@ -29,7 +29,6 @@ export function parseCandles(rows: any[]): Candle[] {
 
 export class AtkMarketData implements MarketData {
   readonly name = "atk";
-  private sentimentDisabledUntil = 0;
 
   constructor(private readonly atk: AtkCaller) {}
 
@@ -81,7 +80,7 @@ export class AtkMarketData implements MarketData {
 
   async sentiment(coins: string[]): Promise<Map<string, number>> {
     const out = new Map<string, number>();
-    if (Date.now() < this.sentimentDisabledUntil || !coins.length) return out;
+    if (!coins.length) return out;
     try {
       const data: any = await this.atk.call("news_get_coin_sentiment", { coins: coins.slice(0, 20).join(","), period: "24h" });
       const list: any[] = Array.isArray(data) ? data : data?.list ?? data?.items ?? [];
@@ -95,10 +94,18 @@ export class AtkMarketData implements MarketData {
         else if (Number.isFinite(score)) v = Math.max(-1, Math.min(1, score > 1 ? (score - 50) / 50 : score));
         if (coin && v !== null) out.set(coin, v);
       }
-    } catch {
-      // Haber modülü OKX OAuth kimliği istiyor; erişilemezse 10 dk sonra yeniden denenir.
-      this.sentimentDisabledUntil = Date.now() + 10 * 60_000;
+    } catch (e) {
+      // Haber modülü OKX OAuth kimliği istiyor; erişilemezse boş döner (arayüzde "veri yok").
+      this.lastNewsError = (e as Error).message;
     }
     return out;
+  }
+
+  lastNewsError: string | null = null;
+
+  async news(coins: string[]): Promise<{ coin: string; title: string; ts: number }[]> {
+    const data: any = await this.atk.call("news_get_latest", { coins: coins.slice(0, 20).join(","), importance: "low", limit: 20 });
+    const list: any[] = Array.isArray(data) ? data : data?.list ?? data?.items ?? data?.news ?? [];
+    return list.map((n) => ({ coin: String(n.ccy ?? n.coin ?? n.coins?.[0] ?? "").toUpperCase(), title: String(n.title ?? n.headline ?? ""), ts: Number(n.ts ?? n.publishTime ?? Date.now()) })).filter((n) => n.title);
   }
 }

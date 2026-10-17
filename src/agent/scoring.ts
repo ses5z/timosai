@@ -3,6 +3,15 @@ import type { DecisionInput, ScoreParts } from "../ports.js";
 import { atr, clamp, ema, pctChange, rsi as calcRsi } from "../util/math.js";
 import type { Thresholds } from "./thresholds.js";
 
+/** Hacim ölçüsü: son 1 saat (4×15 dk) hacmi / önceki 10 saat ortalaması → 0-100. Skor motoru ve hold raporu AYNI fonksiyonu kullanır. */
+export function volumeScore(volRatio: number, mom4h = 0): number {
+  return clamp(35 + (volRatio - 1) * 35 + (mom4h > 0 ? 8 : -4), 0, 100);
+}
+/** Hacim düşük mü? Eşik config/thresholds.json → lowVolumeScore (varsayılan 35). */
+export function isVolumeLow(score: number, th: { lowVolumeScore?: number }): boolean {
+  return score < (th.lowVolumeScore ?? 35);
+}
+
 export interface ScoreResult {
   parts: ScoreParts;
   opportunity: number;
@@ -43,7 +52,7 @@ export function scoreInput(inp: DecisionInput, th: Thresholds): ScoreResult {
   const prev = c.slice(-44, -4);
   const base = prev.reduce((s, x) => s + x.vol, 0) / Math.max(1, prev.length);
   const volRatio = base > 0 ? recent / base : 1;
-  const volume = clamp(35 + (volRatio - 1) * 35 + (mom4h > 0 ? 8 : -4), 0, 100);
+  const volume = volumeScore(volRatio, mom4h);
 
   // RSI: ATK göstergesi varsa o, yoksa mumdan
   const r = inp.rsi ?? calcRsi(closes);
@@ -68,13 +77,15 @@ export function scoreInput(inp: DecisionInput, th: Thresholds): ScoreResult {
   }
 
   // Duygu: -1..1 → 0..100, veri yoksa nötr
-  const sentiment = inp.sentiment === null ? 50 : clamp(50 + inp.sentiment * 40, 0, 100);
+  // Haber duygusu yoksa skora katılmaz (ağırlık diğerlerine dağılır), arayüzde "veri yok" görünür.
+  const sentiment = inp.sentiment === null ? null : clamp(50 + inp.sentiment * 40, 0, 100);
 
   const parts: ScoreParts = { momentum, trend, volume, rsi: rsiScore, volatility, funding, sentiment };
   const w = th.weights;
-  const wsum = Object.values(w).reduce((s, x) => s + x, 0) || 1;
+  const ws = sentiment === null ? 0 : w.sentiment;
+  const wsum = w.momentum + w.trend + w.volume + w.rsi + w.volatility + w.funding + ws || 1;
   const opportunity = clamp(
-    (momentum * w.momentum + trend * w.trend + volume * w.volume + rsiScore * w.rsi + volatility * w.volatility + funding * w.funding + sentiment * w.sentiment) / wsum,
+    (momentum * w.momentum + trend * w.trend + volume * w.volume + rsiScore * w.rsi + volatility * w.volatility + funding * w.funding + (sentiment ?? 0) * ws) / wsum,
     0,
     100,
   );

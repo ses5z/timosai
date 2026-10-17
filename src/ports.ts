@@ -32,6 +32,8 @@ export interface MarketData {
   orderbook(instId: string): Promise<OrderbookSummary | null>;
   /** -1..1 arası duygu; erişilemezse boş harita. */
   sentiment(coins: string[]): Promise<Map<string, number>>;
+  /** Son haberler (ATK news_get_latest); erişilemezse hata fırlatır. */
+  news?(coins: string[]): Promise<{ coin: string; title: string; ts: number }[]>;
 }
 
 export type DecisionKind = "aç" | "izle" | "ele";
@@ -43,7 +45,7 @@ export interface ScoreParts {
   rsi: number;
   volatility: number;
   funding: number;
-  sentiment: number;
+  sentiment: number | null; // veri yoksa null ("veri yok"), 50 değil
 }
 
 export interface SecuritySummary {

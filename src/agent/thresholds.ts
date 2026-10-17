@@ -15,6 +15,7 @@ export interface Thresholds {
   highVolAtrPct: number;
   fundingCrowdedAbs: number;
   maxSpreadPct: number;
+  lowVolumeScore?: number;
   management: { partialAtR: number; partialFraction: number; trailStartR: number; trailAtrMult: number; timeStopHours: number; timeStopMinR: number; trailMode?: "atr" | "atrTrend" };
 }
 
@@ -32,6 +33,7 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
   highVolAtrPct: 0.9,
   fundingCrowdedAbs: 0.0003,
   maxSpreadPct: 0.25,
+  lowVolumeScore: 35,
   management: { partialAtR: 1, partialFraction: 0.5, trailStartR: 1.5, trailAtrMult: 1, timeStopHours: 6, timeStopMinR: 0.3, trailMode: "atr" },
 };
 

@@ -37,13 +37,13 @@ Başlangıç: 15:01 · Kod dondurma: 18:30 · Teslim: 19:00
 - [x] DONE 2.8 Test + ekran görüntüsü + commit
 
 ## Madde 3 – Canlı inceleme hataları
-- [ ] 3.1 Hold raporu hacim kuralı skor motorundaki hacim ölçüsüyle aynı fonksiyon ve eşik
-- [ ] 3.2 Keşfet "Yön" etiketine zaman aralığı ("1s trend: yukarı")
-- [ ] 3.3 24 sa değişim yön etiketinin yanında
-- [ ] 3.4 Her taramada izleme listesi için news_get_coin_sentiment ve son haberler çağrılır
-- [ ] 3.5 Sonuç "Haber duygusu" skoruna ve haber bildirimlerine yansır
-- [ ] 3.6 Veri yoksa "veri yok" (50 değil)
-- [ ] 3.7 Test + ekran görüntüsü + commit
+- [x] DONE 3.1 Hold raporu hacim kuralı skor motorundaki hacim ölçüsüyle aynı fonksiyon ve eşik
+- [x] DONE 3.2 Keşfet "Yön" etiketine zaman aralığı ("1s trend: yukarı")
+- [x] DONE 3.3 24 sa değişim yön etiketinin yanında
+- [x] DONE 3.4 Her taramada izleme listesi için news_get_coin_sentiment ve son haberler çağrılır
+- [~] PARTIAL 3.5 (bağlantı kodda hazır ve testli; OKX news OAuth istediği için canlı veri yok, "veri yok" gösteriliyor) Sonuç "Haber duygusu" skoruna ve haber bildirimlerine yansır
+- [x] DONE 3.6 Veri yoksa "veri yok" (50 değil)
+- [x] DONE 3.7 Test + ekran görüntüsü + commit
 
 ## Madde 4 – Paper trading motoru
 - [ ] 4.1 Sanal bakiye config, varsayılan 1000 USDT

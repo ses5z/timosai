@@ -71,6 +71,9 @@ export class Agent {
   private rsiCache = new Map<string, { v: number | null; at: number }>();
   private fundingCache = new Map<string, { v: number | null; at: number }>();
   private sentimentCache: { map: Map<string, number>; at: number } = { map: new Map(), at: 0 };
+  /** Son haberler (her taramada ATK news_get_latest) ve durum metni. */
+  news: { coin: string; title: string; ts: number }[] = [];
+  newsStatus = "denenmedi";
   derivSnap = new Map<string, { at: number; v: DerivSnapshot }>();
   lastCandles = new Map<string, Candle[]>();
   private blockedTimes: number[] = [];
@@ -172,9 +175,18 @@ export class Agent {
       const tickers = await this.d.market.tickers(ids);
       for (const [k, v] of tickers) this.prices.set(k, v);
       const now = Date.now();
-      if (now - this.sentimentCache.at > 10 * 60_000) {
-        this.sentimentCache = { map: await this.d.market.sentiment(ids.map((i) => i.split("-")[0])), at: now };
-      }
+      // Haber: her tarama turunda izleme listesi için duygu + son haberler (ATK). Veri yoksa "veri yok".
+      const bases = ids.map((i) => i.split("-")[0]);
+      this.sentimentCache = { map: await this.d.market.sentiment(bases).catch(() => new Map<string, number>()), at: now };
+      if (this.d.market.news) {
+        try {
+          this.news = await this.d.market.news(bases);
+          this.newsStatus = `canlı (${this.news.length} haber, ${this.sentimentCache.map.size} coin duygu)`;
+        } catch (e) {
+          this.news = [];
+          this.newsStatus = `veri yok: ${(e as Error).message.slice(0, 80)}`;
+        }
+      } else this.newsStatus = this.sentimentCache.map.size ? `örnek (${this.sentimentCache.map.size} coin)` : "veri yok";
       const live = this.d.market.isLive();
       const priorityIds = new Set(this.d.store.priority);
       await this.refreshDerivatives(ids);

@@ -49,6 +49,7 @@ export function createApp(ctx: AppContext) {
       atkMode: ctx.env.atkMode,
       atkConnected: ctx.atk?.available() ?? false,
       publicData: ctx.derivatives.stats(),
+      newsStatus: agent.newsStatus,
       liveData: ctx.market.isLive(),
       mentor,
       telegram: ctx.extras.telegram?.status?.() ?? { enabled: false, connected: false },

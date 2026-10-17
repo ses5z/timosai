@@ -56,6 +56,10 @@ export class ResilientMarketData implements MarketData {
   orderbook(id: string): Promise<OrderbookSummary | null> {
     return this.run((m) => m.orderbook(id)).catch(() => null);
   }
+  news(coins: string[]): Promise<{ coin: string; title: string; ts: number }[]> {
+    if (!this.primary.news) return Promise.reject(new Error("haber kaynağı yok"));
+    return this.primary.news(coins);
+  }
   sentiment(coins: string[]): Promise<Map<string, number>> {
     // duygu verisi uydurulmaz: canlı yoksa boş döner
     return this.live ? this.primary.sentiment(coins).catch(() => new Map()) : Promise.resolve(new Map());

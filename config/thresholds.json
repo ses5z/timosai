@@ -13,6 +13,7 @@
   "highVolAtrPct": 0.9,
   "fundingCrowdedAbs": 0.0003,
   "maxSpreadPct": 0.25,
+  "lowVolumeScore": 35,
   "management": {
     "partialAtR": 1,
     "partialFraction": 0.5,
