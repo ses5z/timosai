@@ -47,6 +47,7 @@ export function createApp(ctx: AppContext) {
       tradingMode: agent.trading.mode,
       atkMode: ctx.env.atkMode,
       atkConnected: ctx.atk?.available() ?? false,
+      publicData: ctx.derivatives.stats(),
       liveData: ctx.market.isLive(),
       mentor,
       telegram: ctx.extras.telegram?.status?.() ?? { enabled: false, connected: false },
@@ -134,6 +135,15 @@ export function createApp(ctx: AppContext) {
     const pos = agent.positionsView().find((p) => p.instId === id) ?? null;
     const size = sizePosition({ equityUsdt: agent.trading.equity(), riskPct: store.settings.riskPct, entry: c.entry, stop: c.stop, openNotionalUsdt: agent.trading.openNotional(), limits });
     json(res, { candidate: c, position: pos, size, followed: store.follows.includes(id), prioritized: store.priority.includes(id) });
+  });
+
+  app.get("/api/derivatives/:instId", async (req, res) => {
+    const id = req.params.instId;
+    if (!validInstId(id)) return res.status(400).json({ error: "geçersiz sembol" });
+    const { derivAnalysisFor } = await import("./derivatives/view.js");
+    const a = await derivAnalysisFor(ctx, id);
+    if (!a) return res.status(404).json({ error: "vadeli veri yok" });
+    json(res, { ...a, source: { atk: "funding, OI, OI geçmişi (ATK)", public: `L/S ve taker hacmi: ${a.snapshot.publicSource ? a.snapshot.publicSource + " vadeli verisi (ATK dışı)" : "veri yok"}` }, stats: ctx.derivatives.stats() });
   });
 
   // ---------- Plan (tercih listesi; emir değildir) ----------

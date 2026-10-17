@@ -3,6 +3,7 @@ import type { Candidate, DecisionInput, DecisionKind, DecisionProvider, Security
 import { clamp, round, roundPrice } from "../util/math.js";
 import { scoreInput } from "./scoring.js";
 import type { Thresholds } from "./thresholds.js";
+import { analyzeDerivatives, priceContext, DEFAULT_DERIV, type DerivConfig } from "../derivatives/rules.js";
 
 const PART_LABEL: Record<string, string> = {
   momentum: "ivme",
@@ -39,13 +40,19 @@ export function sampleSecurity(instId: string, spreadPct: number | null, depthUs
 
 export class RuleDecisionProvider implements DecisionProvider {
   readonly name = "kural";
-  constructor(private readonly th: Thresholds) {}
+  constructor(
+    private readonly th: Thresholds,
+    private readonly derivCfg: DerivConfig = DEFAULT_DERIV,
+  ) {}
 
   decide(inp: DecisionInput): Candidate {
     const th = this.th;
     const s = scoreInput(inp, th);
     const price = inp.ticker.last;
     const security = sampleSecurity(inp.instId, inp.orderbook?.spreadPct ?? null, inp.orderbook?.depthUsdt ?? null);
+
+    const deriv = inp.derivSnapshot ? analyzeDerivatives(inp.derivSnapshot, priceContext(inp.candles, s.volRatio), this.derivCfg) : null;
+    if (deriv) s.risk = Math.min(100, s.risk + deriv.riskAdj);
 
     let decision: DecisionKind = "ele";
     if (s.opportunity >= th.openMinOpportunity && s.risk <= th.openMaxRisk && s.trendUp && security.level !== "zayıf") decision = "aç";
@@ -67,6 +74,10 @@ export class RuleDecisionProvider implements DecisionProvider {
     else if (decision === "izle") reason = `${strong[0]} olumlu ama ${PART_LABEL[weak[0]]} zayıf; teyit beklemek daha sakin.`;
     else reason = s.trendDown ? `Trend aşağı ve ${PART_LABEL[weak[0]]} zayıf; şimdilik uzak durmak mantıklı.` : `Belirgin bir fırsat görünmüyor; ${PART_LABEL[weak[0]]} zayıf.`;
 
+    if (decision === "aç" && deriv?.manipulation === "yüksek") {
+      decision = "izle";
+      reason = `Teknik görünüm olumlu ama vadeli tarafta manipülasyon şüphesi yüksek (${deriv.badge}); izlemede.`;
+    }
     const why: string[] = [];
     why.push(`Son 4 saatte ${s.mom4h >= 0 ? "+" : ""}${s.mom4h.toFixed(2)}%, 24 saatte ${inp.ticker.change24hPct >= 0 ? "+" : ""}${inp.ticker.change24hPct.toFixed(2)}% değişim.`);
     why.push(s.trendUp ? "Fiyat kısa ve orta ortalamaların üstünde (EMA20 > EMA50)." : s.trendDown ? "Fiyat ortalamaların altında, eğilim aşağı." : "Ortalamalar iç içe; net bir trend yok.");
@@ -74,6 +85,7 @@ export class RuleDecisionProvider implements DecisionProvider {
     if (s.rsi !== null) why.push(`RSI ${s.rsi.toFixed(0)}: ${s.rsi >= th.rsiOverbought ? "aşırı alım bölgesi, dikkat" : s.rsi <= th.rsiOversold ? "aşırı satım bölgesi" : "dengeli bölgede"}.`);
     why.push(`Oynaklık (ATR) fiyatın %${s.atrPct.toFixed(2)}'si.`);
     if (inp.funding !== null) why.push(`Funding ${(inp.funding * 100).toFixed(4)}%: ${Math.abs(inp.funding) > th.fundingCrowdedAbs ? "kalabalık pozisyon işareti" : "nötr"}.`);
+    if (deriv?.available) why.push(`Vadeli: ${deriv.badge}; ${deriv.reasons[0]}`);
     if (inp.sentiment !== null) why.push(`Haber duygusu ${inp.sentiment >= 0 ? "olumlu" : "olumsuz"} (${(inp.sentiment * 100).toFixed(0)}).`);
 
     return {
@@ -101,6 +113,7 @@ export class RuleDecisionProvider implements DecisionProvider {
       reason,
       whyBullets: why,
       security,
+      derivatives: deriv,
       updatedAt: Date.now(),
       live: inp.live,
     };

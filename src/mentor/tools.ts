@@ -4,6 +4,7 @@ import type { AppContext } from "../context.js";
 import { followWarning, makePlan, validInstId } from "../app.js";
 import { analyzeCandidate } from "./analysis.js";
 import { round } from "../util/math.js";
+import { derivAnalysisFor } from "../derivatives/view.js";
 
 export interface ToolDef {
   name: string;
@@ -16,6 +17,7 @@ export const TOOL_DEFS: ToolDef[] = [
   { name: "durum", description: "Ajanın, işlem modunun (KURU/GERÇEK), risk skorunun ve verinin canlı olup olmadığının özeti.", parameters: { type: "object", properties: {} } },
   { name: "adaylar", description: "Ajanın sıraladığı aday coinler (karar, fırsat, risk, gerekçe).", parameters: { type: "object", properties: { adet: { type: "number", description: "kaç aday (varsayılan 5)" } } } },
   { name: "aday_analizi", description: "Bir coin için teknik tablo, giriş/stop/hedef, R:R, risk bütçesine göre örnek boyut ve dikkat edilecekler.", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. SOL veya SOL-USDT" } }, required: ["sembol"] } },
+  { name: "vadeli_durum", description: "Bir coinin vadeli piyasa durumu: funding, open interest, genel hesap ve üst trader L/S oranları, kalabalık taraf, manipülasyon şüphesi ve gerekçeler. Vadeli veri yalnızca analiz girdisidir.", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. BTC" } }, required: ["sembol"] } },
   { name: "listem", description: "Kullanıcının takip listesi.", parameters: { type: "object", properties: {} } },
   { name: "listeye_ekle", description: "Bir coini takip listesine ekler (işlem açmaz).", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. SOL" } }, required: ["sembol"] } },
   { name: "listeden_cikar", description: "Bir coini takip listesinden çıkarır.", parameters: { type: "object", properties: { sembol: { type: "string", description: "ör. SOL" } }, required: ["sembol"] } },
@@ -106,6 +108,14 @@ export class MentorTools {
         const an = analyzeCandidate(ctx, id);
         if (!an) return { ok: false, error: `${id} izleme listesinde değil ya da henüz taranmadı.` };
         return { ok: true, data: { ...an, security: { ...an.security, not: "güvenlik alanları ÖRNEK VERİ, makas gerçek" } } };
+      }
+      case "vadeli_durum": {
+        const id = normSymbol(args.sembol);
+        if (!id) return { ok: false, error: "Geçersiz sembol." };
+        const d = await derivAnalysisFor(ctx, id);
+        if (!d || !d.available) return { ok: false, error: `${id} için vadeli veri yok.` };
+        const s = d.snapshot;
+        return { ok: true, data: { sembol: id.split("-")[0], ozet: d.badge, kalabalikTaraf: d.crowded, manipulasyonSuphesi: d.manipulation, gerekceler: d.reasons, funding: s.funding, oiUsd: s.oiUsd, oiDegisim1sa: s.oiDeltaPct1h, genelHesapOrani: s.lsAccount, ustTraderHesapOrani: s.lsTopAccount, ustTraderPozisyonOrani: s.lsTopPosition, takerAlis: s.takerBuy, takerSatis: s.takerSell, kaynak: s.publicSource ? `${s.publicSource} vadeli verisi (ATK dışı) + ATK` : "ATK" } };
       }
       case "listem":
         return { ok: true, data: ctx.store.follows.map((id) => ({ sembol: id.split("-")[0], karar: a.candidates.get(id)?.decision ?? "taranmadı" })) };

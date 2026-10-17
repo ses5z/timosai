@@ -152,6 +152,7 @@
       <section><h3>Giriş, stop, hedef</h3><div class="levels"><div class="level"><span>Giriş</span><b>${F.price(c.entry)}</b></div><div class="level stop"><span>${T.term("stop", "Stop")}</span><b>${F.price(c.stop)}</b></div><div class="level target"><span>Hedef</span><b>${F.price(c.target)}</b></div><div class="level"><span>${T.term("rr", "R:R")}</span><b>${c.rr}</b></div></div>
         <p class="kpi-small" style="margin-top:8px">Risk bütçene göre örnek boyut: <b>${s.notionalUsdt > 0 ? F.usd(s.notionalUsdt) : "yok"}</b>${s.notionalUsdt > 0 ? ` · stop olursa ≈ ${F.num(s.riskUsdt, 3)} USDT` : ""}. <span class="detail-only">${T.esc(s.explain)}</span></p></section>
       <section data-pos>${posHtml(p)}</section>
+      <section><h3>Vadeli durum</h3><div id="dr-deriv">${T.derivCard(c.derivatives)}</div></section>
       <section><h3>Skor bileşenleri</h3><p class="kpi-small">${T.term("opportunity", "Fırsat")} ${c.opportunity} · ${T.term("risk", "Risk")} ${c.risk}<span class="detail-only"> · ${T.term("rsi", "RSI")} ${c.rsi ?? "-"} · ${T.term("atr", "ATR")} %${c.atrPct} · ${T.term("funding", "Funding")} ${c.funding == null ? "-" : (c.funding * 100).toFixed(4) + "%"}</span></p>${parts}</section>
       <section class="detail-only"><h3>Neden?</h3><ul class="cautions">${c.whyBullets.map((b) => `<li>${T.esc(b)}</li>`).join("")}</ul><p class="kpi-small">Güvenlik özeti <span class="badge badge-warn">${T.esc(c.security.label)}</span>: ${T.esc(c.security.level)} · makas (gerçek) ${c.security.spreadPct == null ? "ölçülmedi" : "%" + c.security.spreadPct}</p></section>
       <section style="display:flex;gap:8px;flex-wrap:wrap">
@@ -177,6 +178,7 @@
       T.toast(`${c.base} ajanın tarama sırasında öne alındı.`);
     });
     if (first) body.querySelector("[data-x]").focus();
+    T.api("/api/derivatives/" + encodeURIComponent(c.instId)).then((dv) => { const el = body.querySelector("#dr-deriv"); if (el) el.innerHTML = T.derivCard(dv); }).catch(() => {});
   }
   function posHtml(p) {
     if (!p) return `<h3>Pozisyon</h3><p class="kpi-small">Bu coinde açık pozisyon yok.</p>`;

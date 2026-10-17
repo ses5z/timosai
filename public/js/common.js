@@ -33,6 +33,29 @@
     vol: (v) => (v >= 1e9 ? nf(1).format(v / 1e9) + " Mr" : v >= 1e6 ? nf(1).format(v / 1e6) + " Mn" : v >= 1e3 ? nf(0).format(v / 1e3) + " B" : nf(0).format(v)),
   };
   T.cls = (v) => (v > 0 ? "up" : v < 0 ? "down" : "");
+  /** Vadeli durum rozeti: renk yanında her zaman metin. */
+  T.derivBadge = (d) => {
+    if (!d || !d.available) return `<span class="badge badge-muted">vadeli veri yok</span>`;
+    const cls = d.manipulation === "yüksek" ? "badge-bad" : d.manipulation === "orta" || d.crowded !== "dengeli" ? "badge-warn" : "badge-ok";
+    return `<span class="badge ${cls}" title="Manipülasyon şüphesi: ${T.esc(d.manipulation)}">${T.esc(d.badge)}</span>`;
+  };
+  /** Vadeli durum kartı (Basit: tek rozet + ilk gerekçe; Ayrıntı: tüm sayılar). */
+  T.derivCard = (d) => {
+    if (!d || !d.available) return `<p class="kpi-small">Vadeli veri yok.</p>`;
+    const s = d.snapshot, n = (v, k = 2) => (v == null ? "-" : Number(v).toFixed(k));
+    return `<div class="view-box"><p style="margin:0 0 6px">${T.derivBadge(d)} <span class="kpi-small">Kalabalık taraf: <b>${T.esc(d.crowded)}</b> · Manipülasyon şüphesi: <b>${T.esc(d.manipulation)}</b></span></p>
+      <ul class="cautions">${d.reasons.map((r) => `<li>${T.esc(r)}</li>`).join("")}</ul>
+      <div class="detail-only kpi-small" style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">
+        <span>${T.term("funding", "Funding")}</span><b class="num">${s.funding == null ? "-" : (s.funding * 100).toFixed(4) + "%"}</b>
+        <span>${T.term("oi", "OI")}</span><b class="num">${s.oiUsd == null ? "-" : T.fmt.vol(s.oiUsd) + " USD"}</b>
+        <span>OI değişimi 1 sa / 4 sa</span><b class="num">${n(s.oiDeltaPct1h)}% / ${n(s.oiDeltaPct4h)}%</b>
+        <span>${T.term("ls", "Genel hesap oranı")}</span><b class="num">${n(s.lsAccount)}</b>
+        <span>Üst trader oranı (hesap)</span><b class="num">${n(s.lsTopAccount)}</b>
+        <span>Üst trader oranı (pozisyon)</span><b class="num">${n(s.lsTopPosition)}</b>
+        <span>Taker alış / satış</span><b class="num">${s.takerBuy == null ? "-" : T.fmt.vol(s.takerBuy)} / ${s.takerSell == null ? "-" : T.fmt.vol(s.takerSell)}</b>
+      </div>
+      <p class="faint" style="font-size:.78rem;margin:8px 0 0">Funding ve OI: ATK. L/S ve taker hacmi: ${s.publicSource ? T.esc(s.publicSource) + " vadeli verisi (ATK dışı)" : "veri yok"}. Vadeli veri yalnızca analiz girdisidir; işlem spot.</p></div>`;
+  };
 
   // ---------- İkonlar (sade SVG) ----------
   const P = {
@@ -73,6 +96,9 @@
     breakeven: "Başa baş: stopu giriş fiyatına çekmek. Böylece işlem en kötü ihtimalle zararsız kapanır.",
     trailing: "İz süren stop: fiyat lehe ilerledikçe stopu da yukarı taşımak.",
     notional: "Büyüklük (notional): işlemin USDT cinsinden toplam değeri.",
+    oi: "Open interest (OI): vadeli piyasada açık duran toplam pozisyon büyüklüğü. Fiyatla birlikte sert artışı kaldıraçlı hareket işaretidir.",
+    ls: "Long/short (L/S) oranı: long pozisyondaki hesapların short olanlara oranı. 1'in çok üstü long kalabalığı demektir. Üst trader oranı en büyük hesapların oranıdır.",
+    fdv: "FDV: tüm arz dolaşımda olsaydı piyasa değeri. FDV/piyasa değeri oranı yüksekse ileride arz açılımı baskısı olabilir.",
     kuru: "KURU ÇALIŞMA: emirler borsaya gitmez; canlı fiyatla kâğıt üzerinde simüle edilir.",
   };
   T.term = (key, label) => `<span class="term">${T.esc(label)}<button type="button" class="term-btn" data-term="${key}" aria-label="${T.esc(label)} nedir?" aria-expanded="false">?</button></span>`;

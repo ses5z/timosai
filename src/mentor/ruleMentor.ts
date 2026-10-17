@@ -100,6 +100,13 @@ export class RuleMentor {
       const r = await this.tools.call("senaryo_baslat", {});
       return { text: r.pending ? `Onayın gerekiyor: ${r.pending.summary} Onaylıyor musun?` : r.error ?? "Tamam." };
     }
+    if (/(vadeli|funding|open\s*interest|\boi\b|long\s*short|l\/s|kalabal)/.test(t)) {
+      const id = sym ?? "BTC-USDT";
+      const r = await this.tools.call("vadeli_durum", { sembol: id });
+      if (!r.ok) return { text: r.error! };
+      const d = r.data as any;
+      return { text: `${d.sembol} vadeli durum: ${d.ozet}. Kalabalık taraf ${d.kalabalikTaraf}, manipülasyon şüphesi ${d.manipulasyonSuphesi}. ${d.gerekceler[0]} Vadeli veri yalnızca analiz girdisi; işlem spot.` };
+    }
     if (/(listeme\s*ekle|listeye\s*ekle|takibe\s*al|takip\s*et|ekle)/.test(t) && sym) {
       const r = await this.tools.call("listeye_ekle", { sembol: sym });
       const d = r.data as any;

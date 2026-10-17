@@ -14,7 +14,7 @@
     const s = c.security || {};
     return `<article class="swipe-card${behind ? " behind" : ""}" data-inst="${T.esc(c.instId)}" ${behind ? 'aria-hidden="true"' : `tabindex="0" aria-roledescription="kaydırılabilir kart" aria-label="${T.esc(c.base)}: ${T.esc(c.reason)}"`}>
       <div class="stamp stamp-like" aria-hidden="true">LİSTEME</div><div class="stamp stamp-pass" aria-hidden="true">GEÇ</div>
-      <header><div><h2>${T.esc(c.base)}</h2><span class="cat">${T.esc(c.category)} · ${T.esc(c.instId)}</span></div><span class="pill pill-${T.esc(c.decision)}">${DEC[c.decision]}</span></header>
+      <header><div><h2>${T.esc(c.base)}</h2><span class="cat">${T.esc(c.category)} · ${T.esc(c.instId)}</span></div><div style="display:grid;gap:6px;justify-items:end"><span class="pill pill-${T.esc(c.decision)}">${DEC[c.decision]}</span>${T.derivBadge(c.derivatives)}</div></header>
       <div class="price-row"><span class="kpi" data-price>${F.price(c.price)}</span><span data-chg class="${T.cls(c.change24hPct)}">${F.pct(c.change24hPct)} <span class="faint">24 sa</span></span></div>
       <div class="mini-chart">${T.spark(c.spark, 400, 78)}</div>
       <div class="scores">

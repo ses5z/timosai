@@ -4,6 +4,7 @@ import type { AppContext } from "../context.js";
 import type { Notifier, NotifyMessage } from "../ports.js";
 import type { MentorService } from "../mentor/mentorService.js";
 import { analyzeCandidate } from "../mentor/analysis.js";
+import { derivAnalysisFor, derivText } from "../derivatives/view.js";
 import { normSymbol } from "../mentor/tools.js";
 import { NotifyPolicy } from "./notifyPolicy.js";
 import { log, mask } from "../util/log.js";
@@ -53,6 +54,7 @@ export function candidateCaption(c: Candidate, lead?: string): string {
     `${c.base} · ${c.category}`,
     `Fiyat ${c.price} (${c.change24hPct >= 0 ? "+" : ""}${c.change24hPct}% 24 sa)`,
     `Fırsat ${c.opportunity} · Risk ${c.risk} · ajan: ${c.decision}`,
+    ...(c.derivatives?.available ? [`Vadeli: ${c.derivatives.badge}`] : []),
     `Giriş ${c.entry} · Stop ${c.stop} · Hedef ${c.target}`,
     c.reason,
   ];
@@ -296,6 +298,7 @@ export class TelegramBot implements Notifier {
             "/kesfet - sıradaki aday kartı (kalp: takibe al, kırık kalp: geç)",
             "/takip - takip listen",
             "/birak SOL - takibi bırak",
+            "/vadeli SOL - vadeli durum (funding, OI, L/S)",
             "/durum - ajan durumu",
             "/portfoy - değer ve pozisyonlar",
             "/bildirim - bildirim ayarları",
@@ -309,6 +312,12 @@ export class TelegramBot implements Notifier {
         return void (await this.send(`Kullanıcı kimliğin: ${this.opts.allowedUserId}`));
       case "/kesfet":
         return this.sendNextCandidate();
+      case "/vadeli": {
+        const id = normSymbol(args[0] ?? "BTC");
+        if (!id) return void (await this.send("Kullanım: /vadeli SOL"));
+        const d = await derivAnalysisFor(this.ctx, id);
+        return void (await this.send(d ? derivText(d, id.split("-")[0]) : `${id.split("-")[0]}: vadeli veri yok.`));
+      }
       case "/takip": {
         if (!st.follows.length) return void (await this.send("Takip listen boş. /kesfet ile kalp vererek ekleyebilirsin."));
         const lines = st.follows.map((id) => {

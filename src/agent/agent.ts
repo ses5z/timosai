@@ -11,6 +11,7 @@ import type { Thresholds } from "./thresholds.js";
 import { sizePosition } from "./sizing.js";
 import { round, roundPrice } from "../util/math.js";
 import { log } from "../util/log.js";
+import type { DerivativesData, DerivSnapshot } from "../derivatives/derivativesData.js";
 
 export interface WatchPair {
   instId: string;
@@ -49,6 +50,9 @@ export interface AgentDeps {
   watchlist: WatchPair[];
   scanIntervalSec: number;
   priceTickSec?: number;
+  derivatives?: DerivativesData;
+  derivRefreshPerScan?: number;
+  derivCacheMs?: number;
 }
 
 const LEVEL_RANK = { iyi: 0, orta: 1, zayıf: 2 } as const;
@@ -66,6 +70,7 @@ export class Agent {
   private rsiCache = new Map<string, { v: number | null; at: number }>();
   private fundingCache = new Map<string, { v: number | null; at: number }>();
   private sentimentCache: { map: Map<string, number>; at: number } = { map: new Map(), at: 0 };
+  derivSnap = new Map<string, { at: number; v: DerivSnapshot }>();
   private blockedTimes: number[] = [];
   lossStreak = 0;
   /** Stop olunan coinler: süreyle değil, karar "aç" dışına çıkıp yeniden "aç" olunca (yeni kurulum) tekrar girilir. */
@@ -160,6 +165,7 @@ export class Agent {
       }
       const live = this.d.market.isLive();
       const priorityIds = new Set(this.d.store.priority);
+      await this.refreshDerivatives(ids);
       const results: Candidate[] = [];
       const rotate = this.scanCount % 4;
       const work = order.filter((w) => tickers.has(w.instId));
@@ -172,7 +178,8 @@ export class Agent {
             try {
               const candles = await this.d.market.candles(w.instId, "15m", 100);
               const rsi = await this.cachedRsi(w.instId, priorityIds.has(w.instId) || idx % 4 === rotate);
-              const funding = await this.cachedFunding(w.instId);
+              const snap = this.derivSnap.get(w.instId)?.v ?? null;
+              const funding = snap?.funding ?? (await this.cachedFunding(w.instId));
               const sent = this.sentimentCache.map.get(w.instId.split("-")[0]);
               return this.d.decision.decide({
                 instId: w.instId,
@@ -183,6 +190,7 @@ export class Agent {
                 funding,
                 sentiment: sent === undefined ? null : sent,
                 orderbook: null,
+                derivSnapshot: snap,
                 live,
               });
             } catch (e) {
@@ -210,6 +218,7 @@ export class Agent {
             funding: this.fundingCache.get(c.instId)?.v ?? null,
             sentiment: c.sentiment,
             orderbook: ob,
+            derivSnapshot: this.derivSnap.get(c.instId)?.v ?? null,
             live,
           });
           results[results.indexOf(c)] = re;
@@ -235,6 +244,41 @@ export class Agent {
       return [...this.candidates.values()];
     } finally {
       this.scanning = false;
+    }
+  }
+
+  /** Vadeli verisini yenile: öncelikli, elde tutulan ve takip edilenler önce; geri kalanı sırayla. */
+  private async refreshDerivatives(ids: string[]): Promise<void> {
+    const dd = this.d.derivatives;
+    if (!dd) return;
+    const ttl = this.d.derivCacheMs ?? 5 * 60_000;
+    const held = this.d.trading.listPositions().map((p) => p.instId);
+    const first = [...new Set([...this.d.store.priority, ...held, ...this.d.store.follows])].filter((i) => ids.includes(i));
+    const stale = ids.filter((i) => !this.derivSnap.has(i) || Date.now() - this.derivSnap.get(i)!.at > ttl);
+    const todo = [...new Set([...first.filter((i) => stale.includes(i)), ...stale])].slice(0, this.d.derivRefreshPerScan ?? 6);
+    await Promise.all(
+      todo.map(async (id) => {
+        try {
+          this.derivSnap.set(id, { at: Date.now(), v: await dd.snapshot(id) });
+        } catch (e) {
+          log.warn(`${id} vadeli verisi alınamadı: ${(e as Error).message}`);
+        }
+      }),
+    );
+  }
+
+  /** Tek coin için güncel vadeli verisi (mentor/Telegram/çekmece). */
+  async derivativesFor(instId: string): Promise<DerivSnapshot | null> {
+    const dd = this.d.derivatives;
+    if (!dd) return null;
+    const c = this.derivSnap.get(instId);
+    if (c && Date.now() - c.at < (this.d.derivCacheMs ?? 5 * 60_000)) return c.v;
+    try {
+      const v = await dd.snapshot(instId);
+      this.derivSnap.set(instId, { at: Date.now(), v });
+      return v;
+    } catch {
+      return c?.v ?? null;
     }
   }
 
@@ -593,6 +637,7 @@ export function slim(c: Candidate) {
     decision: c.decision,
     direction: c.direction,
     reason: c.reason,
+    derivBadge: c.derivatives?.available ? c.derivatives.badge : null,
     spark: c.spark.slice(-32),
   };
 }

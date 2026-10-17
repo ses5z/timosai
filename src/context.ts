@@ -14,6 +14,8 @@ import { MockMarketData } from "./market/mockMarketData.js";
 import { ResilientMarketData } from "./market/resilientMarketData.js";
 import type { MarketData, ProofAnchor } from "./ports.js";
 import { NoopProofAnchor } from "./proof/proofAnchor.js";
+import { LiveDerivativesData, MockDerivativesData, type DerivativesData } from "./derivatives/derivativesData.js";
+import { loadDerivConfig, type DerivConfig } from "./derivatives/rules.js";
 import { Store } from "./state/store.js";
 import { loadHardLimits, type HardLimits } from "./trading/hardLimits.js";
 import { AtkTradingClient, MockTradingClient, type TradingClient } from "./trading/tradingClient.js";
@@ -30,6 +32,8 @@ export interface AppContext {
   watchlist: WatchPair[];
   market: MarketData;
   mock: MockMarketData;
+  derivatives: DerivativesData;
+  derivConfig: DerivConfig;
   atk: AtkCaller | null;
   agent: Agent;
   proof: ProofAnchor;
@@ -49,6 +53,7 @@ export function loadWatchlist(file = path.resolve(process.cwd(), "config/watchli
 export interface ContextOptions {
   market?: MarketData;
   atk?: AtkCaller | null;
+  derivatives?: DerivativesData;
   trading?: TradingClient;
 }
 
@@ -78,11 +83,13 @@ export function createContext(env: AppEnv, opts: ContextOptions = {}): AppContex
   }
   const market: MarketData = opts.market ?? (atk ? new ResilientMarketData(new AtkMarketData(atk), mock) : mock);
 
+  const derivConfig = loadDerivConfig();
+  const derivatives: DerivativesData = opts.derivatives ?? (atk ? new LiveDerivativesData(atk) : new MockDerivativesData());
   const trading: TradingClient = opts.trading ?? new MockTradingClient(limits, ledger, env.paperBalanceUsdt);
   const agent = new Agent({
     market,
     trading,
-    decision: new RuleDecisionProvider(thresholds),
+    decision: new RuleDecisionProvider(thresholds, derivConfig),
     ledger,
     store,
     warnings,
@@ -91,6 +98,9 @@ export function createContext(env: AppEnv, opts: ContextOptions = {}): AppContex
     contract,
     watchlist,
     scanIntervalSec: env.scanIntervalSec,
+    derivatives,
+    derivRefreshPerScan: derivConfig.refreshPerScan,
+    derivCacheMs: derivConfig.cacheMinutes * 60_000,
   });
 
   warnings.onWarning((w) => {
@@ -99,7 +109,7 @@ export function createContext(env: AppEnv, opts: ContextOptions = {}): AppContex
     store.bus.publish("warning", w);
   });
 
-  return { env, store, ledger, warnings, limits, thresholds, contract, watchlist, market, mock, atk, agent, proof: new NoopProofAnchor(), missingEnv: missingEnvLines(env), extras: {} };
+  return { env, store, ledger, warnings, limits, thresholds, contract, watchlist, market, mock, derivatives, derivConfig, atk, agent, proof: new NoopProofAnchor(), missingEnv: missingEnvLines(env), extras: {} };
 }
 
 /** LIVE=true ise ve koşullar uygunsa gerçek işlem istemcisine geçer; değilse KURU kalır. */

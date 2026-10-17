@@ -1,0 +1,15 @@
+{
+  "_aciklama": "Vadeli durum kuralları. Vadeli veri yalnızca analiz girdisidir; işlem spot.",
+  "pxUpPct1h": 1.0,
+  "oiSurgePct1h": 3.0,
+  "oiDropPct1h": 4.0,
+  "weakSpotVolRatio": 1.0,
+  "fundingHigh": 0.0003,
+  "lsHigh": 1.8,
+  "lsLow": 0.7,
+  "divergenceMargin": 0.15,
+  "wickPct": 1.0,
+  "pxUpPct4hForShortSqueeze": 1.0,
+  "cacheMinutes": 5,
+  "refreshPerScan": 6
+}

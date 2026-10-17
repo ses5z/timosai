@@ -1,5 +1,7 @@
 // Portlar: her biri için Atk* (gerçek) ve Mock* uygulaması vardır.
 import type { Candle } from "./util/math.js";
+import type { DerivSnapshot } from "./derivatives/derivativesData.js";
+import type { DerivAnalysis } from "./derivatives/rules.js";
 
 export interface Ticker {
   instId: string;
@@ -80,6 +82,7 @@ export interface Candidate {
   reason: string;
   whyBullets: string[];
   security: SecuritySummary;
+  derivatives: DerivAnalysis | null;
   updatedAt: number;
   live: boolean;
 }
@@ -93,6 +96,7 @@ export interface DecisionInput {
   funding: number | null;
   sentiment: number | null;
   orderbook: OrderbookSummary | null;
+  derivSnapshot?: DerivSnapshot | null;
   live: boolean;
 }
 
