@@ -175,6 +175,10 @@ export function createApp(ctx: AppContext) {
     const t = agent.trading;
     json(res, {
       riskScore: agent.riskScore(),
+      sizeMultiplier: agent.sizeMultiplier(),
+      lossStreak: agent.lossStreak,
+      halveAfterLosses: store.settings.halveAfterLosses,
+      breaker: agent.breaker,
       warningsTotal: warnings.total(),
       blockedByAgent: agent.totalBlocked,
       warnings: warnings.list(20),
@@ -208,6 +212,16 @@ export function createApp(ctx: AppContext) {
     }
     store.bus.publish("agent", agent.status());
     json(res, agent.status());
+  });
+
+  app.post("/api/agent/resume", (_req, res) => {
+    agent.resumeBreaker();
+    json(res, agent.status());
+  });
+
+  app.post("/api/settings/halve", (req, res) => {
+    if (typeof req.body?.on === "boolean") store.settings.halveAfterLosses = req.body.on;
+    json(res, { halveAfterLosses: store.settings.halveAfterLosses });
   });
 
   app.post("/api/agent/scan", async (_req, res) => {

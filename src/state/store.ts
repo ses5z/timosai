@@ -53,6 +53,7 @@ export class Store {
   settings = {
     riskPct: 1,
     paused: false,
+    halveAfterLosses: true,
     autonomous: true,
     notifications: { developments: true, critical: true, opportunitySummary: false, quietUntil: 0 } as NotificationSettings,
   };

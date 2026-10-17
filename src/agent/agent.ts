@@ -67,7 +67,13 @@ export class Agent {
   private fundingCache = new Map<string, { v: number | null; at: number }>();
   private sentimentCache: { map: Map<string, number>; at: number } = { map: new Map(), at: 0 };
   private blockedTimes: number[] = [];
-  private lossStreak = 0;
+  lossStreak = 0;
+  /** Stop olunan coinler: süreyle değil, karar "aç" dışına çıkıp yeniden "aç" olunca (yeni kurulum) tekrar girilir. */
+  awaitingNewSetup = new Set<string>();
+  /** Devre kesici: yalnızca teknik arızada (ardışık API hatası, anormal emir sıklığı, aşırı slipaj). Piyasa kaybı tetiklemez. */
+  breaker: { active: boolean; reason: string; at: number } = { active: false, reason: "", at: 0 };
+  private techFailures = 0;
+  private attemptTimes: number[] = [];
   private baselineDone = false;
   private dailyLossWarnedDay = "";
   private lastRiskScore = 0;
@@ -112,7 +118,10 @@ export class Agent {
   status() {
     const s = this.d.store.settings;
     return {
-      state: s.paused ? "kullanıcı duraklattı" : this.stopped ? "durdu" : "çalışıyor",
+      state: this.breaker.active ? "devre kesici" : s.paused ? "kullanıcı duraklattı" : this.stopped ? "durdu" : "çalışıyor",
+      breaker: this.breaker,
+      sizeMultiplier: this.sizeMultiplier(),
+      lossStreak: this.lossStreak,
       autonomous: s.autonomous,
       paused: s.paused,
       mode: this.d.trading.mode,
@@ -211,6 +220,7 @@ export class Agent {
       this.lastScanAt = Date.now();
       this.lastScanMs = Date.now() - t0;
       this.lastError = null;
+      this.techFailures = 0;
       this.d.store.bus.publish("scan", { count: results.length, at: this.lastScanAt, ms: this.lastScanMs, live });
       if (this.d.store.settings.autonomous && !this.d.store.settings.paused) await this.autoTrade();
       await this.managePositions();
@@ -221,6 +231,7 @@ export class Agent {
     } catch (e) {
       this.lastError = (e as Error).message;
       log.error("tarama hatası", e);
+      this.techFailure(`tarama hatası: ${this.lastError}`);
       return [...this.candidates.values()];
     } finally {
       this.scanning = false;
@@ -253,6 +264,9 @@ export class Agent {
       this.candidates.set(c.instId, c);
       if (!prev) continue;
       const interested = watched.has(c.instId) || held.has(c.instId);
+      if (c.decision !== "aç" && this.awaitingNewSetup.delete(c.instId)) {
+        this.d.store.addEvent("bilgi", `${c.base}: önceki kurulum bozuldu; yeni bir "aç" kurulumu oluşursa ajan tekrar girebilir.`, c.instId);
+      }
       if (prev.decision !== c.decision) {
         this.d.ledger.append("decision", { instId: c.instId, karar: c.decision, onceki: prev.decision, firsat: c.opportunity, risk: c.risk, gerekce: c.reason });
         if (interested) this.dev({ symbol: c.instId, kind: "karar", text: `${c.base}: ajanın görüşü ${prev.decision} → ${c.decision}. ${c.reason}`, critical: false });
@@ -313,7 +327,18 @@ export class Agent {
     const t = this.d.trading;
     const equity = t.equity();
     const riskPct = this.d.store.settings.riskPct;
-    const size = sizePosition({ equityUsdt: equity, riskPct, entry: c.entry, stop: c.stop, openNotionalUsdt: t.openNotional(), limits: this.d.limits });
+    if (this.breaker.active) return { ok: false, reason: `Devre kesici açık: ${this.breaker.reason}` };
+    // Döngü hatası koruması: 60 sn'de 4'ten fazla emir denemesi teknik arızadır.
+    const now = Date.now();
+    this.attemptTimes = this.attemptTimes.filter((x) => now - x < 60_000);
+    this.attemptTimes.push(now);
+    if (this.attemptTimes.length > 4 && origin === "ajan") {
+      this.tripBreaker(`anormal emir sıklığı (60 sn'de ${this.attemptTimes.length} deneme)`);
+      return { ok: false, reason: "Devre kesici: anormal emir sıklığı" };
+    }
+    const mult = this.sizeMultiplier();
+    const size = sizePosition({ equityUsdt: equity, riskPct: riskPct * mult, entry: c.entry, stop: c.stop, openNotionalUsdt: t.openNotional(), limits: this.d.limits });
+    if (mult < 1) size.explain += ` Art arda ${this.lossStreak} zarar nedeniyle boyut yarıya indirildi (ilk kazançla normale döner).`;
     if (size.notionalUsdt <= 0) {
       this.d.store.addEvent("karar", `${c.base}: "aç" kararı var ama boyut yetersiz (${size.explain})`, c.instId);
       return { ok: false, reason: size.explain };
@@ -338,6 +363,9 @@ export class Agent {
     }
     try {
       const pos = await t.openPosition(req);
+      this.techFailures = 0;
+      const slip = Math.abs(pos.entryPx - c.price) / c.price;
+      if (slip > 0.015) this.tripBreaker(`aşırı slipaj: ${(slip * 100).toFixed(2)}% (${c.base})`);
       const msg = `${t.mode === "KURU" ? "KURU" : "GERÇEK"} emir: ${c.base} ${pos.costUsdt.toFixed(2)} USDT @ ${roundPrice(pos.entryPx)}, stop ${pos.stopPx}, hedef ${pos.targetPx}. ${c.reason}`;
       this.d.store.addEvent("emir", msg, c.instId);
       this.d.store.bus.publish("positions", this.positionsView());
@@ -346,6 +374,7 @@ export class Agent {
       return { ok: true, reason: msg, position: pos };
     } catch (e) {
       const m = e instanceof HardLimitError ? e.violations.join(" ") : (e as Error).message;
+      if (!(e instanceof HardLimitError)) this.techFailure(`emir hatası: ${m}`);
       this.d.store.addEvent("hata", `${c.base}: emir gönderilemedi (${m})`, c.instId);
       return { ok: false, reason: m };
     }
@@ -354,8 +383,9 @@ export class Agent {
   private async autoTrade(): Promise<void> {
     const held = new Set(this.d.trading.listPositions().map((p) => p.instId));
     const pref = [...this.d.store.planPreference, ...this.d.store.priority];
+    if (this.breaker.active) return;
     const opens = this.queue()
-      .filter((c) => c.decision === "aç" && !held.has(c.instId) && this.d.limits.allowedPairs.includes(c.instId))
+      .filter((c) => c.decision === "aç" && !held.has(c.instId) && this.d.limits.allowedPairs.includes(c.instId) && !this.awaitingNewSetup.has(c.instId))
       .sort((a, b) => {
         const pa = pref.includes(a.instId) ? 0 : 1;
         const pb = pref.includes(b.instId) ? 0 : 1;
@@ -450,7 +480,11 @@ export class Agent {
     });
     if (!r) return;
     const total = p.realizedPnl;
+    const prevStreak = this.lossStreak;
     this.lossStreak = total < 0 ? this.lossStreak + 1 : 0;
+    if (/stop/i.test(reason) && total < 0) this.awaitingNewSetup.add(p.instId);
+    if (prevStreak >= 3 && this.lossStreak === 0) this.d.store.addEvent("bilgi", "İlk kazanç geldi; pozisyon boyutu normale döndü.");
+    if (this.lossStreak === 3 && this.d.store.settings.halveAfterLosses) this.d.store.addEvent("uyarı", "Art arda 3 zarar: sonraki girişlerde boyut yarıya iner. Ajan çalışmaya devam ediyor.");
     const msg = `${p.instId.split("-")[0]} pozisyonu kapandı: ${reason}. Sonuç ${total >= 0 ? "+" : ""}${total.toFixed(3)} USDT.`;
     this.d.store.addEvent("emir", msg, p.instId);
     this.dev({ symbol: p.instId, kind: "pozisyon_kapandı", text: msg, critical: true });
@@ -496,6 +530,32 @@ export class Agent {
   snapshotEquity(): void {
     this.equityHistory.push({ ts: Date.now(), equity: round(this.d.trading.equity(), 4) });
     if (this.equityHistory.length > 720) this.equityHistory.shift();
+  }
+
+  sizeMultiplier(): number {
+    return this.d.store.settings.halveAfterLosses && this.lossStreak >= 3 ? 0.5 : 1;
+  }
+
+  private techFailure(reason: string): void {
+    this.techFailures++;
+    if (this.techFailures >= 5) this.tripBreaker(`ardışık ${this.techFailures} teknik hata (son: ${reason})`);
+  }
+
+  tripBreaker(reason: string): void {
+    if (this.breaker.active) return;
+    this.breaker = { active: true, reason, at: Date.now() };
+    this.d.store.addEvent("hata", `Devre kesici açıldı: ${reason}. Ajan yeni emir vermiyor; kullanıcı tek tıkla devam ettirebilir.`);
+    this.d.warnings.raise("devre_kesici", reason, "Devre kesici açıldı", `Teknik bir arıza algılandı: ${reason}. Ajan yeni emir vermiyor, açık pozisyonları yönetmeye devam ediyor. Panelden "Devam ettir" ile açabilirsin.`, [{ label: "Neden", value: reason, limit: "-" }], this.riskScore().score);
+    this.dev({ symbol: "SİSTEM", kind: "günlük_zarar", text: `Devre kesici açıldı: ${reason}. Panelden devam ettirebilirsin.`, critical: true });
+    this.d.store.bus.publish("agent", this.status());
+  }
+
+  resumeBreaker(): void {
+    this.breaker = { active: false, reason: "", at: 0 };
+    this.techFailures = 0;
+    this.attemptTimes = [];
+    this.d.store.addEvent("bilgi", "Devre kesici kullanıcı tarafından kapatıldı; ajan devam ediyor.");
+    this.d.store.bus.publish("agent", this.status());
   }
 
   positionsView() {

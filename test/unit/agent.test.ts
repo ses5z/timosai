@@ -111,3 +111,58 @@ test("ajan: uygun kararda KURU emir verir ve stop'ta kapatır; zarardan sonra ç
   const r2 = await ctx.agent.tryEnter({ ...other, decision: "aç", rr: 2, risk: 20, entry: other.price, stop: other.price * 0.99, target: other.price * 1.02, security: { ...other.security, spreadPct: 0.01 } });
   assert.equal(r2.ok, true, r2.reason);
 });
+
+test("risk: art arda 3 zararda boyut yarıya iner, ilk kazançla normale döner", async () => {
+  const ctx = mkCtx({ AUTONOMOUS: "false" });
+  await ctx.agent.scanOnce();
+  assert.equal(ctx.agent.sizeMultiplier(), 1);
+  ctx.agent.lossStreak = 3;
+  assert.equal(ctx.agent.sizeMultiplier(), 0.5);
+  ctx.store.settings.halveAfterLosses = false;
+  assert.equal(ctx.agent.sizeMultiplier(), 1);
+  ctx.store.settings.halveAfterLosses = true;
+  // geniş stoplu adayda yarım risk → yarım boyut
+  const base = ctx.agent.queue()[0];
+  const c = { ...base, decision: "aç" as const, rr: 2.2, risk: 20, entry: base.price, stop: base.price * 0.9, target: base.price * 1.25, security: { ...base.security, spreadPct: 0.01 } };
+  const contractLoose = { ...ctx.contract, maxStopPct: 20 };
+  (ctx.agent.d as any).contract = contractLoose;
+  const r = await ctx.agent.tryEnter(c);
+  assert.equal(r.ok, true, r.reason);
+  assert.ok(Math.abs(r.position!.costUsdt - 1.5) < 0.02, String(r.position!.costUsdt)); // 30*%0.5/10% = 1.5
+});
+
+test("risk: stop olunan coine yeni kurulum oluşmadan tekrar girilmez", async () => {
+  const ctx = mkCtx({ AUTONOMOUS: "false" });
+  await ctx.agent.scanOnce();
+  const base = ctx.agent.queue()[0];
+  const c = { ...base, decision: "aç" as const, rr: 2.2, risk: 20, entry: base.price, stop: base.price * 0.99, target: base.price * 1.022, security: { ...base.security, spreadPct: 0.01 } };
+  assert.equal((await ctx.agent.tryEnter(c)).ok, true);
+  ctx.mock.setPrice(c.instId, c.price * 0.97);
+  await ctx.agent.priceTick();
+  assert.ok(ctx.agent.awaitingNewSetup.has(c.instId));
+  // karar "aç" dışına çıkınca kurulum sıfırlanır
+  ctx.agent.candidates.set(c.instId, { ...ctx.agent.candidates.get(c.instId)!, decision: "aç" });
+  (ctx.agent as any).applyResults([{ ...ctx.agent.candidates.get(c.instId)!, decision: "izle" }]);
+  assert.equal(ctx.agent.awaitingNewSetup.has(c.instId), false);
+});
+
+test("devre kesici: piyasa kaybı tetiklemez; ardışık teknik hata ve anormal emir sıklığı tetikler, tek tıkla devam", async () => {
+  const ctx = mkCtx({ AUTONOMOUS: "false" });
+  await ctx.agent.scanOnce();
+  const base = ctx.agent.queue()[0];
+  const c = { ...base, decision: "aç" as const, rr: 2.2, risk: 20, entry: base.price, stop: base.price * 0.99, target: base.price * 1.022, security: { ...base.security, spreadPct: 0.01 } };
+  await ctx.agent.tryEnter(c);
+  ctx.mock.setPrice(c.instId, c.price * 0.5); // büyük piyasa kaybı
+  await ctx.agent.priceTick();
+  assert.equal(ctx.agent.breaker.active, false);
+  for (let i = 0; i < 5; i++) (ctx.agent as any).techFailure("ATK zaman aşımı");
+  assert.equal(ctx.agent.breaker.active, true);
+  const blocked = await ctx.agent.tryEnter({ ...c, instId: "ETH-USDT" });
+  assert.match(blocked.reason, /Devre kesici/);
+  ctx.agent.resumeBreaker();
+  assert.equal(ctx.agent.breaker.active, false);
+  // döngü hatası: 60 sn'de 5. deneme kesiciyi açar
+  for (let i = 0; i < 5; i++) await ctx.agent.tryEnter({ ...c, rr: 0.5 });
+  assert.equal(ctx.agent.breaker.active, true);
+  assert.match(ctx.agent.breaker.reason, /anormal emir sıklığı/);
+});

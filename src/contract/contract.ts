@@ -18,7 +18,7 @@ export interface ContractRules {
 
 export const DEFAULT_CONTRACT: ContractRules = {
   riskPerTradePct: 2,
-  minRR: 1.5,
+  minRR: 2,
   maxStopPct: 6,
   maxRiskScoreForEntry: 70,
   maxSpreadPct: 0.25,

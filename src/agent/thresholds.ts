@@ -26,7 +26,7 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
   stopAtrMult: 1.6,
   minStopPct: 0.8,
   maxStopPct: 6,
-  targetRR: 2,
+  targetRR: 2.2,
   rsiOverbought: 74,
   rsiOversold: 28,
   highVolAtrPct: 0.9,

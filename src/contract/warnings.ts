@@ -2,7 +2,7 @@
 import crypto from "node:crypto";
 import type { ContractItem } from "./contract.js";
 
-export type WarningKind = "ajan_engelledi" | "gunluk_zarar" | "risk_skoru" | "liste_15" | "limite_yakin";
+export type WarningKind = "ajan_engelledi" | "gunluk_zarar" | "risk_skoru" | "liste_15" | "limite_yakin" | "devre_kesici";
 
 export interface AppWarning {
   id: string;

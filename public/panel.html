@@ -18,6 +18,7 @@
     <div id="detail-toggle"></div>
   </div>
   <div id="notices"></div>
+  <div id="breaker-box"></div>
   <section class="card" id="scenario-card" hidden aria-labelledby="sc-h" style="margin-bottom:16px">
     <div class="card-head"><h2 id="sc-h">Senaryo</h2><span class="badge badge-muted" id="sc-step">-</span></div>
     <ol class="scenario-steps" id="sc-list"></ol>
@@ -64,6 +65,7 @@
       <div class="kpi-row" style="margin:12px 0">
         <div class="stat"><span class="kpi-small">Uyarı</span><b id="ct-warn">0</b></div>
         <div class="stat"><span class="kpi-small">Ajanın engellediği emir</span><b id="ct-blocked">0</b></div>
+        <div class="stat"><span class="kpi-small">Boyut çarpanı</span><b id="ct-mult">1×</b></div>
       </div>
       <div id="ct-bars"></div>
       <h3 style="margin-top:6px">Son uyarılar</h3>
@@ -76,7 +78,8 @@
       <label for="risk-range" class="kpi-small">İşlem başına risk: <b id="risk-val" class="num">%1</b></label>
       <input type="range" id="risk-range" min="0.25" max="2" step="0.25" value="1" style="width:100%;accent-color:var(--amber)">
       <p class="kpi-small" id="risk-usdt">-</p>
-      <p class="faint" style="font-size:.82rem">Ajan boyutu bu bütçeye göre hesaplar; tek emir en fazla 5 USDT, toplam 15 USDT.</p>
+      <label class="switch" style="margin:6px 0 10px"><input type="checkbox" id="halve" role="switch"> <span>Art arda 3 zararda boyutu yarıya indir</span></label>
+      <p class="faint" style="font-size:.82rem">Boyut = risk tutarı ÷ stop mesafesi; tek emir en fazla 5 USDT, toplam 15 USDT. Zarardan sonra hiçbir şey durdurulmaz; ilk kazançla boyut normale döner.</p>
     </section>
 
     <section class="card span-2" aria-labelledby="ev-h">

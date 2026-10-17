@@ -38,6 +38,8 @@
     const c = await T.api("/api/contract");
     $("#ct-gauge").innerHTML = T.gauge(c.riskScore.score) + `<div><b>${T.term("risk", "Risk skoru")}</b><p class="kpi-small" style="margin:4px 0 0">Durum: <b class="${c.riskScore.level === "güvenli" ? "up" : c.riskScore.level === "riskli" ? "down" : ""}">${c.riskScore.level}</b></p></div>`;
     $("#ct-warn").textContent = c.warningsTotal;
+    $("#ct-mult").textContent = c.sizeMultiplier === 1 ? "1×" : `${c.sizeMultiplier}× (${c.lossStreak} zarar)`;
+    $("#halve").checked = c.halveAfterLosses;
     $("#ct-blocked").textContent = c.blockedByAgent;
     T.renderKeep($("#ct-list"), c.warnings.slice(0, 8).map((w) => `<li class="lvl-uyarı"><time>${F.time(w.ts)}</time><span><b>${T.esc(w.title)}</b><br><span class="faint">${T.esc(w.text)}</span></span></li>`).join("") || `<li><span></span><span class="muted">Uyarı yok.</span></li>`);
     $("#ct-bars").innerHTML = c.bars.map((b) => {
@@ -74,6 +76,10 @@
     st.innerHTML = `<span class="dot"></span> ${T.esc(a.state)}`;
     st.className = "badge " + (a.paused ? "badge-warn" : "badge-ok");
     $("#ag-auto").checked = a.autonomous;
+    if (a.breaker && a.breaker.active) st.className = "badge badge-bad";
+    $("#breaker-box").innerHTML = a.breaker && a.breaker.active ? `<div class="notice notice-warn" role="alert">${T.icon("warn")}<span><b>Devre kesici açık:</b> ${T.esc(a.breaker.reason)}. Ajan yeni emir vermiyor; açık pozisyonlar yönetiliyor.</span><button class="btn btn-sm btn-primary" type="button" id="resume-btn" style="margin-left:auto">Devam ettir</button></div>` : "";
+    const rb = document.getElementById("resume-btn");
+    if (rb) rb.addEventListener("click", async () => { await T.api("/api/agent/resume", { body: {} }); T.refreshStatus(); T.toast("Ajan devam ediyor."); });
     $("#ag-pause").checked = a.paused;
     $("#ag-info").innerHTML = `${a.scanCount} tarama · son ${a.lastScanAt ? F.ago(a.lastScanAt) : "-"} · her ${a.scanIntervalSec} sn · ${s.liveData ? '<span class="up">canlı veri</span>' : '<span class="down">canlı veri yok</span>'} · ${T.term("kuru", s.tradingMode)}`;
     $("#ag-mentor").textContent = `Mentor: ${s.mentor.ai ? "yapay zeka (" + s.mentor.active + ")" : "kural tabanlı"}`;
@@ -86,6 +92,7 @@
   $("#ag-auto").addEventListener("change", (e) => T.api("/api/agent", { body: { autonomous: e.target.checked } }).then(() => T.refreshStatus()));
   $("#ag-pause").addEventListener("change", (e) => T.api("/api/agent", { body: { paused: e.target.checked } }).then(() => T.refreshStatus()));
   $("#ag-scan").addEventListener("click", async (e) => { e.target.disabled = true; try { await T.api("/api/agent/scan", { body: {} }); T.toast("Tarama tamamlandı."); } finally { e.target.disabled = false; refreshAll(); } });
+  $("#halve").addEventListener("change", (e) => T.api("/api/settings/halve", { body: { on: e.target.checked } }).then(loadContract));
   $("#risk-range").addEventListener("change", async (e) => { try { await T.api("/api/settings/risk", { body: { riskPct: Number(e.target.value) } }); loadPortfolio(); } catch (err) { T.toast(err.message); } });
   $("#scenario-btn").addEventListener("click", async (e) => {
     e.target.disabled = true;
@@ -113,6 +120,7 @@
   T.on("positions", (p) => renderPositions(p));
   T.on("scan", () => { soon(); T.refreshStatus(); });
   T.on("warning", () => loadContract());
+  T.on("agent", () => T.refreshStatus());
   setInterval(() => { loadAtk(); loadPortfolio(); }, 10000);
   window.addEventListener("resize", () => { clearTimeout(t1); t1 = setTimeout(loadPortfolio, 300); });
 })();
