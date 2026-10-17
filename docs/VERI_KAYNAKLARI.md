@@ -16,6 +16,19 @@
 | Avalanche Fuji RPC | `api.avax-test.network/ext/bc/C/rpc` | **çalışıyor** | ProofAnchor |
 | Telegram Bot API, Gemini API | – | **çalışıyor** (Gemini ücretsiz kota zaman zaman 429) | Bot, mentor |
 
+### G3 doğrulamaları (2026-10-17, curl)
+
+| Kaynak | Uç nokta | Durum | Kullanım |
+|---|---|---|---|
+| OKX public | `/api/v5/market/candles?bar=` 1m 3m 5m 15m 30m 1H 2H 4H 6H 12H 1D 3D 1W 1M ve `6Hutc 12Hutc 1Dutc 3Dutc 1Wutc 1Mutc` | **çalışıyor** (hepsi `code:"0"`) | Grafik aralıkları; 6H+ için `utc` varyantı (README kararı) |
+| OKX public | `/api/v5/market/history-candles?instId=&bar=&after=` | **çalışıyor** | Sola kaydırınca eski mumlar (ATK `market_get_candles` `history:true`) |
+| Gemini API | `v1beta/models/gemini-3.8-flash:generateContent` | **429** ücretsiz katman günlük 20 istek doldu ("retry in 10h12m") | Varsayılan model; kota dolunca yedeğe geçer |
+| Gemini API | `gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.5-flash-lite` | **çalışıyor** (aynı anahtar, HTTP 200) | Yedek zinciri (`GEMINI_FALLBACKS`) |
+| Gemini API | `gemini-2.5-flash` | **404** (yeni kullanıcılara kapalı) | Kullanılmıyor |
+| Gemini API | `gemini-flash-latest` | **429** | Kullanılmıyor |
+
+Gemini teşhisi: mentorun kural tabanlıya düşmesinin sebebi anahtar değil, `gemini-3.8-flash` ücretsiz kotasının (günde 20 istek) dolmasıydı. Çözüm: 429/404'te sıradaki flash modele geçiş, kotası dolan model bekleme süresince atlanır; hepsi doluysa kural tabanlı yedek. Mentor işlemi kartında yön/seviyeleri kod hesaplar, gerekçe metnini aktif Gemini modeli yazar ("Gerekçe: Gemini (gemini-3.7-flash)").
+
 Lisans kontrolleri:
 - AlphaTrend ve Follow Line (Kıvanç Özbilgiç, TradingView): sayfalar "open-source" diyor, ancak lisans başlığı ve kaynak kod sayfadan doğrulanamadı → port edilmedi, kendi ATR trend çizgimiz kullanılıyor, "Follow Line" adı arayüzde geçmiyor.
 - TradingView Lightweight Charts: Apache 2.0, atıf logosu korunuyor.
